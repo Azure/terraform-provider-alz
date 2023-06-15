@@ -23,19 +23,21 @@ provider "scaffolding" {
 
 ### Optional
 
-- `auxiliary_tenant_ids` (List of String) A list of auxiliary tenant IDs which should be used.
-- `client_certificate_password` (String, Sensitive) The password associated with the client certificate. For use when authenticating as a Service Principal using a Client Certificate
+- `allow_lib_overwrite` (Boolean) Whether to allow overwriting of the library by other lib directories.
+- `auxiliary_tenant_ids` (List of String) A list of auxiliary tenant ids which should be used.
+- `client_certificate_password` (String, Sensitive) The password associated with the client certificate. For use when authenticating as a service principal using a client certificate
 - `client_certificate_path` (String) The path to the client certificate associated with the service principal for use when authenticating as a service principal using a client certificate.
-- `client_id` (String) The Client ID which should be used.
-- `client_secret` (String, Sensitive) The Client Secret which should be used. For use when authenticating as a service principal using a client secret.
-- `environment` (String) The Cloud Environment which should be used. Possible values are public, usgovernment and china. Defaults to public.
+- `client_id` (String) The client id which should be used.
+- `client_secret` (String, Sensitive) The client secret which should be used. For use when authenticating as a service principal using a client secret.
+- `environment` (String) The cloud environment which should be used. Possible values are `public`, `usgovernment` and `china`. Defaults to public.
 - `lib_dirs` (List of String) A list of directories to search for ALZ artefacts. The directories will be processed in order.
 - `oidc_request_token` (String, Sensitive) The bearer token for the request to the OIDC provider. For use when authenticating using OpenID Connect.
-- `oidc_request_url` (String) The URL for the OIDC provider from which to request an ID token. For use when authenticating as a service principal using OpenID Connect.
-- `oidc_token` (String, Sensitive) The OIDC ID token for use when authenticating as a service principal using OpenID connect.
-- `oidc_token_file_path` (String) The path to a file containing an OIDC ID token for use when authenticating using OpenID Connect.
+- `oidc_request_url` (String) The URL for the OIDC provider from which to request an id token. For use when authenticating as a service principal using OpenID Connect.
+- `oidc_token` (String, Sensitive) The OIDC id token for use when authenticating as a service principal using OpenID Connect.
+- `oidc_token_file_path` (String) The path to a file containing an OIDC id token for use when authenticating using OpenID Connect.
 - `skip_provider_registration` (Boolean) Should the provider skip registering all of the resource providers that it supports, if they're not already registered?
 - `tenant_id` (String) The Tenant ID which should be used.
+- `use_alz_lib` (Boolean) Use the built-in ALZ library to resolve archetypes.
 - `use_cli` (String) Allow Azure CLI to be used for authentication.
-- `use_msi` (String) Allow Managed Service Identity to be used for Authentication.
+- `use_msi` (String) Allow managed service identity to be used for authentication.
 - `use_oidc` (Boolean) Allow OpenID Connect to be used for authentication.

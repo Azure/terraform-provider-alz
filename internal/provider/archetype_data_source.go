@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -37,8 +36,8 @@ type ArchetypeDataSourceModel struct {
 }
 
 type ArchetypeDataSourceModelDefaults struct {
-	DefaultLocation      types.String `tfsdk:"default_location"`
-	DefaultLAWorkspaceId types.String `tfsdk:"default_log_analytics_workspace_id"`
+	DefaultLocation      types.String `tfsdk:"location"`
+	DefaultLAWorkspaceId types.String `tfsdk:"log_analytics_workspace_id"`
 }
 
 func (d *ArchetypeDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -55,13 +54,21 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 				MarkdownDescription: "Example configurable attribute",
 				Optional:            true,
 			},
-			"defaults": schema.ObjectAttribute{
-				MarkdownDescription: "Defaults",
-				AttributeTypes: map[string]attr.Type{
-					"default_location":                   types.StringType,
-					"default_log_analytics_workspace_id": types.StringType,
+			"defaults": schema.MapNestedAttribute{
+				MarkdownDescription: "Archetype default values",
+				Required:            true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"location": schema.StringAttribute{
+							MarkdownDescription: "Default location",
+							Required:            true,
+						},
+						"log_analytics_workspace_id": schema.StringAttribute{
+							MarkdownDescription: "Default Log Analytics workspace id",
+							Optional:            true,
+						},
+					},
 				},
-				CustomType: &ArchetypeDataSourceModelDefaults{},
 			},
 		},
 	}
