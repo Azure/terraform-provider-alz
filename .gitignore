@@ -33,3 +33,6 @@ website/vendor
 
 # Keep windows files with windows line endings
 *.winfile eol=crlf
+
+# compiled binary
+terraform-provider-alz
