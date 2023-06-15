@@ -12,7 +12,6 @@ require (
 	github.com/hashicorp/terraform-plugin-go v0.15.0
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 	github.com/hashicorp/terraform-plugin-testing v1.3.0
-	github.com/hashicorp/terraform-provider-scaffolding-framework v0.0.0-20230614193109-4fac87a75b23
 	github.com/matt-FFFFFF/alzlib v0.4.0
 	github.com/stretchr/testify v1.8.4
 )
