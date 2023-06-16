@@ -3,12 +3,12 @@
 page_title: "alz_archetype Data Source - terraform-provider-alz"
 subcategory: ""
 description: |-
-  Archetype data source
+  Archetype data source.
 ---
 
 # alz_archetype (Data Source)
 
-Archetype data source
+Archetype data source.
 
 ## Example Usage
 
@@ -75,6 +75,10 @@ Optional:
 - `identity` (String) The identity type. Must be one of `SystemAssigned` or `UserAssigned`.
 - `identity_ids` (List of String) A list of identity ids to assign to the policy assignment. Required if `identity` is `UserAssigned`.
 - `non_compliance_message` (Attributes Set) The non-compliance messages to use for the policy assignment. (see [below for nested schema](#nestedatt--policy_assignments_to_add--name--non_compliance_message))
+- `parameters` (String) The parameters to use for the policy assignment.
+**Note:** This is a JSON string, and not a map. This is because the parameter values have different types, which confuses the type system used by the provider sdk.
+Use `jsonencode()` to construct the map.
+The map keys must be strings, the values are `any` type.
 - `policy_definition_id` (String) The resource id of the policy definition. Conflicts with `policy_definition_name`.
 - `policy_definition_name` (String) The name of the policy definition. Must be in the AlzLib, if it is not use `policy_definition_id` instead. Conflicts with `policy_definition_id`.
 

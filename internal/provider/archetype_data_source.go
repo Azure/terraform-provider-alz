@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/matt-FFFFFF/alzlib"
+	"github.com/matt-FFFFFF/terraform-provider-alz/internal/alztypes"
 	"github.com/matt-FFFFFF/terraform-provider-alz/internal/alzvalidators"
 )
 
@@ -182,6 +183,15 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 												},
 											},
 										},
+									},
+
+									"parameters": schema.StringAttribute{
+										MarkdownDescription: "The parameters to use for the policy assignment. " +
+											"**Note:** This is a JSON string, and not a map. This is because the parameter values have different types, which confuses the type system used by the provider sdk. " +
+											"Use `jsonencode()` to construct the map. " +
+											"The map keys must be strings, the values are `any` type.",
+										CustomType: alztypes.PolicyParameterType{},
+										Optional:   true,
 									},
 								},
 							},
