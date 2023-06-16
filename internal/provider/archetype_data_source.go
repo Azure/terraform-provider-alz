@@ -35,16 +35,21 @@ type ArchetypeDataSource struct {
 
 // ArchetypeDataSourceModel describes the data source data model.
 type ArchetypeDataSourceModel struct {
-	Name          types.String                     `tfsdk:"name"`
-	ParentId      types.String                     `tfsdk:"parent_id"`
-	BaseArchetype types.String                     `tfsdk:"base_archetype"`
-	DisplayName   types.String                     `tfsdk:"display_name"`
-	Defaults      ArchetypeDataSourceModelDefaults `tfsdk:"defaults"`
+	Name                   types.String                     `tfsdk:"name"`
+	ParentId               types.String                     `tfsdk:"parent_id"`
+	BaseArchetype          types.String                     `tfsdk:"base_archetype"`
+	DisplayName            types.String                     `tfsdk:"display_name"`
+	Defaults               ArchetypeDataSourceModelDefaults `tfsdk:"defaults"`
+	PolicyAssignmentsToAdd []PolicyAssignmentType           `tfsdk:"policy_assignments_to_add"`
 }
 
 type ArchetypeDataSourceModelDefaults struct {
 	DefaultLocation      types.String `tfsdk:"location"`
 	DefaultLAWorkspaceId types.String `tfsdk:"log_analytics_workspace_id"`
+}
+
+type PolicyAssignmentType struct {
+	Parameters alztypes.PolicyParameterValue
 }
 
 func (d *ArchetypeDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
