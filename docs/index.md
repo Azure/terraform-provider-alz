@@ -3,17 +3,17 @@
 page_title: "alz Provider"
 subcategory: ""
 description: |-
-  
+  ALZ provider to do things...
 ---
 
 # alz Provider
 
-
+ALZ provider to do things...
 
 ## Example Usage
 
 ```terraform
-provider "scaffolding" {
+provider "alz" {
   # example configuration here
 }
 ```

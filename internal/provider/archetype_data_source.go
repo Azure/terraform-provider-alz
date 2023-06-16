@@ -6,18 +6,24 @@ package provider
 import (
 	"context"
 	"fmt"
+	"regexp"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/matt-FFFFFF/alzlib"
+	"github.com/matt-FFFFFF/terraform-provider-alz/internal/alzvalidators"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
 var _ datasource.DataSource = &ArchetypeDataSource{}
 
-func NewExampleDataSource() datasource.DataSource {
+func NewArchetypeDataSource() datasource.DataSource {
 	return &ArchetypeDataSource{}
 }
 
@@ -47,13 +53,190 @@ func (d *ArchetypeDataSource) Metadata(ctx context.Context, req datasource.Metad
 func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: "Example data source",
+		MarkdownDescription: "Archetype data source.",
 
 		Attributes: map[string]schema.Attribute{
-			"configurable_attribute": schema.StringAttribute{
-				MarkdownDescription: "Example configurable attribute",
-				Optional:            true,
+			"name": schema.StringAttribute{
+				MarkdownDescription: "The management group name, forming part of the resource id.",
+				Required:            true,
 			},
+
+			"parent_id": schema.StringAttribute{
+				MarkdownDescription: "The parent management group name.",
+				Required:            true,
+			},
+
+			"base_archetype": schema.StringAttribute{
+				MarkdownDescription: "The base archetype name to use. This has been generated from the provider lib directories.",
+				Required:            true,
+			},
+
+			"policy_assignments_to_remove": schema.ListAttribute{
+				MarkdownDescription: "A list of policy assignment names to remove from the archetype.",
+				Optional:            true,
+				ElementType:         types.StringType,
+				Validators: []validator.List{
+					listvalidator.UniqueValues(),
+				},
+			},
+
+			"policy_definitions_to_remove": schema.ListAttribute{
+				MarkdownDescription: "A list of policy definition names to remove from the archetype.",
+				Optional:            true,
+				ElementType:         types.StringType,
+				Validators: []validator.List{
+					listvalidator.UniqueValues(),
+				},
+			},
+
+			"policy_set_definitions_to_remove": schema.ListAttribute{
+				MarkdownDescription: "A list of policy set definition names to remove from the archetype.",
+				Optional:            true,
+				ElementType:         types.StringType,
+				Validators: []validator.List{
+					listvalidator.UniqueValues(),
+				},
+			},
+
+			"role_definitions_to_remove": schema.ListAttribute{
+				MarkdownDescription: "A list of role definition names to remove from the archetype.",
+				Optional:            true,
+				ElementType:         types.StringType,
+				Validators: []validator.List{
+					listvalidator.UniqueValues(),
+				},
+			},
+
+			"policy_assignments_to_add": schema.MapNestedAttribute{
+				MarkdownDescription: "A map of policy assignments names to add to the archetype. The map key is the policy assignemnt name.",
+				Optional:            true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"name": schema.MapNestedAttribute{
+							Required: true,
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: map[string]schema.Attribute{
+									"display_name": schema.StringAttribute{
+										MarkdownDescription: "The policy assignment display name",
+										Required:            true,
+									},
+
+									"policy_definition_name": schema.StringAttribute{
+										MarkdownDescription: "The name of the policy definition. Must be in the AlzLib, if it is not use `policy_definition_id` instead. Conflicts with `policy_definition_id`.",
+										Optional:            true,
+										Validators: []validator.String{
+											stringvalidator.ConflictsWith(path.MatchRelative().AtMapKey("policy_definition_id")),
+										},
+									},
+
+									"policy_definition_id": schema.StringAttribute{
+										MarkdownDescription: "The resource id of the policy definition. Conflicts with `policy_definition_name`.",
+										Optional:            true,
+										Validators: []validator.String{
+											stringvalidator.ConflictsWith(path.MatchRelative().AtMapKey("policy_definition_id")),
+										},
+									},
+
+									"enforcement_mode": schema.StringAttribute{
+										MarkdownDescription: "The enforcement mode of the policy assignment. Must be one of `Default`, or `DoNotEnforce`.",
+										Optional:            true,
+										Validators: []validator.String{
+											stringvalidator.OneOf("Default", "DoNotEnforce"),
+										},
+									},
+
+									"identity": schema.StringAttribute{
+										MarkdownDescription: "The identity type. Must be one of `SystemAssigned` or `UserAssigned`.",
+										Optional:            true,
+										Validators: []validator.String{
+											stringvalidator.OneOf("SystemAssigned", "UserAssigned"),
+										},
+									},
+
+									"identity_ids": schema.ListAttribute{
+										MarkdownDescription: "A list of identity ids to assign to the policy assignment. Required if `identity` is `UserAssigned`.",
+										Optional:            true,
+										ElementType:         types.StringType,
+										Validators: []validator.List{
+											listvalidator.UniqueValues(),
+											listvalidator.ValueStringsAre(
+												alzvalidators.ArmTypeResourceId("Microsoft.ManagedIdentity", "userAssignedIdentities"),
+												stringvalidator.AlsoRequires(path.MatchRelative().AtMapKey("identity")),
+											),
+										},
+									},
+
+									"non_compliance_message": schema.SetNestedAttribute{
+										MarkdownDescription: "The non-compliance messages to use for the policy assignment.",
+										Optional:            true,
+										NestedObject: schema.NestedAttributeObject{
+											Attributes: map[string]schema.Attribute{
+												"message": schema.StringAttribute{
+													MarkdownDescription: "The non-compliance message.",
+													Required:            true,
+												},
+
+												"policy_definition_reference_id": schema.StringAttribute{
+													MarkdownDescription: "The policy definition reference id (not the resource id) to use for the non compliance message. This references the definition within the policy set.",
+													Optional:            true,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+
+			"policy_definitions_to_add": schema.ListAttribute{
+				MarkdownDescription: "A list of policy definition names to add to the archetype.",
+				Optional:            true,
+				ElementType:         types.StringType,
+				Validators: []validator.List{
+					listvalidator.UniqueValues(),
+				},
+			},
+
+			"policy_set_definitions_to_add": schema.ListAttribute{
+				MarkdownDescription: "A list of policy set definition names to add to the archetype.",
+				Optional:            true,
+				ElementType:         types.StringType,
+				Validators: []validator.List{
+					listvalidator.UniqueValues(),
+				},
+			},
+
+			"role_definitions_to_add": schema.ListAttribute{
+				MarkdownDescription: "A list of role definition names to add to the archetype.",
+				Optional:            true,
+				ElementType:         types.StringType,
+				Validators: []validator.List{
+					listvalidator.UniqueValues(),
+				},
+			},
+
+			"role_assignments_to_add": schema.MapNestedAttribute{
+				MarkdownDescription: "A list of role definition names to add to the archetype.",
+				Optional:            true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"definition": schema.StringAttribute{
+							MarkdownDescription: "The role definition name, or resource id.",
+							Required:            true,
+						},
+						"object_id": schema.StringAttribute{
+							MarkdownDescription: "The principal object id to assign.",
+							Required:            true,
+							Validators: []validator.String{
+								stringvalidator.RegexMatches(regexp.MustCompile(`^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$`), "The subscription id must be a valid lowercase UUID."),
+							},
+						},
+					},
+				},
+			},
+
 			"defaults": schema.MapNestedAttribute{
 				MarkdownDescription: "Archetype default values",
 				Required:            true,
@@ -66,8 +249,22 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 						"log_analytics_workspace_id": schema.StringAttribute{
 							MarkdownDescription: "Default Log Analytics workspace id",
 							Optional:            true,
+							Validators: []validator.String{
+								alzvalidators.ArmTypeResourceId("Microsoft.OperationalInsights", "workspaces"),
+							},
 						},
 					},
+				},
+			},
+
+			"subscription_ids": schema.ListAttribute{
+				MarkdownDescription: "A list of subscription ids to add to the management group.",
+				Optional:            true,
+				ElementType:         types.StringType,
+				Validators: []validator.List{
+					listvalidator.ValueStringsAre(
+						stringvalidator.RegexMatches(regexp.MustCompile(`^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$`), "The subscription id must be a valid lowercase UUID."),
+					),
 				},
 			},
 		},

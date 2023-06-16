@@ -68,6 +68,8 @@ func (p *AlzProvider) Metadata(ctx context.Context, req provider.MetadataRequest
 
 func (p *AlzProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "ALZ provider to do things...",
+
 		Attributes: map[string]schema.Attribute{
 			"allow_lib_overwrite": schema.BoolAttribute{
 				MarkdownDescription: "Whether to allow overwriting of the library by other lib directories.",
@@ -330,14 +332,12 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 }
 
 func (p *AlzProvider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{
-		NewExampleResource,
-	}
+	return []func() resource.Resource{}
 }
 
 func (p *AlzProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
-		NewExampleDataSource,
+		NewArchetypeDataSource,
 	}
 }
 

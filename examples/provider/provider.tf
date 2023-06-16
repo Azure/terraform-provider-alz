@@ -1,3 +1,3 @@
-provider "scaffolding" {
+provider "alz" {
   # example configuration here
 }
