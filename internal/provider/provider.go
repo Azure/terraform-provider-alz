@@ -10,6 +10,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm/policy"
@@ -30,6 +31,13 @@ import (
 
 // Ensure ScaffoldingProvider satisfies various provider interfaces.
 var _ provider.Provider = &AlzProvider{}
+
+// AlzProviderData contains the data that is passed to resources/data sources
+// it contains a configured flag to indicate if the provider has been configured.
+type AlzProviderData struct {
+	configured bool
+	AlzLib     *alzlib.AlzLib
+}
 
 // AlzProvider defines the provider implementation.
 type AlzProvider struct {
@@ -185,6 +193,12 @@ func (p *AlzProvider) Schema(ctx context.Context, req provider.SchemaRequest, re
 }
 
 func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+	if providerData, ok := resp.DataSourceData.(*AlzProviderData); ok {
+		if providerData.configured {
+			return
+		}
+	}
+
 	var data AlzProviderModel
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
@@ -235,6 +249,10 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 		}
 	}
 
+	if data.UseCli.IsNull() {
+		data.UseCli = types.BoolValue(true)
+	}
+
 	var cloudConfig cloud.Configuration
 	env := data.Environment.String()
 	switch strings.ToLower(env) {
@@ -246,7 +264,6 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 		cloudConfig = cloud.AzureChina
 	default:
 		cloudConfig = cloud.AzurePublic
-		return
 	}
 
 	// Maps the auth related environment variables used in the provider to what azidentity honors.
@@ -290,7 +307,7 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 	}
 
 	popts := new(policy.ClientOptions)
-	popts.PerRetryPolicies = append(popts.PerRetryPolicies, withUserAgent(fmt.Sprintf("Terraform Azure/AlzLib provider: %s", p.version)))
+	popts.PerRetryPolicies = append(popts.PerRetryPolicies, withUserAgent(fmt.Sprintf("AzureTerraformAlzProvider/%s", p.version)))
 
 	alz := alzlib.NewAlzLib()
 	cf, err := armpolicy.NewClientFactory("", cred, popts)
@@ -308,27 +325,30 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 		data.AllowLibOverwrite = types.BoolValue(false)
 	}
 
-	alz.Options = &alzlib.AlzLibOptions{
-		AllowOverwrite: data.AllowLibOverwrite.ValueBool(),
-	}
+	alz.Options.AllowOverwrite = data.AllowLibOverwrite.ValueBool()
 
-	libdirfs := make([]fs.FS, 2)
+	libdirfs := make([]fs.FS, 0)
 	if data.UseAlzLib.ValueBool() {
-		libdirfs[0] = alzlib.Lib
+		libdirfs = append(libdirfs, alzlib.Lib)
 	}
-	if !data.LibDirs.IsNull() {
+	if len(data.LibDirs.Elements()) != 0 {
 		for _, v := range data.LibDirs.Elements() {
 			libdirfs = append(libdirfs, os.DirFS(v.String()))
 		}
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
 	if err := alz.Init(ctx, libdirfs...); err != nil {
 		resp.Diagnostics.AddError("failed to initialize AlzLib: %v", err.Error())
 		return
 	}
 
-	resp.DataSourceData = alz
-	resp.ResourceData = alz
+	providerData := new(AlzProviderData)
+	providerData.AlzLib = alz
+	providerData.configured = true
+	resp.DataSourceData = providerData
+	resp.ResourceData = providerData
 }
 
 func (p *AlzProvider) Resources(ctx context.Context) []func() resource.Resource {

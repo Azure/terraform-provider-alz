@@ -38,6 +38,6 @@ provider "alz" {
 - `skip_provider_registration` (Boolean) Should the provider skip registering all of the resource providers that it supports, if they're not already registered?
 - `tenant_id` (String) The Tenant ID which should be used.
 - `use_alz_lib` (Boolean) Use the built-in ALZ library to resolve archetypes.
-- `use_cli` (String) Allow Azure CLI to be used for authentication.
-- `use_msi` (String) Allow managed service identity to be used for authentication.
+- `use_cli` (Boolean) Allow Azure CLI to be used for authentication.
+- `use_msi` (Boolean) Allow managed service identity to be used for authentication.
 - `use_oidc` (Boolean) Allow OpenID Connect to be used for authentication.

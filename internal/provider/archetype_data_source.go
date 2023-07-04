@@ -1,5 +1,5 @@
-// Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
 
 package provider
 
@@ -44,6 +44,7 @@ type ArchetypeDataSourceModel struct {
 	BaseArchetype                types.String                     `tfsdk:"base_archetype"`
 	Defaults                     ArchetypeDataSourceModelDefaults `tfsdk:"defaults"`
 	DisplayName                  types.String                     `tfsdk:"display_name"`
+	Id                           types.String                     `tfsdk:"id"`
 	Name                         types.String                     `tfsdk:"name"`
 	ParentId                     types.String                     `tfsdk:"parent_id"`
 	PolicyAssignmentsToAdd       map[string]PolicyAssignmentType  `tfsdk:"policy_assignments_to_add"`
@@ -94,6 +95,11 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 		MarkdownDescription: "Archetype data source.",
 
 		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				MarkdownDescription: "Internal id attribute required for acceptance testing. See [here](https://developer.hashicorp.com/terraform/plugin/framework/acctests#implement-id-attribute).",
+				Computed:            true,
+			},
+
 			"name": schema.StringAttribute{
 				MarkdownDescription: "The management group name, forming part of the resource id.",
 				Required:            true,
@@ -336,18 +342,18 @@ func (d *ArchetypeDataSource) Configure(ctx context.Context, req datasource.Conf
 		return
 	}
 
-	alz, ok := req.ProviderData.(*alzlib.AlzLib)
+	data, ok := req.ProviderData.(*AlzProviderData)
 
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *alzlib.AlzLib, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *AlzProviderData, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
 	}
 
-	d.alz = alz
+	d.alz = data.AlzLib
 }
 
 func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
@@ -370,7 +376,7 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 
 	// For the purposes of this example code, hardcoding a response value to
 	// save into the Terraform state.
-	data.ParentId = types.StringValue("example-id")
+	data.Id = types.StringValue("example-id")
 
 	// Write logs using the tflog package
 	// Documentation: https://terraform.io/plugin/log

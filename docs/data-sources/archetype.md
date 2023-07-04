@@ -26,22 +26,32 @@ data "alz_archetype" "example" {
 ### Required
 
 - `base_archetype` (String) The base archetype name to use. This has been generated from the provider lib directories.
-- `defaults` (Attributes Map) Archetype default values (see [below for nested schema](#nestedatt--defaults))
+- `defaults` (Attributes) Archetype default values (see [below for nested schema](#nestedatt--defaults))
 - `name` (String) The management group name, forming part of the resource id.
 - `parent_id` (String) The parent management group name.
 
 ### Optional
 
+- `display_name` (String) The display name of the management group.
 - `policy_assignments_to_add` (Attributes Map) A map of policy assignments names to add to the archetype. The map key is the policy assignemnt name. (see [below for nested schema](#nestedatt--policy_assignments_to_add))
-- `policy_assignments_to_remove` (List of String) A list of policy assignment names to remove from the archetype.
-- `policy_definitions_to_add` (List of String) A list of policy definition names to add to the archetype.
-- `policy_definitions_to_remove` (List of String) A list of policy definition names to remove from the archetype.
-- `policy_set_definitions_to_add` (List of String) A list of policy set definition names to add to the archetype.
-- `policy_set_definitions_to_remove` (List of String) A list of policy set definition names to remove from the archetype.
+- `policy_assignments_to_remove` (Set of String) A list of policy assignment names to remove from the archetype.
+- `policy_definitions_to_add` (Set of String) A list of policy definition names to add to the archetype.
+- `policy_definitions_to_remove` (Set of String) A list of policy definition names to remove from the archetype.
+- `policy_set_definitions_to_add` (Set of String) A list of policy set definition names to add to the archetype.
+- `policy_set_definitions_to_remove` (Set of String) A list of policy set definition names to remove from the archetype.
 - `role_assignments_to_add` (Attributes Map) A list of role definition names to add to the archetype. (see [below for nested schema](#nestedatt--role_assignments_to_add))
-- `role_definitions_to_add` (List of String) A list of role definition names to add to the archetype.
-- `role_definitions_to_remove` (List of String) A list of role definition names to remove from the archetype.
-- `subscription_ids` (List of String) A list of subscription ids to add to the management group.
+- `role_definitions_to_add` (Set of String) A list of role definition names to add to the archetype.
+- `role_definitions_to_remove` (Set of String) A list of role definition names to remove from the archetype.
+- `subscription_ids` (Set of String) A list of subscription ids to add to the management group.
+
+### Read-Only
+
+- `alz_policy_assignments` (Map of String) A map of generated policy assignments. The values are ARM JSON policy assignments.
+- `alz_policy_definitions` (Map of String) A map of generated policy assignments. The values are ARM JSON policy definitions.
+- `alz_policy_set_definitions` (Map of String) A map of generated policy assignments. The values are ARM JSON policy set definitions.
+- `alz_role_assignments` (Map of String) A map of generated role assignments. The values are ARM JSON role assignments.
+- `alz_role_definitions` (Map of String) A map of generated role assignments. The values are ARM JSON role definitions.
+- `id` (String) Internal id attribute required for acceptance testing. See [here](https://developer.hashicorp.com/terraform/plugin/framework/acctests#implement-id-attribute).
 
 <a id="nestedatt--defaults"></a>
 ### Nested Schema for `defaults`
@@ -75,10 +85,7 @@ Optional:
 - `identity` (String) The identity type. Must be one of `SystemAssigned` or `UserAssigned`.
 - `identity_ids` (List of String) A list of identity ids to assign to the policy assignment. Required if `identity` is `UserAssigned`.
 - `non_compliance_message` (Attributes Set) The non-compliance messages to use for the policy assignment. (see [below for nested schema](#nestedatt--policy_assignments_to_add--name--non_compliance_message))
-- `parameters` (String) The parameters to use for the policy assignment.
-**Note:** This is a JSON string, and not a map. This is because the parameter values have different types, which confuses the type system used by the provider sdk.
-Use `jsonencode()` to construct the map.
-The map keys must be strings, the values are `any` type.
+- `parameters` (String) The parameters to use for the policy assignment. **Note:** This is a JSON string, and not a map. This is because the parameter values have different types, which confuses the type system used by the provider sdk. Use `jsonencode()` to construct the map. The map keys must be strings, the values are `any` type.
 - `policy_definition_id` (String) The resource id of the policy definition. Conflicts with `policy_definition_name`.
 - `policy_definition_name` (String) The name of the policy definition. Must be in the AlzLib, if it is not use `policy_definition_id` instead. Conflicts with `policy_definition_id`.
 

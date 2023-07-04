@@ -1,5 +1,5 @@
-// Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
 
 package provider
 
@@ -19,7 +19,7 @@ func TestAlzArchetypeDataSource(t *testing.T) {
 			{
 				Config: testAccExampleDataSourceConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.alz_archetype.test", "id", "example-id"),
+					resource.TestCheckResourceAttr("data.alz_archetype.test", "name", "example"),
 				),
 			},
 		},
