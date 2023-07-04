@@ -9,6 +9,7 @@ import (
 	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -35,17 +36,26 @@ type ArchetypeDataSource struct {
 
 // ArchetypeDataSourceModel describes the data source data model.
 type ArchetypeDataSourceModel struct {
-	Name                    types.String                     `tfsdk:"name"`
-	ParentId                types.String                     `tfsdk:"parent_id"`
-	BaseArchetype           types.String                     `tfsdk:"base_archetype"`
-	DisplayName             types.String                     `tfsdk:"display_name"`
-	Defaults                ArchetypeDataSourceModelDefaults `tfsdk:"defaults"`
-	PolicyAssignmentsToAdd  map[string]PolicyAssignmentType  `tfsdk:"policy_assignments_to_add"`
-	AlzPolicyAssignments    types.Map                        `tfsdk:"alz_policy_assignments"`
-	AlzPolicyDefinitions    types.Map                        `tfsdk:"alz_policy_definitions"`
-	AlzPolicySetDefinitions types.Map                        `tfsdk:"alz_policy_set_definitions"`
-	AlzRoleDefinitions      types.Map                        `tfsdk:"alz_role_definitions"`
-	AlzRoleAssignments      types.Map                        `tfsdk:"alz_role_assignments"`
+	AlzPolicyAssignments         types.Map                        `tfsdk:"alz_policy_assignments"`
+	AlzPolicyDefinitions         types.Map                        `tfsdk:"alz_policy_definitions"`
+	AlzPolicySetDefinitions      types.Map                        `tfsdk:"alz_policy_set_definitions"`
+	AlzRoleAssignments           types.Map                        `tfsdk:"alz_role_assignments"`
+	AlzRoleDefinitions           types.Map                        `tfsdk:"alz_role_definitions"`
+	BaseArchetype                types.String                     `tfsdk:"base_archetype"`
+	Defaults                     ArchetypeDataSourceModelDefaults `tfsdk:"defaults"`
+	DisplayName                  types.String                     `tfsdk:"display_name"`
+	Name                         types.String                     `tfsdk:"name"`
+	ParentId                     types.String                     `tfsdk:"parent_id"`
+	PolicyAssignmentsToAdd       map[string]PolicyAssignmentType  `tfsdk:"policy_assignments_to_add"`
+	PolicyAssignmentsToRemove    types.Set                        `tfsdk:"policy_assignments_to_remove"`
+	PolicyDefinitionsToAdd       types.Set                        `tfsdk:"policy_definitions_to_add"`
+	PolicyDefinitionsToRemove    types.Set                        `tfsdk:"policy_definitions_to_remove"`
+	PolicySetDefinitionsToAdd    types.Set                        `tfsdk:"policy_set_definitions_to_add"`
+	PolicySetDefinitionsToRemove types.Set                        `tfsdk:"policy_set_definitions_to_remove"`
+	RoleAssignmentsToAdd         map[string]RoleAssignmentType    `tfsdk:"role_assignments_to_add"`
+	RoleDefinitionsToAdd         types.Set                        `tfsdk:"role_definitions_to_add"`
+	RoleDefinitionsToRemove      types.Set                        `tfsdk:"role_definitions_to_remove"`
+	SubscriptionIds              types.Set                        `tfsdk:"subscription_ids"`
 }
 
 type ArchetypeDataSourceModelDefaults struct {
@@ -69,6 +79,11 @@ type PolicyAssignmentNonComplianceMessage struct {
 	PolicyDefinitionReferenceId types.String `tfsdk:"policy_definition_reference_id"`
 }
 
+type RoleAssignmentType struct {
+	Definition types.String `tfsdk:"definition"`
+	ObjectId   types.String `tfsdk:"object_id"`
+}
+
 func (d *ArchetypeDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_archetype"
 }
@@ -84,6 +99,11 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 				Required:            true,
 			},
 
+			"display_name": schema.StringAttribute{
+				MarkdownDescription: "The display name of the management group.",
+				Optional:            true,
+			},
+
 			"parent_id": schema.StringAttribute{
 				MarkdownDescription: "The parent management group name.",
 				Required:            true,
@@ -94,40 +114,28 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 				Required:            true,
 			},
 
-			"policy_assignments_to_remove": schema.ListAttribute{
+			"policy_assignments_to_remove": schema.SetAttribute{
 				MarkdownDescription: "A list of policy assignment names to remove from the archetype.",
 				Optional:            true,
 				ElementType:         types.StringType,
-				Validators: []validator.List{
-					listvalidator.UniqueValues(),
-				},
 			},
 
-			"policy_definitions_to_remove": schema.ListAttribute{
+			"policy_definitions_to_remove": schema.SetAttribute{
 				MarkdownDescription: "A list of policy definition names to remove from the archetype.",
 				Optional:            true,
 				ElementType:         types.StringType,
-				Validators: []validator.List{
-					listvalidator.UniqueValues(),
-				},
 			},
 
-			"policy_set_definitions_to_remove": schema.ListAttribute{
+			"policy_set_definitions_to_remove": schema.SetAttribute{
 				MarkdownDescription: "A list of policy set definition names to remove from the archetype.",
 				Optional:            true,
 				ElementType:         types.StringType,
-				Validators: []validator.List{
-					listvalidator.UniqueValues(),
-				},
 			},
 
-			"role_definitions_to_remove": schema.ListAttribute{
+			"role_definitions_to_remove": schema.SetAttribute{
 				MarkdownDescription: "A list of role definition names to remove from the archetype.",
 				Optional:            true,
 				ElementType:         types.StringType,
-				Validators: []validator.List{
-					listvalidator.UniqueValues(),
-				},
 			},
 
 			"policy_assignments_to_add": schema.MapNestedAttribute{
@@ -222,31 +230,22 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 				},
 			},
 
-			"policy_definitions_to_add": schema.ListAttribute{
+			"policy_definitions_to_add": schema.SetAttribute{
 				MarkdownDescription: "A list of policy definition names to add to the archetype.",
 				Optional:            true,
 				ElementType:         types.StringType,
-				Validators: []validator.List{
-					listvalidator.UniqueValues(),
-				},
 			},
 
-			"policy_set_definitions_to_add": schema.ListAttribute{
+			"policy_set_definitions_to_add": schema.SetAttribute{
 				MarkdownDescription: "A list of policy set definition names to add to the archetype.",
 				Optional:            true,
 				ElementType:         types.StringType,
-				Validators: []validator.List{
-					listvalidator.UniqueValues(),
-				},
 			},
 
-			"role_definitions_to_add": schema.ListAttribute{
+			"role_definitions_to_add": schema.SetAttribute{
 				MarkdownDescription: "A list of role definition names to add to the archetype.",
 				Optional:            true,
 				ElementType:         types.StringType,
-				Validators: []validator.List{
-					listvalidator.UniqueValues(),
-				},
 			},
 
 			"role_assignments_to_add": schema.MapNestedAttribute{
@@ -287,12 +286,12 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 				},
 			},
 
-			"subscription_ids": schema.ListAttribute{
+			"subscription_ids": schema.SetAttribute{
 				MarkdownDescription: "A list of subscription ids to add to the management group.",
 				Optional:            true,
 				ElementType:         types.StringType,
-				Validators: []validator.List{
-					listvalidator.ValueStringsAre(
+				Validators: []validator.Set{
+					setvalidator.ValueStringsAre(
 						stringvalidator.RegexMatches(regexp.MustCompile(`^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$`), "The subscription id must be a valid lowercase UUID."),
 					),
 				},
