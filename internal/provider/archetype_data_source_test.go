@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
-func TestAccExampleDataSource(t *testing.T) {
+func TestAlzArchetypeDataSource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -19,7 +19,7 @@ func TestAccExampleDataSource(t *testing.T) {
 			{
 				Config: testAccExampleDataSourceConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.scaffolding_example.test", "id", "example-id"),
+					resource.TestCheckResourceAttr("data.alz_archetype.test", "id", "example-id"),
 				),
 			},
 		},
@@ -27,7 +27,12 @@ func TestAccExampleDataSource(t *testing.T) {
 }
 
 const testAccExampleDataSourceConfig = `
-data "scaffolding_example" "test" {
-  configurable_attribute = "example"
+data "alz_archetype" "test" {
+	name           = "example"
+  parent_id      = "test"
+	base_archetype = "root"
+	defaults = {
+		location = "westeurope"
+	}
 }
 `

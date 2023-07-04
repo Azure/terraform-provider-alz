@@ -35,21 +35,38 @@ type ArchetypeDataSource struct {
 
 // ArchetypeDataSourceModel describes the data source data model.
 type ArchetypeDataSourceModel struct {
-	Name                   types.String                     `tfsdk:"name"`
-	ParentId               types.String                     `tfsdk:"parent_id"`
-	BaseArchetype          types.String                     `tfsdk:"base_archetype"`
-	DisplayName            types.String                     `tfsdk:"display_name"`
-	Defaults               ArchetypeDataSourceModelDefaults `tfsdk:"defaults"`
-	PolicyAssignmentsToAdd []PolicyAssignmentType           `tfsdk:"policy_assignments_to_add"`
+	Name                    types.String                     `tfsdk:"name"`
+	ParentId                types.String                     `tfsdk:"parent_id"`
+	BaseArchetype           types.String                     `tfsdk:"base_archetype"`
+	DisplayName             types.String                     `tfsdk:"display_name"`
+	Defaults                ArchetypeDataSourceModelDefaults `tfsdk:"defaults"`
+	PolicyAssignmentsToAdd  map[string]PolicyAssignmentType  `tfsdk:"policy_assignments_to_add"`
+	AlzPolicyAssignments    types.Map                        `tfsdk:"alz_policy_assignments"`
+	AlzPolicyDefinitions    types.Map                        `tfsdk:"alz_policy_definitions"`
+	AlzPolicySetDefinitions types.Map                        `tfsdk:"alz_policy_set_definitions"`
+	AlzRoleDefinitions      types.Map                        `tfsdk:"alz_role_definitions"`
+	AlzRoleAssignments      types.Map                        `tfsdk:"alz_role_assignments"`
 }
 
 type ArchetypeDataSourceModelDefaults struct {
 	DefaultLocation      types.String `tfsdk:"location"`
-	DefaultLAWorkspaceId types.String `tfsdk:"log_analytics_workspace_id"`
+	DefaultLaWorkspaceId types.String `tfsdk:"log_analytics_workspace_id"`
 }
 
 type PolicyAssignmentType struct {
-	Parameters alztypes.PolicyParameterValue
+	DisplayName          types.String                           `tfsdk:"display_name"`
+	PolicyDefinitionName types.String                           `tfsdk:"policy_definition_name"`
+	PolicyDefinitionId   types.String                           `tfsdk:"policy_definition_id"`
+	EnforcementMode      types.String                           `tfsdk:"enforcement_mode"`
+	Identity             types.String                           `tfsdk:"identity"`
+	IdentityIds          []types.String                         `tfsdk:"identity_ids"`
+	NonComplianceMessage []PolicyAssignmentNonComplianceMessage `tfsdk:"non_compliance_message"`
+	Parameters           alztypes.PolicyParameterValue          `tfsdk:"parameters"`
+}
+
+type PolicyAssignmentNonComplianceMessage struct {
+	Message                     types.String `tfsdk:"message"`
+	PolicyDefinitionReferenceId types.String `tfsdk:"policy_definition_reference_id"`
 }
 
 func (d *ArchetypeDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -252,21 +269,19 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 				},
 			},
 
-			"defaults": schema.MapNestedAttribute{
+			"defaults": schema.SingleNestedAttribute{
 				MarkdownDescription: "Archetype default values",
 				Required:            true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"location": schema.StringAttribute{
-							MarkdownDescription: "Default location",
-							Required:            true,
-						},
-						"log_analytics_workspace_id": schema.StringAttribute{
-							MarkdownDescription: "Default Log Analytics workspace id",
-							Optional:            true,
-							Validators: []validator.String{
-								alzvalidators.ArmTypeResourceId("Microsoft.OperationalInsights", "workspaces"),
-							},
+				Attributes: map[string]schema.Attribute{
+					"location": schema.StringAttribute{
+						MarkdownDescription: "Default location",
+						Required:            true,
+					},
+					"log_analytics_workspace_id": schema.StringAttribute{
+						MarkdownDescription: "Default Log Analytics workspace id",
+						Optional:            true,
+						Validators: []validator.String{
+							alzvalidators.ArmTypeResourceId("Microsoft.OperationalInsights", "workspaces"),
 						},
 					},
 				},
@@ -281,6 +296,36 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 						stringvalidator.RegexMatches(regexp.MustCompile(`^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$`), "The subscription id must be a valid lowercase UUID."),
 					),
 				},
+			},
+
+			"alz_policy_assignments": schema.MapAttribute{
+				MarkdownDescription: "A map of generated policy assignments. The values are ARM JSON policy assignments.",
+				Computed:            true,
+				ElementType:         types.StringType,
+			},
+
+			"alz_policy_definitions": schema.MapAttribute{
+				MarkdownDescription: "A map of generated policy assignments. The values are ARM JSON policy definitions.",
+				Computed:            true,
+				ElementType:         types.StringType,
+			},
+
+			"alz_policy_set_definitions": schema.MapAttribute{
+				MarkdownDescription: "A map of generated policy assignments. The values are ARM JSON policy set definitions.",
+				Computed:            true,
+				ElementType:         types.StringType,
+			},
+
+			"alz_role_assignments": schema.MapAttribute{
+				MarkdownDescription: "A map of generated role assignments. The values are ARM JSON role assignments.",
+				Computed:            true,
+				ElementType:         types.StringType,
+			},
+
+			"alz_role_definitions": schema.MapAttribute{
+				MarkdownDescription: "A map of generated role assignments. The values are ARM JSON role definitions.",
+				Computed:            true,
+				ElementType:         types.StringType,
 			},
 		},
 	}

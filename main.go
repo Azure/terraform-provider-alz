@@ -39,8 +39,9 @@ func main() {
 
 	opts := providerserver.ServeOpts{
 		// TODO: Update this string with the published name of your provider.
-		Address: "registry.terraform.io/Azure/alz",
-		Debug:   debug,
+		Address:         "registry.terraform.io/Azure/alz",
+		Debug:           debug,
+		ProtocolVersion: 6,
 	}
 
 	err := providerserver.Serve(context.Background(), provider.New(version), opts)

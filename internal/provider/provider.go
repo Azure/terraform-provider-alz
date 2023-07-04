@@ -50,12 +50,12 @@ type AlzProviderModel struct {
 	Environment               types.String `tfsdk:"environment"`
 	LibDirs                   types.List   `tfsdk:"lib_dirs"`
 	OidcRequestToken          types.String `tfsdk:"oidc_request_token"`
-	OidcRequestUrl            types.String `tfsdk:"oidc_request_token"`
+	OidcRequestUrl            types.String `tfsdk:"oidc_request_url"`
 	OidcToken                 types.String `tfsdk:"oidc_token"`
 	OidcTokenFilePath         types.String `tfsdk:"oidc_token_file_path"`
 	SkipProviderRegistration  types.Bool   `tfsdk:"skip_provider_registration"`
 	TenantId                  types.String `tfsdk:"tenant_id"`
-	UseAlzLib                 types.Bool   `tfsdk:"use_alzlib"`
+	UseAlzLib                 types.Bool   `tfsdk:"use_alz_lib"`
 	UseCli                    types.Bool   `tfsdk:"use_cli"`
 	UseMsi                    types.Bool   `tfsdk:"use_msi"`
 	UseOidc                   types.Bool   `tfsdk:"use_oidc"`
@@ -166,12 +166,12 @@ func (p *AlzProvider) Schema(ctx context.Context, req provider.SchemaRequest, re
 				Optional:            true,
 			},
 
-			"use_cli": schema.StringAttribute{
+			"use_cli": schema.BoolAttribute{
 				MarkdownDescription: "Allow Azure CLI to be used for authentication.",
 				Optional:            true,
 			},
 
-			"use_msi": schema.StringAttribute{
+			"use_msi": schema.BoolAttribute{
 				MarkdownDescription: "Allow managed service identity to be used for authentication.",
 				Optional:            true,
 			},
@@ -245,7 +245,7 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 	case "china":
 		cloudConfig = cloud.AzureChina
 	default:
-		resp.Diagnostics.AddError("unknown `environment` specified: %q", env)
+		cloudConfig = cloud.AzurePublic
 		return
 	}
 
