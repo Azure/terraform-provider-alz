@@ -20,6 +20,8 @@ type PolicyParameterType struct {
 	// ... potentially other fields ...
 }
 
+// PolicyParameterMap is a map of string to any
+// and is used to represent ARM policy parameter values
 type PolicyParameterMap map[string]any
 
 func (t PolicyParameterType) Equal(o attr.Type) bool {
