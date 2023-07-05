@@ -20,6 +20,7 @@ func TestAlzArchetypeDataSource(t *testing.T) {
 				Config: testAccExampleDataSourceConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.alz_archetype.test", "name", "example"),
+					resource.TestCheckResourceAttr("data.alz_archetype.test", "alz_policy_assignments.#", "100"),
 				),
 			},
 		},
@@ -27,6 +28,8 @@ func TestAlzArchetypeDataSource(t *testing.T) {
 }
 
 const testAccExampleDataSourceConfig = `
+provider "alz" {}
+
 data "alz_archetype" "test" {
 	name           = "example"
   parent_id      = "test"

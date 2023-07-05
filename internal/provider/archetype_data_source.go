@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -16,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/matt-FFFFFF/alzlib"
 	"github.com/matt-FFFFFF/terraform-provider-alz/internal/alztypes"
@@ -366,22 +368,55 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 		return
 	}
 
-	// If applicable, this is a great opportunity to initialize any necessary
-	// provider client data and make a call using it.
-	// httpResp, err := d.client.Do(httpReq)
-	// if err != nil {
-	//     resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read example, got error: %s", err))
-	//     return
-	// }
+	// Set the id of the data source to the supplied name
+	data.Id = data.Name
 
-	// For the purposes of this example code, hardcoding a response value to
-	// save into the Terraform state.
-	data.Id = types.StringValue("example-id")
+	// Get the archetype
+	arch, ok := d.alz.Archetypes[data.BaseArchetype.ValueString()]
+	if !ok {
+		resp.Diagnostics.AddError("Archetype not found", fmt.Sprintf("Unable to find archetype %s", data.BaseArchetype.ValueString()))
+		return
+	}
 
-	// Write logs using the tflog package
-	// Documentation: https://terraform.io/plugin/log
-	tflog.Trace(ctx, "read a data source")
+	// Set well known policy values
+	wkpv := new(alzlib.WellKnownPolicyValues)
+	defloc := data.Defaults.DefaultLocation.ValueString()
+	if defloc == "" {
+		resp.Diagnostics.AddError("Default location not set", "Unable to find default location in the archetype attributes. This should have been caught by the schema validation.")
+	}
+	wkpv.DefaultLocation = defloc
+	wkpv.DefaultLogAnalyticsWorkspaceId = data.Defaults.DefaultLaWorkspaceId.ValueString()
+
+	// Add management group
+	if err := d.alz.Deployment.AddManagementGroup(data.Name.ValueString(), data.DisplayName.ValueString(), data.ParentId.ValueString(), arch.WithWellKnownPolicyValues(wkpv)); err != nil {
+		resp.Diagnostics.AddError("Unable to add management group", err.Error())
+		return
+	}
+
+	// Calculate values
+	tflog.Debug(ctx, "Caculating policy assignments")
+	pa, _ := calculatePolicyAssignments(d.alz.Deployment.MGs[data.Name.ValueString()].PolicyAssignments)
+	mv, diags := basetypes.NewMapValueFrom(ctx, types.StringType, pa)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	data.AlzPolicyAssignments = mv
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func calculatePolicyAssignments(policyAssignments map[string]*armpolicy.Assignment) (map[string]string, error) {
+	result := make(map[string]string, len(policyAssignments))
+
+	for k, v := range policyAssignments {
+		bytes, err := v.MarshalJSON()
+		if err != nil {
+			return nil, err
+		}
+		result[k] = string(bytes)
+	}
+
+	return result, nil
 }
