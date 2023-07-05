@@ -342,18 +342,18 @@ func (d *ArchetypeDataSource) Configure(ctx context.Context, req datasource.Conf
 		return
 	}
 
-	data, ok := req.ProviderData.(*AlzProviderData)
+	data, ok := req.ProviderData.(*alzlib.AlzLib)
 
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *AlzProviderData, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *alzlib.AlzLib, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
 	}
 
-	d.alz = data.AlzLib
+	d.alz = data
 }
 
 func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {

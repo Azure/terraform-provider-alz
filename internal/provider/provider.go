@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -26,18 +28,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/matt-FFFFFF/alzlib"
+)
+
+const (
+	userAgentBase = "AzureTerraformAlzProvider"
 )
 
 // Ensure ScaffoldingProvider satisfies various provider interfaces.
 var _ provider.Provider = &AlzProvider{}
-
-// AlzProviderData contains the data that is passed to resources/data sources
-// it contains a configured flag to indicate if the provider has been configured.
-type AlzProviderData struct {
-	configured bool
-	AlzLib     *alzlib.AlzLib
-}
 
 // AlzProvider defines the provider implementation.
 type AlzProvider struct {
@@ -45,6 +46,7 @@ type AlzProvider struct {
 	// provider is built and ran locally, and "test" when running acceptance
 	// testing.
 	version string
+	alzLib  *alzlib.AlzLib
 }
 
 // AlzProviderModel describes the provider data model.
@@ -80,12 +82,12 @@ func (p *AlzProvider) Schema(ctx context.Context, req provider.SchemaRequest, re
 
 		Attributes: map[string]schema.Attribute{
 			"allow_lib_overwrite": schema.BoolAttribute{
-				MarkdownDescription: "Whether to allow overwriting of the library by other lib directories.",
+				MarkdownDescription: "Whether to allow overwriting of the library by other lib directories. Default is `false`.",
 				Optional:            true,
 			},
 
 			"auxiliary_tenant_ids": schema.ListAttribute{
-				MarkdownDescription: "A list of auxiliary tenant ids which should be used.",
+				MarkdownDescription: "A list of auxiliary tenant ids which should be used. If not specified, value will be attempted to be read from the `ARM_AUXILIARY_TENANT_IDS` environment variable. When configuring from the environment, use a semicolon as a delimiter.",
 				ElementType:         types.StringType,
 				Optional:            true,
 				Validators: []validator.List{
@@ -96,18 +98,18 @@ func (p *AlzProvider) Schema(ctx context.Context, req provider.SchemaRequest, re
 			},
 
 			"client_certificate_password": schema.StringAttribute{
-				MarkdownDescription: "The password associated with the client certificate. For use when authenticating as a service principal using a client certificate",
+				MarkdownDescription: "The password associated with the client certificate. For use when authenticating as a service principal using a client certificate. If not specified, value will be attempted to be read from the `ARM_CLIENT_CERTIFICATE_PASSWORD` environment variable.",
 				Optional:            true,
 				Sensitive:           true,
 			},
 
 			"client_certificate_path": schema.StringAttribute{
-				MarkdownDescription: "The path to the client certificate associated with the service principal for use when authenticating as a service principal using a client certificate.",
+				MarkdownDescription: "The path to the client certificate associated with the service principal for use when authenticating as a service principal using a client certificate. If not specified, value will be attempted to be read from the `ARM_CLIENT_CERTIFICATE_PATH` environment variable.",
 				Optional:            true,
 			},
 
 			"client_id": schema.StringAttribute{
-				MarkdownDescription: "The client id which should be used.",
+				MarkdownDescription: "The client id which should be used. For use when authenticating as a service principal. If not specified, value will be attempted to be read from the `ARM_CLIENT_ID` environment variable.",
 				Optional:            true,
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(regexp.MustCompile(`^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$`), "The client id must be a valid lowercase UUID."),
@@ -115,13 +117,13 @@ func (p *AlzProvider) Schema(ctx context.Context, req provider.SchemaRequest, re
 			},
 
 			"client_secret": schema.StringAttribute{
-				MarkdownDescription: "The client secret which should be used. For use when authenticating as a service principal using a client secret.",
+				MarkdownDescription: "The client secret which should be used. For use when authenticating as a service principal using a client secret. If not specified, value will be attempted to be read from the `ARM_CLIENT_SECRET` environment variable.",
 				Optional:            true,
 				Sensitive:           true,
 			},
 
 			"environment": schema.StringAttribute{
-				MarkdownDescription: "The cloud environment which should be used. Possible values are `public`, `usgovernment` and `china`. Defaults to public.",
+				MarkdownDescription: "The cloud environment which should be used. Possible values are `public`, `usgovernment` and `china`. Defaults to `public`. If not specified, value will be attempted to be read from the `ARM_ENVIRONMENT` environment variable.",
 				Optional:            true,
 				Validators: []validator.String{
 					stringvalidator.OneOf("public", "usgovernment", "china"),
@@ -135,34 +137,34 @@ func (p *AlzProvider) Schema(ctx context.Context, req provider.SchemaRequest, re
 			},
 
 			"oidc_request_token": schema.StringAttribute{
-				MarkdownDescription: "The bearer token for the request to the OIDC provider. For use when authenticating using OpenID Connect.",
+				MarkdownDescription: "The bearer token for the request to the OIDC provider. For use when authenticating using OpenID Connect. If not specified, value will be attempted to be read from the first non-empty value of the `ARM_OIDC_REQUEST_TOKEN` and `ACTIONS_ID_TOKEN_REQUEST_TOKEN` environment variables.",
 				Optional:            true,
 				Sensitive:           true,
 			},
 
 			"oidc_request_url": schema.StringAttribute{
-				MarkdownDescription: "The URL for the OIDC provider from which to request an id token. For use when authenticating as a service principal using OpenID Connect.",
+				MarkdownDescription: "The URL for the OIDC provider from which to request an id token. For use when authenticating as a service principal using OpenID Connect. If not specified, value will be attempted to be read from the first non-empty value of the `ARM_OIDC_REQUEST_URL` and `ACTIONS_ID_TOKEN_REQUEST_URL` environment variables.",
 				Optional:            true,
 			},
 
 			"oidc_token": schema.StringAttribute{
-				MarkdownDescription: "The OIDC id token for use when authenticating as a service principal using OpenID Connect.",
+				MarkdownDescription: "The OIDC id token for use when authenticating as a service principal using OpenID Connect. If not specified, value will be attempted to be read from the `ARM_OIDC_TOKEN` environment variable.",
 				Optional:            true,
 				Sensitive:           true,
 			},
 
 			"oidc_token_file_path": schema.StringAttribute{
-				MarkdownDescription: "The path to a file containing an OIDC id token for use when authenticating using OpenID Connect.",
+				MarkdownDescription: "The path to a file containing an OIDC id token for use when authenticating using OpenID Connect. If not specified, value will be attempted to be read from the `ARM_OIDC_TOKEN_FILE_PATH` environment variable.",
 				Optional:            true,
 			},
 
 			"skip_provider_registration": schema.BoolAttribute{
-				MarkdownDescription: "Should the provider skip registering all of the resource providers that it supports, if they're not already registered?",
+				MarkdownDescription: "Should the provider skip registering all of the resource providers that it supports, if they're not already registered? Default is `false`. If not specified, value will be attempted to be read from the `ARM_SKIP_PROVIDER_REGISTRATION` environment variable.",
 				Optional:            true,
 			},
 
 			"tenant_id": schema.StringAttribute{
-				MarkdownDescription: "The Tenant ID which should be used.",
+				MarkdownDescription: "The Tenant ID which should be used. If not specified, value will be attempted to be read from the `ARM_TENANT_ID` environment variable.",
 				Optional:            true,
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(regexp.MustCompile(`^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$`), "The tenant id must be a valid lowercase UUID."),
@@ -170,22 +172,22 @@ func (p *AlzProvider) Schema(ctx context.Context, req provider.SchemaRequest, re
 			},
 
 			"use_alz_lib": schema.BoolAttribute{
-				MarkdownDescription: "Use the built-in ALZ library to resolve archetypes.",
+				MarkdownDescription: "Use the built-in ALZ library to resolve archetypes. Default is `true`.",
 				Optional:            true,
 			},
 
 			"use_cli": schema.BoolAttribute{
-				MarkdownDescription: "Allow Azure CLI to be used for authentication.",
+				MarkdownDescription: "Allow Azure CLI to be used for authentication. Default is `true`. If not specified, value will be attempted to be read from the `ARM_USE_CLI` environment variable.",
 				Optional:            true,
 			},
 
 			"use_msi": schema.BoolAttribute{
-				MarkdownDescription: "Allow managed service identity to be used for authentication.",
+				MarkdownDescription: "Allow managed service identity to be used for authentication. Default is `false`. If not specified, value will be attempted to be read from the `ARM_USE_MSI` environment variable.",
 				Optional:            true,
 			},
 
 			"use_oidc": schema.BoolAttribute{
-				MarkdownDescription: "Allow OpenID Connect to be used for authentication.",
+				MarkdownDescription: "Allow OpenID Connect to be used for authentication. Default is `false`. If not specified, value will be attempted to be read from the `ARM_USE_OIDC` environment variable.",
 				Optional:            true,
 			},
 		},
@@ -193,11 +195,16 @@ func (p *AlzProvider) Schema(ctx context.Context, req provider.SchemaRequest, re
 }
 
 func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
-	if providerData, ok := resp.DataSourceData.(*AlzProviderData); ok {
-		if providerData.configured {
-			return
-		}
+	tflog.Debug(ctx, "Provider configuration started")
+
+	if p.alzLib != nil {
+		tflog.Debug(ctx, "Provider AlzLib already present, skipping configuration")
+		resp.DataSourceData = p.alzLib
+		resp.ResourceData = p.alzLib
+		return
 	}
+
+	tflog.Debug(ctx, "Provider AlzLib not present, beginning configuration")
 
 	var data AlzProviderModel
 
@@ -206,127 +213,31 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	var auxTenants []string
-	if !data.AuxiliaryTenantIds.IsNull() {
-		if avs := data.AuxiliaryTenantIds.Elements(); len(avs) > 0 {
-			auxTenants = make([]string, len(avs))
-			for i, v := range avs {
-				auxTenants[i] = v.String()
-			}
-		} else if v := os.Getenv("ARM_AUXILIARY_TENANT_IDS"); v != "" {
-			auxTenants = strings.Split(v, ";")
-		}
-	}
-
-	type env2type struct {
-		tp  types.String
-		env []string
-	}
-
 	// Read the environment variables and set in data
 	// if the data is not already set and the environment variable is set
-	e2t := []env2type{
-		{data.ClientCertificatePassword, []string{"ARM_CLIENT_CERTIFICATE_PASSWORD"}},
-		{data.ClientCertificatePath, []string{"ARM_CLIENT_CERTIFICATE_PATH"}},
-		{data.ClientId, []string{"ARM_CLIENT_ID"}},
-		{data.ClientSecret, []string{"ARM_CLIENT_SECRET"}},
-		{data.Environment, []string{"ARM_ENVIRONMENT"}},
-		{data.OidcRequestToken, []string{"ARM_OIDC_REQUEST_TOKEN", "ACTIONS_ID_TOKEN_REQUEST_TOKEN"}},
-		{data.OidcRequestUrl, []string{"ARM_OIDC_REQUEST_URL", "ACTIONS_ID_TOKEN_REQUEST_URL"}},
-		{data.OidcToken, []string{"ARM_OIDC_TOKEN"}},
-		{data.OidcTokenFilePath, []string{"ARM_OIDC_TOKEN_FILE_PATH"}},
-		{data.TenantId, []string{"ARM_TENANT_ID"}},
+	configureFromEnvironment(&data)
+
+	// Set the go sdk's azidentity specific environment variables
+	if resp.Diagnostics = append(resp.Diagnostics, configureAzIdentityEnvironment(ctx, &data)...); resp.Diagnostics.HasError() {
+		return
 	}
 
-	for _, e := range e2t {
-		if e.tp.IsNull() {
-			v := getFirstSetEnvVar(e.env...)
-			if v == "" {
-				continue
-			}
-			e.tp = types.StringValue(v)
-		}
+	// Configure aux tenant ids from config and environment
+	if resp.Diagnostics = append(resp.Diagnostics, configureAuxTenants(ctx, &data)...); resp.Diagnostics.HasError() {
+		return
 	}
 
-	if data.UseCli.IsNull() {
-		data.UseCli = types.BoolValue(true)
-	}
+	// Set the default values if not already set in the config or by environment
+	configureDefaults(&data)
 
-	var cloudConfig cloud.Configuration
-	env := data.Environment.String()
-	switch strings.ToLower(env) {
-	case "public":
-		cloudConfig = cloud.AzurePublic
-	case "usgovernment":
-		cloudConfig = cloud.AzureGovernment
-	case "china":
-		cloudConfig = cloud.AzureChina
-	default:
-		cloudConfig = cloud.AzurePublic
-	}
-
-	// Maps the auth related environment variables used in the provider to what azidentity honors.
-	if !data.TenantId.IsNull() {
-		// #nosec G104
-		os.Setenv("AZURE_TENANT_ID", data.TenantId.ValueString())
-	}
-	if !data.ClientId.IsNull() {
-		// #nosec G104
-		os.Setenv("AZURE_CLIENT_ID", data.ClientId.ValueString())
-	}
-	if !data.ClientSecret.IsNull() {
-		// #nosec G104
-		os.Setenv("AZURE_CLIENT_SECRET", data.ClientSecret.ValueString())
-	}
-	if !data.ClientCertificatePath.IsNull() {
-		// #nosec G104
-		os.Setenv("AZURE_CLIENT_CERTIFICATE_PATH", data.ClientCertificatePath.String())
-	}
-	if !data.ClientCertificatePassword.IsNull() {
-		// #nosec G104
-		os.Setenv("AZURE_CLIENT_CERTIFICATE_PASSWORD", data.ClientCertificatePassword.String())
-	}
-	if len(auxTenants) != 0 {
-		// #nosec G104
-		os.Setenv("AZURE_ADDITIONALLY_ALLOWED_TENANTS", strings.Join(auxTenants, ";"))
-	}
-
-	option := &azidentity.DefaultAzureCredentialOptions{
-		AdditionallyAllowedTenants: auxTenants,
-		ClientOptions: azcore.ClientOptions{
-			Cloud: cloudConfig,
-		},
-		TenantID: data.TenantId.ValueString(),
-	}
-
-	cred, d := newDefaultAzureCredential(data, option)
-	resp.Diagnostics.Append(d...)
+	// Create the AlzLib
+	alz, diags := configureAlzLib(ctx, data, fmt.Sprintf("%s/%s", userAgentBase, p.version))
+	resp.Diagnostics = append(resp.Diagnostics, diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	popts := new(policy.ClientOptions)
-	popts.PerRetryPolicies = append(popts.PerRetryPolicies, withUserAgent(fmt.Sprintf("AzureTerraformAlzProvider/%s", p.version)))
-
-	alz := alzlib.NewAlzLib()
-	cf, err := armpolicy.NewClientFactory("", cred, popts)
-	if err != nil {
-		resp.Diagnostics.AddError("failed to create Azure Policy client factory: %v", err.Error())
-		return
-	}
-	alz.AddPolicyClient(cf)
-
-	if data.UseAlzLib.IsNull() {
-		data.UseAlzLib = types.BoolValue(true)
-	}
-
-	if data.AllowLibOverwrite.IsNull() {
-		data.AllowLibOverwrite = types.BoolValue(false)
-	}
-
-	alz.Options.AllowOverwrite = data.AllowLibOverwrite.ValueBool()
-
+	// Create the fs.FS library file systems based on the configuration
 	libdirfs := make([]fs.FS, 0)
 	if data.UseAlzLib.ValueBool() {
 		libdirfs = append(libdirfs, alzlib.Lib)
@@ -340,15 +251,16 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 	if err := alz.Init(ctx, libdirfs...); err != nil {
-		resp.Diagnostics.AddError("failed to initialize AlzLib: %v", err.Error())
+		resp.Diagnostics.AddError("Failed to initialize AlzLib", err.Error())
 		return
 	}
 
-	providerData := new(AlzProviderData)
-	providerData.AlzLib = alz
-	providerData.configured = true
-	resp.DataSourceData = providerData
-	resp.ResourceData = providerData
+	// store the alz pointer in the provider struct so we don't have to do all this work every time `.Configure`` is called
+	// It takes approx 30 seconds each time and is called 4-5 time during a single acceptance test.
+	p.alzLib = alz
+	resp.DataSourceData = alz
+	resp.ResourceData = alz
+	tflog.Debug(ctx, "Provider configuration finished")
 }
 
 func (p *AlzProvider) Resources(ctx context.Context) []func() resource.Resource {
@@ -376,6 +288,226 @@ func getFirstSetEnvVar(envVars ...string) string {
 		}
 	}
 	return ""
+}
+
+// configureAuxTenants gets a slice of the auxiliary tenant IDs from the provider data,
+// or the environment variable `ARM_AUXILIARY_TENANT_IDS` if the provider data is not set.
+func configureAuxTenants(ctx context.Context, data *AlzProviderModel) diag.Diagnostics {
+	var auxTenants []string
+	if data.AuxiliaryTenantIds.IsNull() {
+		if v := os.Getenv("ARM_AUXILIARY_TENANT_IDS"); v != "" {
+			auxTenants = strings.Split(v, ";")
+		}
+		var diags diag.Diagnostics
+		data.AuxiliaryTenantIds, diags = types.ListValueFrom(ctx, types.StringType, auxTenants)
+		return diags
+	}
+	return nil
+}
+
+// configureFromEnvironment sets the provider data from environment variables
+func configureFromEnvironment(data *AlzProviderModel) {
+	if val := getFirstSetEnvVar("ARM_CLIENT_CERTIFICATE_PASSWORD"); val != "" && data.ClientCertificatePassword.IsNull() {
+		data.ClientCertificatePassword = types.StringValue(val)
+	}
+
+	if val := getFirstSetEnvVar("ARM_CLIENT_CERTIFICATE_PATH"); val != "" && data.ClientCertificatePath.IsNull() {
+		data.ClientCertificatePath = types.StringValue(val)
+	}
+
+	if val := getFirstSetEnvVar("ARM_CLIENT_ID"); val != "" && data.ClientId.IsNull() {
+		data.ClientId = types.StringValue(val)
+	}
+
+	if val := getFirstSetEnvVar("ARM_CLIENT_SECRET"); val != "" && data.ClientSecret.IsNull() {
+		data.ClientSecret = types.StringValue(val)
+	}
+
+	if val := getFirstSetEnvVar("ARM_ENVIRONMENT"); val != "" && data.Environment.IsNull() {
+		data.Environment = types.StringValue(val)
+	}
+
+	if val := getFirstSetEnvVar("ARM_OIDC_REQUEST_TOKEN", "ACTIONS_ID_TOKEN_REQUEST_TOKEN"); val != "" && data.OidcRequestToken.IsNull() {
+		data.OidcRequestToken = types.StringValue(val)
+	}
+
+	if val := getFirstSetEnvVar("ARM_OIDC_REQUEST_URL", "ACTIONS_ID_TOKEN_REQUEST_URL"); val != "" && data.OidcRequestUrl.IsNull() {
+		data.OidcRequestUrl = types.StringValue(val)
+	}
+
+	if val := getFirstSetEnvVar("ARM_OIDC_TOKEN"); val != "" && data.OidcToken.IsNull() {
+		data.OidcToken = types.StringValue(val)
+	}
+
+	if val := getFirstSetEnvVar("ARM_OIDC_TOKEN_FILE_PATH"); val != "" && data.OidcTokenFilePath.IsNull() {
+		data.OidcTokenFilePath = types.StringValue(val)
+	}
+
+	if val := getFirstSetEnvVar("ARM_TENANT_ID"); val != "" && data.TenantId.IsNull() {
+		data.TenantId = types.StringValue(val)
+	}
+
+	if val := getFirstSetEnvVar("ARM_USE_CLI"); val != "" && data.UseCli.IsNull() {
+		data.UseCli = types.BoolValue(str2Bool(val))
+	}
+
+	if val := getFirstSetEnvVar("ARM_USE_MSI"); val != "" && data.UseMsi.IsNull() {
+		data.UseMsi = types.BoolValue(str2Bool(val))
+	}
+
+	if val := getFirstSetEnvVar("ARM_USE_OIDC"); val != "" && data.UseOidc.IsNull() {
+		data.UseOidc = types.BoolValue(str2Bool(val))
+	}
+
+	if val := getFirstSetEnvVar("ARM_SKIP_PROVIDER_REGISTRATION"); val != "" && data.SkipProviderRegistration.IsNull() {
+		data.SkipProviderRegistration = types.BoolValue(str2Bool(val))
+	}
+}
+
+// str2Bool converts a string to a bool, returning false if the string is not a valid bool.
+func str2Bool(val string) bool {
+	b, err := strconv.ParseBool(val)
+	if err != nil {
+		b = false
+	}
+	return b
+}
+
+// configureAzIdentityEnvironment sets the environment variables used by go Azure sdk's azidentity package.
+func configureAzIdentityEnvironment(ctx context.Context, data *AlzProviderModel) diag.Diagnostics {
+	// Maps the auth related environment variables used in the provider to what azidentity honors.
+	if !data.TenantId.IsNull() {
+		// #nosec G104
+		os.Setenv("AZURE_TENANT_ID", data.TenantId.ValueString())
+	}
+	if !data.ClientId.IsNull() {
+		// #nosec G104
+		os.Setenv("AZURE_CLIENT_ID", data.ClientId.ValueString())
+	}
+	if !data.ClientSecret.IsNull() {
+		// #nosec G104
+		os.Setenv("AZURE_CLIENT_SECRET", data.ClientSecret.ValueString())
+	}
+	if !data.ClientCertificatePath.IsNull() {
+		// #nosec G104
+		os.Setenv("AZURE_CLIENT_CERTIFICATE_PATH", data.ClientCertificatePath.ValueString())
+	}
+	if !data.ClientCertificatePassword.IsNull() {
+		// #nosec G104
+		os.Setenv("AZURE_CLIENT_CERTIFICATE_PASSWORD", data.ClientCertificatePassword.ValueString())
+	}
+	if len(data.AuxiliaryTenantIds.Elements()) != 0 {
+		auxTenants := listElementsToStrings(data.AuxiliaryTenantIds.Elements())
+		// #nosec G104
+		os.Setenv("AZURE_ADDITIONALLY_ALLOWED_TENANTS", strings.Join(auxTenants, ";"))
+	}
+	return nil
+}
+
+// listElementsToStrings converts a list of attr.Value to a list of strings
+func listElementsToStrings(list []attr.Value) []string {
+	if len(list) == 0 {
+		return nil
+	}
+	strings := make([]string, len(list))
+	for i, v := range list {
+		sv, ok := v.(basetypes.StringValue)
+		if !ok {
+			return nil
+		}
+		strings[i] = sv.ValueString()
+	}
+	return strings
+}
+
+// configureAlzLib configures the alzlib for use by the provider
+func configureAlzLib(ctx context.Context, data AlzProviderModel, userAgent string) (*alzlib.AlzLib, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	var cloudConfig cloud.Configuration
+	env := data.Environment.ValueString()
+	switch strings.ToLower(env) {
+	case "public":
+		cloudConfig = cloud.AzurePublic
+	case "usgovernment":
+		cloudConfig = cloud.AzureGovernment
+	case "china":
+		cloudConfig = cloud.AzureChina
+	default:
+		diags.AddError("Could not determine cloud configuration", "Valid values are 'public', 'usgovernment', or 'china'")
+		return nil, diags
+	}
+
+	auxTenants := listElementsToStrings(data.AuxiliaryTenantIds.Elements())
+
+	option := &azidentity.DefaultAzureCredentialOptions{
+		AdditionallyAllowedTenants: auxTenants,
+		ClientOptions: azcore.ClientOptions{
+			Cloud: cloudConfig,
+		},
+		TenantID: data.TenantId.ValueString(),
+	}
+
+	cred, d := newDefaultAzureCredential(data, option)
+	diags = append(diags, d...)
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	popts := new(policy.ClientOptions)
+	popts.DisableRPRegistration = data.SkipProviderRegistration.ValueBool()
+	popts.PerRetryPolicies = append(popts.PerRetryPolicies, withUserAgent(userAgent))
+
+	alz := alzlib.NewAlzLib()
+	cf, err := armpolicy.NewClientFactory("", cred, popts)
+	if err != nil {
+		diags.AddError("failed to create Azure Policy client factory: %v", err.Error())
+		return nil, diags
+	}
+
+	alz.AddPolicyClient(cf)
+
+	alz.Options.AllowOverwrite = data.AllowLibOverwrite.ValueBool()
+
+	return alz, diags
+}
+
+// configureDefaults sets default values if they aren't already set
+func configureDefaults(data *AlzProviderModel) {
+	// Use azure public cloud by default
+	if data.Environment.IsNull() {
+		data.Environment = types.StringValue("public")
+	}
+
+	// Do not skip provider registration by default
+	if data.SkipProviderRegistration.IsNull() {
+		data.SkipProviderRegistration = types.BoolValue(false)
+	}
+
+	// Do not use OIDC auth by default
+	if data.UseOidc.IsNull() {
+		data.UseOidc = types.BoolValue(false)
+	}
+
+	// Do not use MSI auth by default
+	if data.UseMsi.IsNull() {
+		data.UseMsi = types.BoolValue(false)
+	}
+
+	// Use CLI auth by default
+	if data.UseCli.IsNull() {
+		data.UseCli = types.BoolValue(true)
+	}
+
+	// Use internal AlzLib reference library by default
+	if data.UseAlzLib.IsNull() {
+		data.UseAlzLib = types.BoolValue(true)
+	}
+
+	// Do not allow library overwrite by default
+	if data.AllowLibOverwrite.IsNull() {
+		data.AllowLibOverwrite = types.BoolValue(false)
+	}
 }
 
 func newDefaultAzureCredential(data AlzProviderModel, options *azidentity.DefaultAzureCredentialOptions) (*azidentity.ChainedTokenCredential, diag.Diagnostics) {

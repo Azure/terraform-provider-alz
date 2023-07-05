@@ -1,5 +1,6 @@
 {
   "go.testEnvVars": {
-    "TF_ACC": "1"
+    "TF_ACC": "1",
+    "TF_LOG": "INFO"
   }
 }
