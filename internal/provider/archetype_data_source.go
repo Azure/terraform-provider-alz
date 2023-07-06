@@ -12,12 +12,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/matt-FFFFFF/alzlib"
 	"github.com/matt-FFFFFF/terraform-provider-alz/internal/alztypes"
@@ -36,9 +36,11 @@ type ArchetypeDataSource struct {
 	alz *alzlib.AlzLib
 }
 
+var _ attr.Value = &types.Map{}
+
 // ArchetypeDataSourceModel describes the data source data model.
 type ArchetypeDataSourceModel struct {
-	AlzPolicyAssignments         types.Map                        `tfsdk:"alz_policy_assignments"`
+	AlzPolicyAssignments         map[string]string                `tfsdk:"alz_policy_assignments"`
 	AlzPolicyDefinitions         types.Map                        `tfsdk:"alz_policy_definitions"`
 	AlzPolicySetDefinitions      types.Map                        `tfsdk:"alz_policy_set_definitions"`
 	AlzRoleAssignments           types.Map                        `tfsdk:"alz_role_assignments"`
@@ -396,12 +398,7 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 	// Calculate values
 	tflog.Debug(ctx, "Caculating policy assignments")
 	pa, _ := calculatePolicyAssignments(d.alz.Deployment.MGs[data.Name.ValueString()].PolicyAssignments)
-	mv, diags := basetypes.NewMapValueFrom(ctx, types.StringType, pa)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	data.AlzPolicyAssignments = mv
+	data.AlzPolicyAssignments = pa
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
