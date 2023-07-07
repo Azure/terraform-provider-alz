@@ -14,7 +14,7 @@
     "enforcementMode": null,
     "nonComplianceMessages": [
       {
-        "message": "Advanced Threat Protection {enforcementMode} be enabled on open-source relational databases."
+        "message": "Test {enforcementMode}"
       }
     ],
     "parameters": {},
