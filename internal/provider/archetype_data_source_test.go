@@ -13,11 +13,6 @@ func TestAlzArchetypeDataSource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		// WorkingDir: func() string {
-		// 	wd, _ := os.Getwd()
-		// 	return filepath.Join(wd + "/../../")
-
-		// }(),
 		Steps: []resource.TestStep{
 			// Read testing
 			{
