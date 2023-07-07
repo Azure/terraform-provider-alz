@@ -13,14 +13,18 @@ func TestAlzArchetypeDataSource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		// WorkingDir: func() string {
+		// 	wd, _ := os.Getwd()
+		// 	return filepath.Join(wd + "/../../")
 
+		// }(),
 		Steps: []resource.TestStep{
 			// Read testing
 			{
 				Config: testAccExampleDataSourceConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.alz_archetype.test", "name", "example"),
-					resource.TestCheckResourceAttr("data.alz_archetype.test", "alz_policy_assignments.#", "100"),
+					resource.TestCheckResourceAttr("data.alz_archetype.test", "alz_policy_assignments.%", "1"),
 				),
 			},
 		},
@@ -28,7 +32,14 @@ func TestAlzArchetypeDataSource(t *testing.T) {
 }
 
 const testAccExampleDataSourceConfig = `
-provider "alz" {}
+provider "alz" {
+	use_alz_lib = false
+	lib_dirs = [
+		"./testdata/tfacc_lib",
+	]
+}
+
+
 
 data "alz_archetype" "test" {
 	name           = "example"
@@ -36,6 +47,7 @@ data "alz_archetype" "test" {
 	base_archetype = "root"
 	defaults = {
 		location = "westeurope"
+		log_analytics_workspace_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg/providers/Microsoft.OperationalInsights/workspaces/la"
 	}
 }
 `

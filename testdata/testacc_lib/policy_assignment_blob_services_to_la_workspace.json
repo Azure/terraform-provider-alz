@@ -1,0 +1,24 @@
+{
+  "type": "Microsoft.Authorization/policyAssignments",
+  "apiVersion": "2022-06-01",
+  "name": "BlobServicesDiagnosticsLogsToWorkspace",
+  "location": "${default_location}",
+  "dependsOn": [],
+  "identity": {
+    "type": "SystemAssigned"
+  },
+  "properties": {
+    "description": "Deploys the diagnostic settings for Blob Services to stream resource logs to a Log Analytics workspace when any blob Service which is missing this diagnostic settings is created or updated.",
+    "displayName": "Configure diagnostic settings for Blob Services to Log Analytics workspace",
+    "policyDefinitionId": "/providers/Microsoft.Authorization/policySetDefinitions/BlobServicesDiagnosticsLogsToWorkspace",
+    "enforcementMode": null,
+    "nonComplianceMessages": [
+      {
+        "message": "Advanced Threat Protection {enforcementMode} be enabled on open-source relational databases."
+      }
+    ],
+    "parameters": {},
+    "scope": "${current_scope_resource_id}",
+    "notScopes": []
+  }
+}
