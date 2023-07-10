@@ -10,7 +10,7 @@
   "properties": {
     "description": "Deploys the diagnostic settings for Blob Services to stream resource logs to a Log Analytics workspace when any blob Service which is missing this diagnostic settings is created or updated.",
     "displayName": "Configure diagnostic settings for Blob Services to Log Analytics workspace",
-    "policyDefinitionId": "/providers/Microsoft.Authorization/policySetDefinitions/BlobServicesDiagnosticsLogsToWorkspace",
+    "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/BlobServicesDiagnosticsLogsToWorkspace",
     "enforcementMode": null,
     "nonComplianceMessages": [
       {

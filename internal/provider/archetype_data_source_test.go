@@ -14,7 +14,6 @@ func TestAlzArchetypeDataSource(t *testing.T) {
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Read testing
 			{
 				Config: testAccExampleDataSourceConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -30,7 +29,7 @@ const testAccExampleDataSourceConfig = `
 provider "alz" {
 	use_alz_lib = false
 	lib_dirs = [
-		"./testdata/tfacc_lib",
+		"/home/matt/code/terraform-provider-alz/internal/provider/testdata/testacc_lib",
 	]
 }
 
@@ -39,7 +38,7 @@ provider "alz" {
 data "alz_archetype" "test" {
 	name           = "example"
   parent_id      = "test"
-	base_archetype = "root"
+	base_archetype = "test"
 	defaults = {
 		location = "westeurope"
 		log_analytics_workspace_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg/providers/Microsoft.OperationalInsights/workspaces/la"

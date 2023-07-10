@@ -123,6 +123,10 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 			"parent_id": schema.StringAttribute{
 				MarkdownDescription: "The parent management group name.",
 				Required:            true,
+				Validators: []validator.String{
+					stringvalidator.RegexMatches(regexp.MustCompile("^[().a-zA-Z0-9_-]{1,90}$"), "Max length is 90 characters. ID can only contain an letter, digit, -, _, (, ), ."),
+					stringvalidator.RegexMatches(regexp.MustCompile("^.*[^.]$"), "ID cannot end with a period"),
+				},
 			},
 
 			"base_archetype": schema.StringAttribute{
@@ -394,7 +398,13 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 	// It should be identical. If it is not then error as the user has duplicate management group names.
 	if _, ok := d.alz.Deployment.MGs[mgname]; !ok {
 		tflog.Debug(ctx, "Add management group")
-		if err := d.alz.Deployment.AddManagementGroup(mgname, data.DisplayName.ValueString(), "", arch.WithWellKnownPolicyValues(wkpv)); err != nil {
+		external := false
+		parent := data.ParentId.ValueString()
+		if _, ok := d.alz.Deployment.MGs[parent]; !ok {
+			external = true
+		}
+
+		if err := d.alz.Deployment.AddManagementGroup(mgname, data.DisplayName.ValueString(), data.ParentId.ValueString(), external, arch.WithWellKnownPolicyValues(wkpv)); err != nil {
 			resp.Diagnostics.AddError("Unable to add management group", err.Error())
 			return
 		}

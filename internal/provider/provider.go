@@ -244,8 +244,16 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 		libdirfs = append(libdirfs, alzlib.Lib)
 	}
 	if len(data.LibDirs.Elements()) != 0 {
-		for _, v := range data.LibDirs.Elements() {
-			libdirfs = append(libdirfs, os.DirFS(v.String()))
+		// We turn the list of elements into a list of strings,
+		// if we use the Elements() method, we get a list of *attr.Value and the .String() method
+		// results in a string wrapped in double quotes.
+		dirs := make([]string, 0, len(data.LibDirs.Elements()))
+		if diags := data.LibDirs.ElementsAs(ctx, &dirs, false); diags.HasError() {
+			resp.Diagnostics = append(resp.Diagnostics, diags...)
+			return
+		}
+		for _, v := range dirs {
+			libdirfs = append(libdirfs, os.DirFS(v))
 		}
 	}
 
