@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
 
-// Ensure the implementation satisfies the expected interfaces
+// Ensure the implementation satisfies the expected interfaces.
 var _ basetypes.StringTypable = PolicyParameterType{}
 
 type PolicyParameterType struct {
@@ -24,7 +24,7 @@ type PolicyParameterType struct {
 }
 
 // PolicyParameterMap is a map of string to any
-// and is used to represent ARM policy parameter values
+// and is used to represent ARM policy parameter values.
 type PolicyParameterMap map[string]any
 
 func (t PolicyParameterType) Equal(o attr.Type) bool {
@@ -42,7 +42,7 @@ func (t PolicyParameterType) String() string {
 }
 
 func (t PolicyParameterType) ValueFromString(ctx context.Context, in basetypes.StringValue) (basetypes.StringValuable, diag.Diagnostics) {
-	// CustomStringValue defined in the value type section
+	// CustomStringValue defined in the value type section.
 	value := PolicyParameterValue{
 		StringValue: in,
 	}
@@ -73,11 +73,11 @@ func (t PolicyParameterType) ValueFromTerraform(ctx context.Context, in tftypes.
 }
 
 func (t PolicyParameterType) ValueType(ctx context.Context) attr.Value {
-	// PolicyParameterType defined in the value type section
+	// PolicyParameterType defined in the value type section.
 	return PolicyParameterValue{}
 }
 
-// PolicyParameterType defined in the schema type section
+// PolicyParameterType defined in the schema type section.
 func (t PolicyParameterType) Validate(ctx context.Context, value tftypes.Value, valuePath path.Path) diag.Diagnostics {
 	if value.IsNull() || !value.IsKnown() {
 		return nil
@@ -121,7 +121,7 @@ func (t PolicyParameterType) Validate(ctx context.Context, value tftypes.Value, 
 			valuePath,
 			"Invalid policy parameter JSON",
 			"An unexpected error occurred while converting a string value that was expected to be a JSON representation of policy parameters. "+
-				"The string value was expected to unmarshal to a map[string]any value, but it did not.\n\n"+
+				"The string value was expected to unmarshal to a :41map[string]any value, but it did not.\n\n"+
 				"Path: "+valuePath.String()+"\n"+
 				"Given Value: "+valueString+"\n"+
 				"Error: "+err.Error(),

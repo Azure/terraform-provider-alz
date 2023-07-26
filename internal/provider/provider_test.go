@@ -40,27 +40,27 @@ func TestGetFirstSetEnvVar(t *testing.T) {
 	assert.Equal(t, "", result)
 
 	// Test when the first environment variable is set
-	os.Setenv("VAR1", "value1")
+	t.Setenv("VAR1", "value1")
 	result = getFirstSetEnvVar("VAR1", "VAR2", "VAR3")
 	assert.Equal(t, "value1", result)
 	_ = os.Unsetenv("VAR1")
 
 	// Test when the second environment variable is set
-	os.Setenv("VAR2", "value2")
+	t.Setenv("VAR2", "value2")
 	result = getFirstSetEnvVar("VAR1", "VAR2", "VAR3")
 	assert.Equal(t, "value2", result)
 	os.Unsetenv("VAR2")
 
 	// Test when the third environment variable is set
-	os.Setenv("VAR3", "value3")
+	t.Setenv("VAR3", "value3")
 	result = getFirstSetEnvVar("VAR1", "VAR2", "VAR3")
 	assert.Equal(t, "value3", result)
 	os.Unsetenv("VAR3")
 
 	// Test when multiple environment variables are set
-	os.Setenv("VAR1", "value1")
-	os.Setenv("VAR2", "value2")
-	os.Setenv("VAR3", "value3")
+	t.Setenv("VAR1", "value1")
+	t.Setenv("VAR2", "value2")
+	t.Setenv("VAR3", "value3")
 	result = getFirstSetEnvVar("VAR1", "VAR2", "VAR3")
 	assert.Equal(t, "value1", result)
 	os.Unsetenv("VAR1")
@@ -104,9 +104,9 @@ func TestConfigureFromEnvironment(t *testing.T) {
 	assert.True(t, data.SkipProviderRegistration.IsNull())
 
 	// Test when some environment variables are set
-	os.Setenv("ARM_CLIENT_ID", "client_id")
-	os.Setenv("ARM_CLIENT_SECRET", "client_secret")
-	os.Setenv("ARM_TENANT_ID", "tenant_id")
+	t.Setenv("ARM_CLIENT_ID", "client_id")
+	t.Setenv("ARM_CLIENT_SECRET", "client_secret")
+	t.Setenv("ARM_TENANT_ID", "tenant_id")
 	data = &AlzProviderModel{}
 	configureFromEnvironment(data)
 	assert.Equal(t, "", data.ClientCertificatePassword.ValueString())
@@ -128,20 +128,20 @@ func TestConfigureFromEnvironment(t *testing.T) {
 	os.Unsetenv("ARM_TENANT_ID")
 
 	// Test when all environment variables are set
-	os.Setenv("ARM_CLIENT_CERTIFICATE_PASSWORD", "password")
-	os.Setenv("ARM_CLIENT_CERTIFICATE_PATH", "path")
-	os.Setenv("ARM_CLIENT_ID", "client_id")
-	os.Setenv("ARM_CLIENT_SECRET", "client_secret")
-	os.Setenv("ARM_ENVIRONMENT", "environment")
-	os.Setenv("ARM_OIDC_REQUEST_TOKEN", "request_token")
-	os.Setenv("ARM_OIDC_REQUEST_URL", "request_url")
-	os.Setenv("ARM_OIDC_TOKEN", "token")
-	os.Setenv("ARM_OIDC_TOKEN_FILE_PATH", "token_file_path")
-	os.Setenv("ARM_TENANT_ID", "tenant_id")
-	os.Setenv("ARM_USE_CLI", "true")
-	os.Setenv("ARM_USE_MSI", "true")
-	os.Setenv("ARM_USE_OIDC", "true")
-	os.Setenv("ARM_SKIP_PROVIDER_REGISTRATION", "true")
+	t.Setenv("ARM_CLIENT_CERTIFICATE_PASSWORD", "password")
+	t.Setenv("ARM_CLIENT_CERTIFICATE_PATH", "path")
+	t.Setenv("ARM_CLIENT_ID", "client_id")
+	t.Setenv("ARM_CLIENT_SECRET", "client_secret")
+	t.Setenv("ARM_ENVIRONMENT", "environment")
+	t.Setenv("ARM_OIDC_REQUEST_TOKEN", "request_token")
+	t.Setenv("ARM_OIDC_REQUEST_URL", "request_url")
+	t.Setenv("ARM_OIDC_TOKEN", "token")
+	t.Setenv("ARM_OIDC_TOKEN_FILE_PATH", "token_file_path")
+	t.Setenv("ARM_TENANT_ID", "tenant_id")
+	t.Setenv("ARM_USE_CLI", "true")
+	t.Setenv("ARM_USE_MSI", "true")
+	t.Setenv("ARM_USE_OIDC", "true")
+	t.Setenv("ARM_SKIP_PROVIDER_REGISTRATION", "true")
 	data = &AlzProviderModel{}
 	configureFromEnvironment(data)
 	assert.Equal(t, "password", data.ClientCertificatePassword.ValueString())
@@ -191,7 +191,7 @@ func TestConfigureAuxTenants(t *testing.T) {
 	assert.Empty(t, diags)
 
 	// Test when ARM_AUXILIARY_TENANT_IDS environment variable is set and data.AuxiliaryTenantIds is null
-	_ = os.Setenv("ARM_AUXILIARY_TENANT_IDS", "tenant1;tenant2")
+	t.Setenv("ARM_AUXILIARY_TENANT_IDS", "tenant1;tenant2")
 	data = &AlzProviderModel{}
 	diags = configureAuxTenants(context.Background(), data)
 	assert.True(t, data.AuxiliaryTenantIds.Equal(lv))
@@ -199,7 +199,7 @@ func TestConfigureAuxTenants(t *testing.T) {
 	_ = os.Unsetenv("ARM_AUXILIARY_TENANT_IDS")
 
 	// Test when ARM_AUXILIARY_TENANT_IDS environment variable is set and data.AuxiliaryTenantIds is not null
-	_ = os.Setenv("ARM_AUXILIARY_TENANT_IDS", "tenant3;tenant4")
+	t.Setenv("ARM_AUXILIARY_TENANT_IDS", "tenant3;tenant4")
 	data = &AlzProviderModel{AuxiliaryTenantIds: lv}
 	diags = configureAuxTenants(context.Background(), data)
 	assert.True(t, data.AuxiliaryTenantIds.Equal(lv))
@@ -210,7 +210,7 @@ func TestConfigureAuxTenants(t *testing.T) {
 func TestConfigureAzIdentityEnvironment(t *testing.T) {
 	// Test when no data fields are set
 	data := &AlzProviderModel{}
-	configureAzIdentityEnvironment(context.Background(), data)
+	configureAzIdentityEnvironment(data)
 	assert.Empty(t, os.Getenv("AZURE_TENANT_ID"))
 	assert.Empty(t, os.Getenv("AZURE_CLIENT_ID"))
 	assert.Empty(t, os.Getenv("AZURE_CLIENT_SECRET"))
@@ -231,7 +231,7 @@ func TestConfigureAzIdentityEnvironment(t *testing.T) {
 		ClientCertificatePassword: types.StringValue("password1"),
 		AuxiliaryTenantIds:        lv,
 	}
-	configureAzIdentityEnvironment(context.Background(), data)
+	configureAzIdentityEnvironment(data)
 	assert.Equal(t, "tenant1", os.Getenv("AZURE_TENANT_ID"))
 	assert.Equal(t, "client1", os.Getenv("AZURE_CLIENT_ID"))
 	assert.Equal(t, "secret1", os.Getenv("AZURE_CLIENT_SECRET"))

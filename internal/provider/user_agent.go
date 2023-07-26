@@ -25,7 +25,7 @@ func (c UserAgentPolicy) Do(req *policy.Request) (*http.Response, error) {
 var _ policy.Policy = UserAgentPolicy{}
 
 // withUserAgent returns a policy.Policy that adds an HTTP extension header of
-// `User-Agent` whose value is passed and has no length limitation
+// `User-Agent` whose value is passed and has no length limitation.
 func withUserAgent(userAgent string) policy.Policy {
 	return UserAgentPolicy{UserAgent: userAgent}
 }

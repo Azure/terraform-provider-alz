@@ -215,30 +215,28 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 		return
 	}
 	// Read the environment variables and set in data
-	// if the data is not already set and the environment variable is set
+	// if the data is not already set and the environment variable is set.
 	configureFromEnvironment(&data)
 
 	// Set the go sdk's azidentity specific environment variables
-	if resp.Diagnostics = append(resp.Diagnostics, configureAzIdentityEnvironment(ctx, &data)...); resp.Diagnostics.HasError() {
-		return
-	}
+	configureAzIdentityEnvironment(&data)
 
-	// Configure aux tenant ids from config and environment
+	// Configure aux tenant ids from config and environment.
 	if resp.Diagnostics = append(resp.Diagnostics, configureAuxTenants(ctx, &data)...); resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Set the default values if not already set in the config or by environment
+	// Set the default values if not already set in the config or by environment.
 	configureDefaults(&data)
 
-	// Create the AlzLib
-	alz, diags := configureAlzLib(ctx, data, fmt.Sprintf("%s/%s", userAgentBase, p.version))
+	// Create the AlzLib.
+	alz, diags := configureAlzLib(data, fmt.Sprintf("%s/%s", userAgentBase, p.version))
 	resp.Diagnostics = append(resp.Diagnostics, diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Create the fs.FS library file systems based on the configuration
+	// Create the fs.FS library file systems based on the configuration.
 	libdirfs := make([]fs.FS, 0)
 	if data.UseAlzLib.ValueBool() {
 		libdirfs = append(libdirfs, alzlib.Lib)
@@ -314,7 +312,7 @@ func configureAuxTenants(ctx context.Context, data *AlzProviderModel) diag.Diagn
 	return nil
 }
 
-// configureFromEnvironment sets the provider data from environment variables
+// configureFromEnvironment sets the provider data from environment variables.
 func configureFromEnvironment(data *AlzProviderModel) {
 	if val := getFirstSetEnvVar("ARM_CLIENT_CERTIFICATE_PASSWORD"); val != "" && data.ClientCertificatePassword.IsNull() {
 		data.ClientCertificatePassword = types.StringValue(val)
@@ -383,7 +381,7 @@ func str2Bool(val string) bool {
 }
 
 // configureAzIdentityEnvironment sets the environment variables used by go Azure sdk's azidentity package.
-func configureAzIdentityEnvironment(ctx context.Context, data *AlzProviderModel) diag.Diagnostics {
+func configureAzIdentityEnvironment(data *AlzProviderModel) {
 	// Maps the auth related environment variables used in the provider to what azidentity honors.
 	if !data.TenantId.IsNull() {
 		// #nosec G104
@@ -410,10 +408,9 @@ func configureAzIdentityEnvironment(ctx context.Context, data *AlzProviderModel)
 		// #nosec G104
 		os.Setenv("AZURE_ADDITIONALLY_ALLOWED_TENANTS", strings.Join(auxTenants, ";"))
 	}
-	return nil
 }
 
-// listElementsToStrings converts a list of attr.Value to a list of strings
+// listElementsToStrings converts a list of attr.Value to a list of strings.
 func listElementsToStrings(list []attr.Value) []string {
 	if len(list) == 0 {
 		return nil
@@ -429,8 +426,8 @@ func listElementsToStrings(list []attr.Value) []string {
 	return strings
 }
 
-// configureAlzLib configures the alzlib for use by the provider
-func configureAlzLib(ctx context.Context, data AlzProviderModel, userAgent string) (*alzlib.AlzLib, diag.Diagnostics) {
+// configureAlzLib configures the alzlib for use by the provider.
+func configureAlzLib(data AlzProviderModel, userAgent string) (*alzlib.AlzLib, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	var cloudConfig cloud.Configuration
@@ -481,39 +478,39 @@ func configureAlzLib(ctx context.Context, data AlzProviderModel, userAgent strin
 	return alz, diags
 }
 
-// configureDefaults sets default values if they aren't already set
+// configureDefaults sets default values if they aren't already set.
 func configureDefaults(data *AlzProviderModel) {
-	// Use azure public cloud by default
+	// Use azure public cloud by default.
 	if data.Environment.IsNull() {
 		data.Environment = types.StringValue("public")
 	}
 
-	// Do not skip provider registration by default
+	// Do not skip provider registration by default.
 	if data.SkipProviderRegistration.IsNull() {
 		data.SkipProviderRegistration = types.BoolValue(false)
 	}
 
-	// Do not use OIDC auth by default
+	// Do not use OIDC auth by default.
 	if data.UseOidc.IsNull() {
 		data.UseOidc = types.BoolValue(false)
 	}
 
-	// Do not use MSI auth by default
+	// Do not use MSI auth by default.
 	if data.UseMsi.IsNull() {
 		data.UseMsi = types.BoolValue(false)
 	}
 
-	// Use CLI auth by default
+	// Use CLI auth by default.
 	if data.UseCli.IsNull() {
 		data.UseCli = types.BoolValue(true)
 	}
 
-	// Use internal AlzLib reference library by default
+	// Use internal AlzLib reference library by default.
 	if data.UseAlzLib.IsNull() {
 		data.UseAlzLib = types.BoolValue(true)
 	}
 
-	// Do not allow library overwrite by default
+	// Do not allow library overwrite by default.
 	if data.AllowLibOverwrite.IsNull() {
 		data.AllowLibOverwrite = types.BoolValue(false)
 	}

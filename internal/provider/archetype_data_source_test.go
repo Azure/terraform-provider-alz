@@ -34,7 +34,7 @@ func TestAccAlzArchetypeDataSource(t *testing.T) {
 	})
 }
 
-// testAccExampleDataSourceConfig returns a test configuration for TestAccAlzArchetypeDataSource
+// testAccExampleDataSourceConfig returns a test configuration for TestAccAlzArchetypeDataSource.
 func testAccExampleDataSourceConfig() string {
 	cwd, _ := os.Getwd()
 	libPath := filepath.Join(cwd, "testdata/testacc_lib")
@@ -64,7 +64,7 @@ func testAccExampleDataSourceConfig() string {
 	`, libPath)
 }
 
-// TestAddAttrStringElementsToSet tests that addAttrStringElementsToSet adds a value to a set
+// TestAddAttrStringElementsToSet tests that addAttrStringElementsToSet adds a value to a set.
 func TestAddAttrStringElementsToSet(t *testing.T) {
 	arch := &alzlib.Archetype{
 		PolicyDefinitions: sets.NewSet[string]("a", "b", "c"),
@@ -72,11 +72,11 @@ func TestAddAttrStringElementsToSet(t *testing.T) {
 	vals := []attr.Value{
 		basetypes.NewStringValue("d"),
 	}
-	addAttrStringElementsToSet(arch.PolicyDefinitions, vals)
+	assert.NoError(t, addAttrStringElementsToSet(arch.PolicyDefinitions, vals))
 	assert.True(t, arch.PolicyDefinitions.Contains("d"))
 }
 
-// TestDeleteAttrStringElementsToSet tests that deleteAttrStringElementsToSet removes a value from a set
+// TestDeleteAttrStringElementsToSet tests that deleteAttrStringElementsToSet removes a value from a set.
 func TestDeleteAttrStringElementsToSet(t *testing.T) {
 	arch := &alzlib.Archetype{
 		PolicyDefinitions: sets.NewSet[string]("a", "b", "c"),
@@ -84,6 +84,6 @@ func TestDeleteAttrStringElementsToSet(t *testing.T) {
 	vals := []attr.Value{
 		basetypes.NewStringValue("c"),
 	}
-	deleteAttrStringElementsFromSet(arch.PolicyDefinitions, vals)
+	assert.NoError(t, deleteAttrStringElementsFromSet(arch.PolicyDefinitions, vals))
 	assert.True(t, !arch.PolicyDefinitions.Contains("c"))
 }

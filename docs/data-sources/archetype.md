@@ -27,7 +27,7 @@ data "alz_archetype" "example" {
 
 - `base_archetype` (String) The base archetype name to use. This has been generated from the provider lib directories.
 - `defaults` (Attributes) Archetype default values (see [below for nested schema](#nestedatt--defaults))
-- `name` (String) The management group name, forming part of the resource id.
+- `id` (String) The management group name, forming part of the resource id.
 - `parent_id` (String) The parent management group name.
 
 ### Optional
@@ -51,7 +51,6 @@ data "alz_archetype" "example" {
 - `alz_policy_set_definitions` (Map of String) A map of generated policy assignments. The values are ARM JSON policy set definitions.
 - `alz_role_assignments` (Map of String) A map of generated role assignments. The values are ARM JSON role assignments.
 - `alz_role_definitions` (Map of String) A map of generated role assignments. The values are ARM JSON role definitions.
-- `id` (String) Internal id attribute required for acceptance testing. See [here](https://developer.hashicorp.com/terraform/plugin/framework/acctests#implement-id-attribute).
 
 <a id="nestedatt--defaults"></a>
 ### Nested Schema for `defaults`
@@ -70,13 +69,6 @@ Optional:
 
 Required:
 
-- `name` (Attributes Map) (see [below for nested schema](#nestedatt--policy_assignments_to_add--name))
-
-<a id="nestedatt--policy_assignments_to_add--name"></a>
-### Nested Schema for `policy_assignments_to_add.name`
-
-Required:
-
 - `display_name` (String) The policy assignment display name
 
 Optional:
@@ -84,13 +76,13 @@ Optional:
 - `enforcement_mode` (String) The enforcement mode of the policy assignment. Must be one of `Default`, or `DoNotEnforce`.
 - `identity` (String) The identity type. Must be one of `SystemAssigned` or `UserAssigned`.
 - `identity_ids` (List of String) A list of identity ids to assign to the policy assignment. Required if `identity` is `UserAssigned`.
-- `non_compliance_message` (Attributes Set) The non-compliance messages to use for the policy assignment. (see [below for nested schema](#nestedatt--policy_assignments_to_add--name--non_compliance_message))
+- `non_compliance_message` (Attributes Set) The non-compliance messages to use for the policy assignment. (see [below for nested schema](#nestedatt--policy_assignments_to_add--non_compliance_message))
 - `parameters` (String) The parameters to use for the policy assignment. **Note:** This is a JSON string, and not a map. This is because the parameter values have different types, which confuses the type system used by the provider sdk. Use `jsonencode()` to construct the map. The map keys must be strings, the values are `any` type.
 - `policy_definition_id` (String) The resource id of the policy definition. Conflicts with `policy_definition_name`.
 - `policy_definition_name` (String) The name of the policy definition. Must be in the AlzLib, if it is not use `policy_definition_id` instead. Conflicts with `policy_definition_id`.
 
-<a id="nestedatt--policy_assignments_to_add--name--non_compliance_message"></a>
-### Nested Schema for `policy_assignments_to_add.name.non_compliance_message`
+<a id="nestedatt--policy_assignments_to_add--non_compliance_message"></a>
+### Nested Schema for `policy_assignments_to_add.non_compliance_message`
 
 Required:
 
@@ -99,7 +91,6 @@ Required:
 Optional:
 
 - `policy_definition_reference_id` (String) The policy definition reference id (not the resource id) to use for the non compliance message. This references the definition within the policy set.
-
 
 
 

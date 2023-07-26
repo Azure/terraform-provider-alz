@@ -161,7 +161,7 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 			},
 
 			"policy_assignments_to_add": schema.MapNestedAttribute{
-				MarkdownDescription: "A map of policy assignments names to add to the archetype. The map key is the policy assignemnt name.",
+				MarkdownDescription: "A map of policy assignments names to add to the archetype. The map key is the policy assignment name.",
 				Optional:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -368,7 +368,7 @@ func (d *ArchetypeDataSource) Configure(ctx context.Context, req datasource.Conf
 func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var data ArchetypeDataSourceModel
 
-	// Read Terraform configuration data into the model
+	// Read Terraform configuration data into the model.
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 
 	if resp.Diagnostics.HasError() {
@@ -377,7 +377,7 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 
 	mgname := data.Id.ValueString()
 
-	// Set well known policy values
+	// Set well known policy values.
 	wkpv := new(alzlib.WellKnownPolicyValues)
 	defloc := data.Defaults.DefaultLocation.ValueString()
 	if defloc == "" {
@@ -386,25 +386,46 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 	wkpv.DefaultLocation = defloc
 	wkpv.DefaultLogAnalyticsWorkspaceId = data.Defaults.DefaultLaWorkspaceId.ValueString()
 
-	// Make a copy of the archetype so we can customize it
+	// Make a copy of the archetype so we can customize it.
 	arch, err := d.alz.CopyArchetype(data.BaseArchetype.ValueString(), wkpv)
 	if err != nil {
 		resp.Diagnostics.AddError("Archetype not found", fmt.Sprintf("Unable to find archetype %s", data.BaseArchetype.ValueString()))
 		return
 	}
 
-	// Add/remove items from archetype before adding the management group
-	addAttrStringElementsToSet(arch.PolicyDefinitions, data.PolicyDefinitionsToAdd.Elements())
-	deleteAttrStringElementsFromSet(arch.PolicyDefinitions, data.PolicyDefinitionsToRemove.Elements())
+	// Add/remove items from archetype before adding the management group.
+	if err := addAttrStringElementsToSet(arch.PolicyDefinitions, data.PolicyDefinitionsToAdd.Elements()); err != nil {
+		resp.Diagnostics.AddError("Unable to add policy definitions", err.Error())
+		return
+	}
+	if err := deleteAttrStringElementsFromSet(arch.PolicyDefinitions, data.PolicyDefinitionsToRemove.Elements()); err != nil {
+		resp.Diagnostics.AddError("Unable to remove policy definitions", err.Error())
+		return
+	}
 
-	addAttrStringElementsToSet(arch.PolicySetDefinitions, data.PolicySetDefinitionsToAdd.Elements())
-	deleteAttrStringElementsFromSet(arch.PolicySetDefinitions, data.PolicySetDefinitionsToRemove.Elements())
+	if err := addAttrStringElementsToSet(arch.PolicySetDefinitions, data.PolicySetDefinitionsToAdd.Elements()); err != nil {
+		resp.Diagnostics.AddError("Unable to add policy set definitions", err.Error())
+		return
+	}
+	if err := deleteAttrStringElementsFromSet(arch.PolicySetDefinitions, data.PolicySetDefinitionsToRemove.Elements()); err != nil {
+		resp.Diagnostics.AddError("Unable to remove policy set definitions", err.Error())
+		return
+	}
 
-	addAttrStringElementsToSet(arch.RoleDefinitions, data.RoleDefinitionsToAdd.Elements())
-	deleteAttrStringElementsFromSet(arch.RoleDefinitions, data.RoleDefinitionsToRemove.Elements())
+	if err := addAttrStringElementsToSet(arch.RoleDefinitions, data.RoleDefinitionsToAdd.Elements()); err != nil {
+		resp.Diagnostics.AddError("Unable to add role definitions", err.Error())
+		return
+	}
+	if err := deleteAttrStringElementsFromSet(arch.RoleDefinitions, data.RoleDefinitionsToRemove.Elements()); err != nil {
+		resp.Diagnostics.AddError("Unable to remove role definitions", err.Error())
+		return
+	}
 
-	// TODO: implement code to create *armpolicy.Assignment from PolicyAssignmentsToAdd
-	deleteAttrStringElementsFromSet(arch.PolicyAssignments, data.PolicyAssignmentsToRemove.Elements())
+	// TODO: implement code to create *armpolicy.Assignment from PolicyAssignmentsToAdd.
+	if err := deleteAttrStringElementsFromSet(arch.PolicyAssignments, data.PolicyAssignmentsToRemove.Elements()); err != nil {
+		resp.Diagnostics.AddError("Unable to remove policy assignments", err.Error())
+		return
+	}
 
 	checks := []checkExistsInAlzLib{
 		{arch.PolicyDefinitions, d.alz.PolicyDefinitionExists},

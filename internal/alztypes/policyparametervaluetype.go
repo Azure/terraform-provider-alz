@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 )
 
-// Ensure the implementation satisfies the expected interfaces
+// Ensure the implementation satisfies the expected interfaces.
 var _ basetypes.StringValuable = PolicyParameterValue{}
 
 type PolicyParameterValue struct {
@@ -43,18 +43,18 @@ func (v PolicyParameterValue) Equal(o attr.Value) bool {
 }
 
 func (v PolicyParameterValue) Type(ctx context.Context) attr.Type {
-	// CustomStringType defined in the schema type section
+	// CustomStringType defined in the schema type section.
 	return PolicyParameterType{}
 }
 
-// PolicyParameterValue defined in the value type section
-// Ensure the implementation satisfies the expected interfaces
+// PolicyParameterValue defined in the value type section.
+// Ensure the implementation satisfies the expected interfaces.
 var _ basetypes.StringValuableWithSemanticEquals = PolicyParameterValue{}
 
 func (v PolicyParameterValue) StringSemanticEquals(ctx context.Context, newValuable basetypes.StringValuable) (bool, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	// The framework should always pass the correct value type, but always check
+	// The framework should always pass the correct value type, but always check.
 	newValue, ok := newValuable.(PolicyParameterValue)
 
 	if !ok {
@@ -85,6 +85,6 @@ func (v PolicyParameterValue) StringSemanticEquals(ctx context.Context, newValua
 		}
 	}
 
-	// If the times are equivalent, keep the prior value
+	// If the times are equivalent, keep the prior value.
 	return reflect.DeepEqual(unmarshalMap[v], unmarshalMap[newValue]), diags
 }
