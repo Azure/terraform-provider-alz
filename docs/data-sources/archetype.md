@@ -33,7 +33,7 @@ data "alz_archetype" "example" {
 ### Optional
 
 - `display_name` (String) The display name of the management group.
-- `policy_assignments_to_add` (Attributes Map) A map of policy assignments names to add to the archetype. The map key is the policy assignemnt name. (see [below for nested schema](#nestedatt--policy_assignments_to_add))
+- `policy_assignments_to_add` (Attributes Map) A map of policy assignments names to add to the archetype. The map key is the policy assignment name. (see [below for nested schema](#nestedatt--policy_assignments_to_add))
 - `policy_assignments_to_remove` (Set of String) A list of policy assignment names to remove from the archetype.
 - `policy_definitions_to_add` (Set of String) A list of policy definition names to add to the archetype.
 - `policy_definitions_to_remove` (Set of String) A list of policy definition names to remove from the archetype.
