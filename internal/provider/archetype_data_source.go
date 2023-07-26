@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/matt-FFFFFF/alzlib"
+	"github.com/matt-FFFFFF/alzlib/sets"
 	"github.com/matt-FFFFFF/terraform-provider-alz/internal/alztypes"
 	"github.com/matt-FFFFFF/terraform-provider-alz/internal/alzvalidators"
 )
@@ -67,6 +68,27 @@ type ArchetypeDataSourceModel struct {
 	RoleDefinitionsToAdd         types.Set                        `tfsdk:"role_definitions_to_add"`          // set of string
 	RoleDefinitionsToRemove      types.Set                        `tfsdk:"role_definitions_to_remove"`       // set of string
 	SubscriptionIds              types.Set                        `tfsdk:"subscription_ids"`                 // set of string
+}
+
+// archetypeDataSourceModelGoTypes is a version of ArchetypeDataSourceModel using Go types.
+// Note we don't include the calculated fields here.
+type archetypeDataSourceModelGoTypes struct {
+	BaseArchetype                string
+	Defaults                     ArchetypeDataSourceModelDefaults
+	DisplayName                  string
+	Id                           string
+	Name                         string
+	ParentId                     string
+	PolicyAssignmentsToAdd       map[string]PolicyAssignmentType
+	PolicyAssignmentsToRemove    []string
+	PolicyDefinitionsToAdd       []string
+	PolicyDefinitionsToRemove    []string
+	PolicySetDefinitionsToAdd    []string
+	PolicySetDefinitionsToRemove []string
+	RoleAssignmentsToAdd         map[string]RoleAssignmentType
+	RoleDefinitionsToAdd         []string
+	RoleDefinitionsToRemove      []string
+	SubscriptionIds              []string
 }
 
 type ArchetypeDataSourceModelDefaults struct {
@@ -378,13 +400,6 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 	// Set the id to the name
 	data.Id = data.Name
 
-	// Get the archetype
-	arch, ok := d.alz.Archetypes[data.BaseArchetype.ValueString()]
-	if !ok {
-		resp.Diagnostics.AddError("Archetype not found", fmt.Sprintf("Unable to find archetype %s", data.BaseArchetype.ValueString()))
-		return
-	}
-
 	// Set well known policy values
 	wkpv := new(alzlib.WellKnownPolicyValues)
 	defloc := data.Defaults.DefaultLocation.ValueString()
@@ -393,6 +408,26 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 	}
 	wkpv.DefaultLocation = defloc
 	wkpv.DefaultLogAnalyticsWorkspaceId = data.Defaults.DefaultLaWorkspaceId.ValueString()
+
+	// Make a copy of the archetype so we can customize it
+	arch, err := d.alz.CopyArchetype(data.BaseArchetype.ValueString(), wkpv)
+	if err != nil {
+		resp.Diagnostics.AddError("Archetype not found", fmt.Sprintf("Unable to find archetype %s", data.BaseArchetype.ValueString()))
+		return
+	}
+
+	// Add/remove items from archetype before adding the management group
+	addAttrStringElementsToSet(arch.PolicyDefinitions, data.PolicyDefinitionsToAdd.Elements())
+	deleteAttrStringElementsFromSet(arch.PolicyDefinitions, data.PolicyDefinitionsToRemove.Elements())
+
+	addAttrStringElementsToSet(arch.PolicySetDefinitions, data.PolicySetDefinitionsToAdd.Elements())
+	deleteAttrStringElementsFromSet(arch.PolicySetDefinitions, data.PolicySetDefinitionsToRemove.Elements())
+
+	addAttrStringElementsToSet(arch.RoleDefinitions, data.RoleDefinitionsToAdd.Elements())
+	deleteAttrStringElementsFromSet(arch.RoleDefinitions, data.RoleDefinitionsToRemove.Elements())
+
+	// TODO: implement code to create *armpolicy.Assignment from PolicyAssignmentsToAdd
+	deleteAttrStringElementsFromSet(arch.PolicyAssignments, data.PolicyAssignmentsToRemove.Elements())
 
 	// TODO: change this to compare the config to the AlzManagementGroup in the alz struct.
 	// It should be identical. If it is not then error as the user has duplicate management group names.
@@ -404,7 +439,7 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 			external = true
 		}
 
-		if err := d.alz.Deployment.AddManagementGroup(mgname, data.DisplayName.ValueString(), data.ParentId.ValueString(), external, arch.WithWellKnownPolicyValues(wkpv)); err != nil {
+		if err := d.alz.AddManagementGroupToDeployment(mgname, data.DisplayName.ValueString(), data.ParentId.ValueString(), external, arch); err != nil {
 			resp.Diagnostics.AddError("Unable to add management group", err.Error())
 			return
 		}
@@ -479,4 +514,29 @@ func marshallMap[T armTypes](m map[string]T) (basetypes.MapValue, diag.Diagnosti
 		return basetypes.NewMapNull(types.StringType), diags
 	}
 	return resultMapType, nil
+}
+
+func addAttrStringElementsToSet(set sets.Set[string], vals []attr.Value) error {
+	for _, attr := range vals {
+		s, ok := attr.(types.String)
+		if !ok {
+			return fmt.Errorf("unable to convert %v to types.String", attr)
+		}
+		set.Add(s.ValueString())
+	}
+	return nil
+}
+
+func deleteAttrStringElementsFromSet(set sets.Set[string], vals []attr.Value) error {
+	for _, attr := range vals {
+		s, ok := attr.(types.String)
+		if !ok {
+			return fmt.Errorf("unable to convert %v to types.String", attr)
+		}
+		if !set.Contains(s.ValueString()) {
+			continue
+		}
+		set.Remove(s.ValueString())
+	}
+	return nil
 }
