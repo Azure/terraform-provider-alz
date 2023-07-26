@@ -262,8 +262,8 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 		return
 	}
 
-	// store the alz pointer in the provider struct so we don't have to do all this work every time `.Configure`` is called
-	// It takes approx 30 seconds each time and is called 4-5 time during a single acceptance test.
+	// Store the alz pointer in the provider struct so we don't have to do all this work every time `.Configure` is called.
+	// Due to fetch from Azure, it takes approx 30 seconds each time and is called 4-5 time during a single acceptance test.
 	p.alzLib = alz
 	resp.DataSourceData = alz
 	resp.ResourceData = alz
