@@ -25,14 +25,16 @@ func TestAccAlzArchetypeDataSource(t *testing.T) {
 			{
 				Config: testAccExampleDataSourceConfig(),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.alz_archetype.test", "name", "example"),
+					resource.TestCheckResourceAttr("data.alz_archetype.test", "id", "example"),
 					resource.TestCheckResourceAttr("data.alz_archetype.test", "alz_policy_assignments.%", "1"),
+					resource.TestCheckOutput("test", "westeurope"),
 				),
 			},
 		},
 	})
 }
 
+// testAccExampleDataSourceConfig returns a test configuration for TestAccAlzArchetypeDataSource
 func testAccExampleDataSourceConfig() string {
 	cwd, _ := os.Getwd()
 	libPath := filepath.Join(cwd, "testdata/testacc_lib")
@@ -46,13 +48,18 @@ func testAccExampleDataSourceConfig() string {
 	}
 
 	data "alz_archetype" "test" {
-		name           = "example"
+		id             = "example"
 		parent_id      = "test"
 		base_archetype = "test"
 		defaults = {
 			location = "westeurope"
 			log_analytics_workspace_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg/providers/Microsoft.OperationalInsights/workspaces/la"
 		}
+	}
+
+	# Test that the data source is returning the correct value for the policy location
+	output "test" {
+		value = jsondecode(data.alz_archetype.test.alz_policy_assignments["BlobServicesDiagnosticsLogsToWorkspace"]).location
 	}
 	`, libPath)
 }

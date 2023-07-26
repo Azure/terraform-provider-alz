@@ -41,8 +41,15 @@ type ArchetypeDataSource struct {
 	alz *alzlib.AlzLib
 }
 
+// armTypes is used for the generic functions that operate on ARM types.
 type armTypes interface {
 	*armpolicy.Assignment | *armpolicy.Definition | *armpolicy.SetDefinition | *armauthorization.RoleAssignment | *armauthorization.RoleDefinition
+}
+
+// checkExistsInAlzLib is a helper struct to check if an item exists in the AlzLib.
+type checkExistsInAlzLib struct {
+	set sets.Set[string]
+	f   func(string) bool
 }
 
 // ArchetypeDataSourceModel describes the data source data model.
@@ -56,7 +63,6 @@ type ArchetypeDataSourceModel struct {
 	Defaults                     ArchetypeDataSourceModelDefaults `tfsdk:"defaults"`
 	DisplayName                  types.String                     `tfsdk:"display_name"`
 	Id                           types.String                     `tfsdk:"id"`
-	Name                         types.String                     `tfsdk:"name"`
 	ParentId                     types.String                     `tfsdk:"parent_id"`
 	PolicyAssignmentsToAdd       types.Map                        `tfsdk:"policy_assignments_to_add"`        // map of PolicyAssignmentType
 	PolicyAssignmentsToRemove    types.Set                        `tfsdk:"policy_assignments_to_remove"`     // set of string
@@ -68,27 +74,6 @@ type ArchetypeDataSourceModel struct {
 	RoleDefinitionsToAdd         types.Set                        `tfsdk:"role_definitions_to_add"`          // set of string
 	RoleDefinitionsToRemove      types.Set                        `tfsdk:"role_definitions_to_remove"`       // set of string
 	SubscriptionIds              types.Set                        `tfsdk:"subscription_ids"`                 // set of string
-}
-
-// archetypeDataSourceModelGoTypes is a version of ArchetypeDataSourceModel using Go types.
-// Note we don't include the calculated fields here.
-type archetypeDataSourceModelGoTypes struct {
-	BaseArchetype                string
-	Defaults                     ArchetypeDataSourceModelDefaults
-	DisplayName                  string
-	Id                           string
-	Name                         string
-	ParentId                     string
-	PolicyAssignmentsToAdd       map[string]PolicyAssignmentType
-	PolicyAssignmentsToRemove    []string
-	PolicyDefinitionsToAdd       []string
-	PolicyDefinitionsToRemove    []string
-	PolicySetDefinitionsToAdd    []string
-	PolicySetDefinitionsToRemove []string
-	RoleAssignmentsToAdd         map[string]RoleAssignmentType
-	RoleDefinitionsToAdd         []string
-	RoleDefinitionsToRemove      []string
-	SubscriptionIds              []string
 }
 
 type ArchetypeDataSourceModelDefaults struct {
@@ -128,11 +113,6 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Internal id attribute required for acceptance testing. See [here](https://developer.hashicorp.com/terraform/plugin/framework/acctests#implement-id-attribute).",
-				Computed:            true,
-			},
-
-			"name": schema.StringAttribute{
 				MarkdownDescription: "The management group name, forming part of the resource id.",
 				Required:            true,
 			},
@@ -395,10 +375,7 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 		return
 	}
 
-	mgname := data.Name.ValueString()
-
-	// Set the id to the name
-	data.Id = data.Name
+	mgname := data.Id.ValueString()
 
 	// Set well known policy values
 	wkpv := new(alzlib.WellKnownPolicyValues)
@@ -428,6 +405,22 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 
 	// TODO: implement code to create *armpolicy.Assignment from PolicyAssignmentsToAdd
 	deleteAttrStringElementsFromSet(arch.PolicyAssignments, data.PolicyAssignmentsToRemove.Elements())
+
+	checks := []checkExistsInAlzLib{
+		{arch.PolicyDefinitions, d.alz.PolicyDefinitionExists},
+		{arch.PolicySetDefinitions, d.alz.PolicySetDefinitionExists},
+		{arch.RoleDefinitions, d.alz.RoleDefinitionExists},
+		{arch.PolicyAssignments, d.alz.PolicyAssignmentExists},
+	}
+
+	for _, check := range checks {
+		for item := range check.set {
+			if !check.f(item) {
+				resp.Diagnostics.AddError("Item not found", fmt.Sprintf("Unable to find %s in the AlzLib", item))
+				return
+			}
+		}
+	}
 
 	// TODO: change this to compare the config to the AlzManagementGroup in the alz struct.
 	// It should be identical. If it is not then error as the user has duplicate management group names.
