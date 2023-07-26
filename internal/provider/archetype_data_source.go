@@ -54,11 +54,11 @@ type checkExistsInAlzLib struct {
 
 // ArchetypeDataSourceModel describes the data source data model.
 type ArchetypeDataSourceModel struct {
-	AlzPolicyAssignments         types.Map                        `tfsdk:"alz_policy_assignments"`     // map of string
-	AlzPolicyDefinitions         types.Map                        `tfsdk:"alz_policy_definitions"`     // map of string
-	AlzPolicySetDefinitions      types.Map                        `tfsdk:"alz_policy_set_definitions"` // map of string
-	AlzRoleAssignments           types.Map                        `tfsdk:"alz_role_assignments"`       // map of string
-	AlzRoleDefinitions           types.Map                        `tfsdk:"alz_role_definitions"`       // map of string
+	AlzPolicyAssignments         types.Map                        `tfsdk:"alz_policy_assignments"`     // map of string, computed
+	AlzPolicyDefinitions         types.Map                        `tfsdk:"alz_policy_definitions"`     // map of string, computed
+	AlzPolicySetDefinitions      types.Map                        `tfsdk:"alz_policy_set_definitions"` // map of string, computed
+	AlzRoleAssignments           types.Map                        `tfsdk:"alz_role_assignments"`       // map of string, computed
+	AlzRoleDefinitions           types.Map                        `tfsdk:"alz_role_definitions"`       // map of string, computed
 	BaseArchetype                types.String                     `tfsdk:"base_archetype"`
 	Defaults                     ArchetypeDataSourceModelDefaults `tfsdk:"defaults"`
 	DisplayName                  types.String                     `tfsdk:"display_name"`
@@ -422,6 +422,8 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 	}
 
 	// TODO: implement code to create *armpolicy.Assignment from PolicyAssignmentsToAdd.
+	// TODO: implement code to create *armauthorization.RoleAssignment from RoleAssignmentsToAdd.
+	// TODO: implement code to populate subscription ids
 	if err := deleteAttrStringElementsFromSet(arch.PolicyAssignments, data.PolicyAssignmentsToRemove.Elements()); err != nil {
 		resp.Diagnostics.AddError("Unable to remove policy assignments", err.Error())
 		return
@@ -512,6 +514,7 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
+// marshallMap converts a map[string]armTypes to a map[string]attr.Value, using types.StringType as the value type.
 func marshallMap[T armTypes](m map[string]T) (basetypes.MapValue, diag.Diagnostics) {
 	result := make(map[string]attr.Value, len(m))
 	for k, v := range m {
