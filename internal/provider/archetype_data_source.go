@@ -11,7 +11,6 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy"
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -25,6 +24,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/matt-FFFFFF/alzlib"
 	"github.com/matt-FFFFFF/alzlib/sets"
+	"github.com/matt-FFFFFF/alzlib/to"
 	"github.com/matt-FFFFFF/terraform-provider-alz/internal/alztypes"
 	"github.com/matt-FFFFFF/terraform-provider-alz/internal/alzvalidators"
 )
@@ -64,13 +64,13 @@ type ArchetypeDataSourceModel struct {
 	DisplayName                  types.String                     `tfsdk:"display_name"`
 	Id                           types.String                     `tfsdk:"id"`
 	ParentId                     types.String                     `tfsdk:"parent_id"`
-	PolicyAssignmentsToAdd       types.Map                        `tfsdk:"policy_assignments_to_add"`        // map of PolicyAssignmentType
+	PolicyAssignmentsToAdd       map[string]PolicyAssignmentType  `tfsdk:"policy_assignments_to_add"`        // map of PolicyAssignmentType
 	PolicyAssignmentsToRemove    types.Set                        `tfsdk:"policy_assignments_to_remove"`     // set of string
 	PolicyDefinitionsToAdd       types.Set                        `tfsdk:"policy_definitions_to_add"`        // set of string
 	PolicyDefinitionsToRemove    types.Set                        `tfsdk:"policy_definitions_to_remove"`     // set of string
 	PolicySetDefinitionsToAdd    types.Set                        `tfsdk:"policy_set_definitions_to_add"`    // set of string
 	PolicySetDefinitionsToRemove types.Set                        `tfsdk:"policy_set_definitions_to_remove"` // set of string
-	RoleAssignmentsToAdd         types.Map                        `tfsdk:"role_assignments_to_add"`          // map of RoleAssignmentType
+	RoleAssignmentsToAdd         map[string]RoleAssignmentType    `tfsdk:"role_assignments_to_add"`          // map of RoleAssignmentType
 	RoleDefinitionsToAdd         types.Set                        `tfsdk:"role_definitions_to_add"`          // set of string
 	RoleDefinitionsToRemove      types.Set                        `tfsdk:"role_definitions_to_remove"`       // set of string
 	SubscriptionIds              types.Set                        `tfsdk:"subscription_ids"`                 // set of string
@@ -81,25 +81,29 @@ type ArchetypeDataSourceModelDefaults struct {
 	DefaultLaWorkspaceId types.String `tfsdk:"log_analytics_workspace_id"`
 }
 
+// PolicyAssignmentType describes the policy assignment data model.
 type PolicyAssignmentType struct {
-	DisplayName          types.String                  `tfsdk:"display_name"`
-	PolicyDefinitionName types.String                  `tfsdk:"policy_definition_name"`
-	PolicyDefinitionId   types.String                  `tfsdk:"policy_definition_id"`
-	EnforcementMode      types.String                  `tfsdk:"enforcement_mode"`
-	Identity             types.String                  `tfsdk:"identity"`
-	IdentityIds          types.Set                     `tfsdk:"identity_ids"`           // set of string
-	NonComplianceMessage types.Set                     `tfsdk:"non_compliance_message"` // set of PolicyAssignmentNonComplianceMessage
-	Parameters           alztypes.PolicyParameterValue `tfsdk:"parameters"`
+	DisplayName             types.String                           `tfsdk:"display_name"`
+	PolicyDefinitionName    types.String                           `tfsdk:"policy_definition_name"`
+	PolicySetDefinitionName types.String                           `tfsdk:"policy_set_definition_name"`
+	PolicyDefinitionId      types.String                           `tfsdk:"policy_definition_id"`
+	EnforcementMode         types.String                           `tfsdk:"enforcement_mode"`
+	Identity                types.String                           `tfsdk:"identity"`
+	IdentityIds             types.Set                              `tfsdk:"identity_ids"`           // set of string
+	NonComplianceMessage    []PolicyAssignmentNonComplianceMessage `tfsdk:"non_compliance_message"` // set of PolicyAssignmentNonComplianceMessage
+	Parameters              alztypes.PolicyParameterValue          `tfsdk:"parameters"`
 }
 
+// PolicyAssignmentNonComplianceMessage describes non-compliance message in a policy assignment.
 type PolicyAssignmentNonComplianceMessage struct {
 	Message                     types.String `tfsdk:"message"`
 	PolicyDefinitionReferenceId types.String `tfsdk:"policy_definition_reference_id"`
 }
 
 type RoleAssignmentType struct {
-	Definition types.String `tfsdk:"definition"`
-	ObjectId   types.String `tfsdk:"object_id"`
+	DefinitionName types.String `tfsdk:"definition_name"`
+	DefinitionId   types.String `tfsdk:"definition_id"`
+	ObjectId       types.String `tfsdk:"object_id"`
 }
 
 func (d *ArchetypeDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -164,6 +168,7 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 				MarkdownDescription: "A map of policy assignments names to add to the archetype. The map key is the policy assignment name.",
 				Optional:            true,
 				NestedObject: schema.NestedAttributeObject{
+					Validators: []validator.Object{},
 					Attributes: map[string]schema.Attribute{
 						"display_name": schema.StringAttribute{
 							MarkdownDescription: "The policy assignment display name",
@@ -171,18 +176,29 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 						},
 
 						"policy_definition_name": schema.StringAttribute{
-							MarkdownDescription: "The name of the policy definition. Must be in the AlzLib, if it is not use `policy_definition_id` instead. Conflicts with `policy_definition_id`.",
+							MarkdownDescription: "The name of the policy definition to assign. Must be in the AlzLib, if not use `policy_definition_id` instead. Conflicts with `policy_definition_id` and `policy_set_definition_name`.",
 							Optional:            true,
 							Validators: []validator.String{
-								stringvalidator.ConflictsWith(path.MatchRelative().AtMapKey("policy_definition_id")),
+								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("policy_definition_id")),
+								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("policy_set_definition_name")),
+							},
+						},
+
+						"policy_set_definition_name": schema.StringAttribute{
+							MarkdownDescription: "The name of the policy set definition to assign. Must be in the AlzLib, if not use `policy_definition_id` instead. Conflicts with `policy_definition_id` and `policy_definition_name`.",
+							Optional:            true,
+							Validators: []validator.String{
+								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("policy_definition_id")),
+								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("policy_definition_name")),
 							},
 						},
 
 						"policy_definition_id": schema.StringAttribute{
-							MarkdownDescription: "The resource id of the policy definition. Conflicts with `policy_definition_name`.",
+							MarkdownDescription: "The resource id of the policy definition. Conflicts with `policy_definition_name` and `policy_set_definition_name`.",
 							Optional:            true,
 							Validators: []validator.String{
-								stringvalidator.ConflictsWith(path.MatchRelative().AtMapKey("policy_definition_id")),
+								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("policy_set_definition_name")),
+								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("policy_definition_name")),
 							},
 						},
 
@@ -202,15 +218,14 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 							},
 						},
 
-						"identity_ids": schema.ListAttribute{
+						"identity_ids": schema.SetAttribute{
 							MarkdownDescription: "A list of identity ids to assign to the policy assignment. Required if `identity` is `UserAssigned`.",
 							Optional:            true,
 							ElementType:         types.StringType,
-							Validators: []validator.List{
-								listvalidator.UniqueValues(),
-								listvalidator.ValueStringsAre(
+							Validators: []validator.Set{
+								setvalidator.ValueStringsAre(
 									alzvalidators.ArmTypeResourceId("Microsoft.ManagedIdentity", "userAssignedIdentities"),
-									stringvalidator.AlsoRequires(path.MatchRelative().AtMapKey("identity")),
+									stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("identity")),
 								),
 							},
 						},
@@ -267,10 +282,22 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 				MarkdownDescription: "A list of role definition names to add to the archetype.",
 				Optional:            true,
 				NestedObject: schema.NestedAttributeObject{
+					Validators: []validator.Object{},
 					Attributes: map[string]schema.Attribute{
-						"definition": schema.StringAttribute{
-							MarkdownDescription: "The role definition name, or resource id.",
-							Required:            true,
+						"definition_id": schema.StringAttribute{
+							MarkdownDescription: "The role definition name. Conflicts with `definition_name`.",
+							Optional:            true,
+							Validators: []validator.String{
+								alzvalidators.ArmTypeResourceId("Microsoft.Authorization", "roleDefinitions"),
+								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("definition_name")),
+							},
+						},
+						"definition_name": schema.StringAttribute{
+							MarkdownDescription: "The role definition resource id. Conflicts with `definition_id`.",
+							Optional:            true,
+							Validators: []validator.String{
+								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("definition_id")),
+							},
 						},
 						"object_id": schema.StringAttribute{
 							MarkdownDescription: "The principal object id to assign.",
@@ -358,7 +385,6 @@ func (d *ArchetypeDataSource) Configure(ctx context.Context, req datasource.Conf
 			"Unexpected Data Source Configure Type",
 			fmt.Sprintf("Expected *alzlib.AlzLib, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
-
 		return
 	}
 
@@ -421,9 +447,10 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 		return
 	}
 
-	// TODO: implement code to create *armpolicy.Assignment from PolicyAssignmentsToAdd.
 	// TODO: implement code to create *armauthorization.RoleAssignment from RoleAssignmentsToAdd.
 	// TODO: implement code to populate subscription ids
+	// TODO: implement code to create *armpolicy.Assignment from PolicyAssignmentsToAdd.
+
 	if err := deleteAttrStringElementsFromSet(arch.PolicyAssignments, data.PolicyAssignmentsToRemove.Elements()); err != nil {
 		resp.Diagnostics.AddError("Unable to remove policy assignments", err.Error())
 		return
@@ -459,6 +486,32 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 			resp.Diagnostics.AddError("Unable to add management group", err.Error())
 			return
 		}
+	}
+
+	// check that the policy assignment referenced definition names are in alz
+	for _, pa := range data.PolicyAssignmentsToAdd {
+		if isKnown(pa.PolicyDefinitionName) && !d.alz.PolicyDefinitionExists(pa.PolicyDefinitionName.ValueString()) {
+			resp.Diagnostics.AddError("Policy definition not found", fmt.Sprintf("Unable to find policy definition %s", pa.PolicyDefinitionName.ValueString()))
+			return
+		}
+		if isKnown(pa.PolicySetDefinitionName) && !d.alz.PolicySetDefinitionExists(pa.PolicySetDefinitionName.ValueString()) {
+			resp.Diagnostics.AddError("Policy set definition not found", fmt.Sprintf("Unable to find policy set definition %s", pa.PolicySetDefinitionName.ValueString()))
+			return
+		}
+	}
+
+	// add new policy assignments to deployed management group and run Update to set the correct references, etc.
+	newPas, err := policyAssignmentType2ArmPolicyAssignment(data.PolicyAssignmentsToAdd, d.alz)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to create policy assignments", err.Error())
+		return
+	}
+	for k, v := range newPas {
+		d.alz.Deployment.MGs[mgname].PolicyAssignments[k] = v
+	}
+	if err := d.alz.Deployment.MGs[mgname].Update(d.alz, wkpv); err != nil {
+		resp.Diagnostics.AddError("Unable to update management group", err.Error())
+		return
 	}
 
 	if err := d.alz.Deployment.MGs[mgname].GeneratePolicyAssignmentAdditionalRoleAssignments(d.alz); err != nil {
@@ -533,6 +586,8 @@ func marshallMap[T armTypes](m map[string]T) (basetypes.MapValue, diag.Diagnosti
 	return resultMapType, nil
 }
 
+// addAttrStringElementsToSet adds the string values of the attr.Value elements to the set.
+// It is used to add elements to the archetype.
 func addAttrStringElementsToSet(set sets.Set[string], vals []attr.Value) error {
 	for _, attr := range vals {
 		s, ok := attr.(types.String)
@@ -544,6 +599,8 @@ func addAttrStringElementsToSet(set sets.Set[string], vals []attr.Value) error {
 	return nil
 }
 
+// deleteAttrStringElementsFromSet removed the string values of the attr.Value elements to the set.
+// It is used to remove elements from the archetype.
 func deleteAttrStringElementsFromSet(set sets.Set[string], vals []attr.Value) error {
 	for _, attr := range vals {
 		s, ok := attr.(types.String)
@@ -556,4 +613,87 @@ func deleteAttrStringElementsFromSet(set sets.Set[string], vals []attr.Value) er
 		set.Remove(s.ValueString())
 	}
 	return nil
+}
+
+func policyAssignmentType2ArmPolicyAssignment(pamap map[string]PolicyAssignmentType, az *alzlib.AlzLib) (map[string]*armpolicy.Assignment, error) {
+	const (
+		policyAssignmentIdFmt    = "/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyAssignments/%s"
+		policyDefinitionIdFmt    = "/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyAssignments/%s"
+		policySetDefinitionIdFmt = "/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyAssignments/%s"
+		policyAssignementType    = "Microsoft.Authorization/policyAssignments"
+	)
+	res := make(map[string]*armpolicy.Assignment, len(pamap))
+	for name, src := range pamap {
+		dst := new(armpolicy.Assignment)
+		dst.Properties = new(armpolicy.AssignmentProperties)
+		dst.ID = to.Ptr(fmt.Sprintf(policyAssignmentIdFmt, name))
+		dst.Name = to.Ptr(name)
+		dst.Type = to.Ptr(policyAssignementType)
+		dst.Properties.DisplayName = to.Ptr(src.DisplayName.ValueString())
+
+		// Set policy definition id.
+		if isKnown(src.PolicyDefinitionName) {
+			if !az.PolicyDefinitionExists(src.PolicyDefinitionName.ValueString()) {
+				return nil, fmt.Errorf("policy definition %s not found in AlzLib", src.PolicyDefinitionName.ValueString())
+			}
+			dst.Properties.PolicyDefinitionID = to.Ptr(fmt.Sprintf(policyDefinitionIdFmt, src.PolicyDefinitionName.ValueString()))
+		}
+		if isKnown(src.PolicySetDefinitionName) {
+			if !az.PolicySetDefinitionExists(src.PolicySetDefinitionName.ValueString()) {
+				return nil, fmt.Errorf("policy set definition %s not found in AlzLib", src.PolicyDefinitionName.ValueString())
+			}
+			dst.Properties.PolicyDefinitionID = to.Ptr(fmt.Sprintf(policySetDefinitionIdFmt, src.PolicyDefinitionName.ValueString()))
+		}
+		if isKnown(src.PolicyDefinitionId) {
+			dst.Properties.PolicyDefinitionID = to.Ptr(src.PolicyDefinitionId.ValueString())
+		}
+
+		// Set enforcement mode.
+		if isKnown(src.EnforcementMode) {
+			switch src.EnforcementMode.ValueString() {
+			case "DoNotEnforce":
+				dst.Properties.EnforcementMode = to.Ptr(armpolicy.EnforcementModeDoNotEnforce)
+			case "Default":
+				dst.Properties.EnforcementMode = to.Ptr(armpolicy.EnforcementModeDefault)
+			}
+		}
+
+		// set non-compliance message
+		if len(src.NonComplianceMessage) > 0 {
+			dst.Properties.NonComplianceMessages = make([]*armpolicy.NonComplianceMessage, len(src.NonComplianceMessage))
+			for i, msg := range src.NonComplianceMessage {
+				dst.Properties.NonComplianceMessages[i] = &armpolicy.NonComplianceMessage{
+					Message: to.Ptr(msg.Message.ValueString()),
+				}
+				if isKnown(msg.PolicyDefinitionReferenceId) {
+					dst.Properties.NonComplianceMessages[i].PolicyDefinitionReferenceID = to.Ptr(msg.PolicyDefinitionReferenceId.ValueString())
+				}
+			}
+		}
+
+		// set parameters
+		if isKnown(src.Parameters) {
+			params := make(map[string]any)
+			if err := json.Unmarshal([]byte(src.Parameters.ValueString()), &params); err != nil {
+				return nil, fmt.Errorf("unable to unmarshal policy parameters for policy %s: %w", name, err)
+			}
+			dst.Properties.Parameters = convertPolicyAssignmentParametersToSdkType(params)
+		}
+		res[name] = dst
+	}
+	return res, nil
+}
+
+func convertPolicyAssignmentParametersToSdkType(src map[string]any) map[string]*armpolicy.ParameterValuesValue {
+	res := make(map[string]*armpolicy.ParameterValuesValue, len(src))
+	for k, v := range src {
+		val := new(armpolicy.ParameterValuesValue)
+		val.Value = v
+		res[k] = val
+	}
+	return res
+}
+
+func isKnown(val attr.Value) bool {
+	return !val.IsNull() && !val.IsUnknown()
 }

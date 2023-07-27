@@ -135,6 +135,9 @@ func (p *AlzProvider) Schema(ctx context.Context, req provider.SchemaRequest, re
 				MarkdownDescription: "A list of directories to search for ALZ artefacts. The directories will be processed in order.",
 				ElementType:         types.StringType,
 				Optional:            true,
+				Validators: []validator.List{
+					listvalidator.UniqueValues(),
+				},
 			},
 
 			"oidc_request_token": schema.StringAttribute{
