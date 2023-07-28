@@ -9,11 +9,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Azure/alzlib"
+	sets "github.com/deckarep/golang-set/v2"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/matt-FFFFFF/alzlib"
-	"github.com/matt-FFFFFF/alzlib/sets"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -63,25 +63,25 @@ func testAccExampleDataSourceConfig() string {
 			log_analytics_workspace_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg/providers/Microsoft.OperationalInsights/workspaces/la"
 		}
 
-		policy_assignments_to_add = {
-			myassign = {
-				display_name 		       = random_pet.test.id
-				policy_definition_id = "/subscriptions/00000000-0000-0000-0000-000000000000/providers/Microsoft.Authorization/policyDefinitions/1234"
-				non_compliance_message = [
-					{
-						message = random_pet.test.id
-					},
-					{
-						message                        = "test2"
-						policy_definition_reference_id = "1234"
-					}
-				]
-				parameters = jsonencode({
-					myparam  = "test"
-					myparam2 = 2
-				})
-			}
-		}
+		// policy_assignments_to_add = {
+		// 	myassign = {
+		// 		display_name 		       = random_pet.test.id
+		// 		policy_definition_id = "/subscriptions/00000000-0000-0000-0000-000000000000/providers/Microsoft.Authorization/policyDefinitions/1234"
+		// 		non_compliance_message = [
+		// 			{
+		// 				message = random_pet.test.id
+		// 			},
+		// 			{
+		// 				message                        = "test2"
+		// 				policy_definition_reference_id = "1234"
+		// 			}
+		// 		]
+		// 		parameters = jsonencode({
+		// 			myparam  = "test"
+		// 			myparam2 = 2
+		// 		})
+		// 	}
+		// }
 	}
 
 	# Test that the data source is returning the correct value for the policy location

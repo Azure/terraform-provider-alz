@@ -9,8 +9,11 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/Azure/alzlib"
+	"github.com/Azure/alzlib/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy"
+	sets "github.com/deckarep/golang-set/v2"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -22,9 +25,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/matt-FFFFFF/alzlib"
-	"github.com/matt-FFFFFF/alzlib/sets"
-	"github.com/matt-FFFFFF/alzlib/to"
 	"github.com/matt-FFFFFF/terraform-provider-alz/internal/alztypes"
 	"github.com/matt-FFFFFF/terraform-provider-alz/internal/alzvalidators"
 )
@@ -43,7 +43,7 @@ type ArchetypeDataSource struct {
 
 // armTypes is used for the generic functions that operate on ARM types.
 type armTypes interface {
-	*armpolicy.Assignment | *armpolicy.Definition | *armpolicy.SetDefinition | *armauthorization.RoleAssignment | *armauthorization.RoleDefinition
+	armpolicy.Assignment | armpolicy.Definition | armpolicy.SetDefinition | armauthorization.RoleAssignment | armauthorization.RoleDefinition
 }
 
 // checkExistsInAlzLib is a helper struct to check if an item exists in the AlzLib.
@@ -464,7 +464,7 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 	}
 
 	for _, check := range checks {
-		for item := range check.set {
+		for item := range check.set.Iter() {
 			if !check.f(item) {
 				resp.Diagnostics.AddError("Item not found", fmt.Sprintf("Unable to find %s in the AlzLib", item))
 				return
@@ -474,11 +474,11 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 
 	// TODO: change this to compare the config to the AlzManagementGroup in the alz struct.
 	// It should be identical. If it is not then error as the user has duplicate management group names.
-	if _, ok := d.alz.Deployment.MGs[mgname]; !ok {
+	if mg := d.alz.Deployment.GetManagementGroup(mgname); mg == nil {
 		tflog.Debug(ctx, "Add management group")
 		external := false
 		parent := data.ParentId.ValueString()
-		if _, ok := d.alz.Deployment.MGs[parent]; !ok {
+		if mg := d.alz.Deployment.GetManagementGroup(parent); mg == nil {
 			external = true
 		}
 
@@ -486,6 +486,12 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 			resp.Diagnostics.AddError("Unable to add management group", err.Error())
 			return
 		}
+	}
+
+	mg := d.alz.Deployment.GetManagementGroup(mgname)
+	if mg == nil {
+		resp.Diagnostics.AddError("Unable to find management group after adding", fmt.Sprintf("Unable to find management group %s", mgname))
+		return
 	}
 
 	// check that the policy assignment referenced definition names are in alz
@@ -506,15 +512,18 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 		resp.Diagnostics.AddError("Unable to create policy assignments", err.Error())
 		return
 	}
-	for k, v := range newPas {
-		d.alz.Deployment.MGs[mgname].PolicyAssignments[k] = v
-	}
-	if err := d.alz.Deployment.MGs[mgname].Update(d.alz, wkpv); err != nil {
-		resp.Diagnostics.AddError("Unable to update management group", err.Error())
+
+	if err := mg.UpsertPolicyAssignments(ctx, newPas, d.alz); err != nil {
+		resp.Diagnostics.AddError("Unable to add policy assignments", err.Error())
 		return
 	}
 
-	if err := d.alz.Deployment.MGs[mgname].GeneratePolicyAssignmentAdditionalRoleAssignments(d.alz); err != nil {
+	// if err := d.alz.Deployment.MGs[mgname].Update(d.alz, wkpv); err != nil {
+	// 	resp.Diagnostics.AddError("Unable to update management group", err.Error())
+	// 	return
+	// }
+
+	if err := mg.GeneratePolicyAssignmentAdditionalRoleAssignments(d.alz); err != nil {
 		resp.Diagnostics.AddError("Unable to generate additional role assignments", err.Error())
 		return
 	}
@@ -524,7 +533,7 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 	var diags diag.Diagnostics
 
 	tflog.Debug(ctx, "Converting policy assignments")
-	m, diags = marshallMap(d.alz.Deployment.MGs[mgname].PolicyAssignments)
+	m, diags = marshallMap(mg.GetPolicyAssignmentMap())
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -532,7 +541,7 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 	data.AlzPolicyAssignments = m
 
 	tflog.Debug(ctx, "Converting policy definitions")
-	m, diags = marshallMap(d.alz.Deployment.MGs[mgname].PolicyDefinitions)
+	m, diags = marshallMap(mg.GetPolicyDefinitionsMap())
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -540,7 +549,7 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 	data.AlzPolicyDefinitions = m
 
 	tflog.Debug(ctx, "Converting policy set definitions")
-	m, diags = marshallMap(d.alz.Deployment.MGs[mgname].PolicySetDefinitions)
+	m, diags = marshallMap(mg.GetPolicySetDefinitionsMap())
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -548,7 +557,7 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 	data.AlzPolicySetDefinitions = m
 
 	tflog.Debug(ctx, "Converting role assignments")
-	m, diags = marshallMap(d.alz.Deployment.MGs[mgname].RoleAssignments)
+	m, diags = marshallMap(mg.GetRoleAssignmentsMap())
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -556,7 +565,7 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 	data.AlzRoleAssignments = m
 
 	tflog.Debug(ctx, "Converting role definitions")
-	m, diags = marshallMap(d.alz.Deployment.MGs[mgname].RoleDefinitions)
+	m, diags = marshallMap(mg.GetRoleDefinitionsMap())
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
