@@ -48,6 +48,7 @@ data "alz_archetype" "example" {
 
 - `alz_policy_assignments` (Map of String) A map of generated policy assignments. The values are ARM JSON policy assignments.
 - `alz_policy_definitions` (Map of String) A map of generated policy assignments. The values are ARM JSON policy definitions.
+- `alz_policy_role_assignments` (Attributes Map) A map of role assignments by policy assignment name. The values are a nested object containing the role definition ids and any additionl scopes. (see [below for nested schema](#nestedatt--alz_policy_role_assignments))
 - `alz_policy_set_definitions` (Map of String) A map of generated policy assignments. The values are ARM JSON policy set definitions.
 - `alz_role_assignments` (Map of String) A map of generated role assignments. The values are ARM JSON role assignments.
 - `alz_role_definitions` (Map of String) A map of generated role assignments. The values are ARM JSON role definitions.
@@ -75,11 +76,12 @@ Optional:
 
 - `enforcement_mode` (String) The enforcement mode of the policy assignment. Must be one of `Default`, or `DoNotEnforce`.
 - `identity` (String) The identity type. Must be one of `SystemAssigned` or `UserAssigned`.
-- `identity_ids` (List of String) A list of identity ids to assign to the policy assignment. Required if `identity` is `UserAssigned`.
+- `identity_ids` (Set of String) A list of identity ids to assign to the policy assignment. Required if `identity` is `UserAssigned`.
 - `non_compliance_message` (Attributes Set) The non-compliance messages to use for the policy assignment. (see [below for nested schema](#nestedatt--policy_assignments_to_add--non_compliance_message))
 - `parameters` (String) The parameters to use for the policy assignment. **Note:** This is a JSON string, and not a map. This is because the parameter values have different types, which confuses the type system used by the provider sdk. Use `jsonencode()` to construct the map. The map keys must be strings, the values are `any` type.
-- `policy_definition_id` (String) The resource id of the policy definition. Conflicts with `policy_definition_name`.
-- `policy_definition_name` (String) The name of the policy definition. Must be in the AlzLib, if it is not use `policy_definition_id` instead. Conflicts with `policy_definition_id`.
+- `policy_definition_id` (String) The resource id of the policy definition. Conflicts with `policy_definition_name` and `policy_set_definition_name`.
+- `policy_definition_name` (String) The name of the policy definition to assign. Must be in the AlzLib, if not use `policy_definition_id` instead. Conflicts with `policy_definition_id` and `policy_set_definition_name`.
+- `policy_set_definition_name` (String) The name of the policy set definition to assign. Must be in the AlzLib, if not use `policy_definition_id` instead. Conflicts with `policy_definition_id` and `policy_definition_name`.
 
 <a id="nestedatt--policy_assignments_to_add--non_compliance_message"></a>
 ### Nested Schema for `policy_assignments_to_add.non_compliance_message`
@@ -99,5 +101,18 @@ Optional:
 
 Required:
 
-- `definition` (String) The role definition name, or resource id.
 - `object_id` (String) The principal object id to assign.
+
+Optional:
+
+- `definition_id` (String) The role definition name. Conflicts with `definition_name`.
+- `definition_name` (String) The role definition resource id. Conflicts with `definition_id`.
+
+
+<a id="nestedatt--alz_policy_role_assignments"></a>
+### Nested Schema for `alz_policy_role_assignments`
+
+Read-Only:
+
+- `additional_scopes` (Set of String) A set of additional scopes to assign with the policy assignment.
+- `role_definition_ids` (Set of String) A set of role definition ids to assign with the policy assignment.

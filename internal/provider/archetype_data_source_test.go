@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/Azure/alzlib"
-	sets "github.com/deckarep/golang-set/v2"
+	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -94,7 +94,7 @@ func testAccExampleDataSourceConfig() string {
 // TestAddAttrStringElementsToSet tests that addAttrStringElementsToSet adds a value to a set.
 func TestAddAttrStringElementsToSet(t *testing.T) {
 	arch := &alzlib.Archetype{
-		PolicyDefinitions: sets.NewSet[string]("a", "b", "c"),
+		PolicyDefinitions: mapset.NewThreadUnsafeSet[string]("a", "b", "c"),
 	}
 	vals := []attr.Value{
 		basetypes.NewStringValue("d"),
@@ -106,7 +106,7 @@ func TestAddAttrStringElementsToSet(t *testing.T) {
 // TestDeleteAttrStringElementsToSet tests that deleteAttrStringElementsToSet removes a value from a set.
 func TestDeleteAttrStringElementsToSet(t *testing.T) {
 	arch := &alzlib.Archetype{
-		PolicyDefinitions: sets.NewSet[string]("a", "b", "c"),
+		PolicyDefinitions: mapset.NewThreadUnsafeSet[string]("a", "b", "c"),
 	}
 	vals := []attr.Value{
 		basetypes.NewStringValue("c"),
