@@ -621,7 +621,7 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-// convertAlzPolicyRoleAssignments converts a map[string]alzlib.PolicyAssignmentAdditionalRoleAssignments to a map[string]AlzPolicyRoleAssignmentType
+// convertAlzPolicyRoleAssignments converts a map[string]alzlib.PolicyAssignmentAdditionalRoleAssignments to a map[string]AlzPolicyRoleAssignmentType.
 func convertAlzPolicyRoleAssignments(ctx context.Context, m map[string]alzlib.PolicyAssignmentAdditionalRoleAssignments) (map[string]AlzPolicyRoleAssignmentType, diag.Diagnostics) {
 	res := make(map[string]AlzPolicyRoleAssignmentType, len(m))
 	diags := make(diag.Diagnostics, 0)
