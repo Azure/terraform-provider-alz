@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Azure/alzlib"
@@ -46,7 +47,12 @@ type AlzProvider struct {
 	// provider is built and ran locally, and "test" when running acceptance
 	// testing.
 	version string
-	alzLib  *alzlib.AlzLib
+	alz     *alzlibWithMutex
+}
+
+type alzlibWithMutex struct {
+	*alzlib.AlzLib
+	mu *sync.Mutex
 }
 
 // AlzProviderModel describes the provider data model.
@@ -201,10 +207,10 @@ func (p *AlzProvider) Schema(ctx context.Context, req provider.SchemaRequest, re
 func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	tflog.Debug(ctx, "Provider configuration started")
 
-	if p.alzLib != nil {
+	if p.alz != nil {
 		tflog.Debug(ctx, "Provider AlzLib already present, skipping configuration")
-		resp.DataSourceData = p.alzLib
-		resp.ResourceData = p.alzLib
+		resp.DataSourceData = p.alz
+		resp.ResourceData = p.alz
 		return
 	}
 
@@ -267,9 +273,13 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 
 	// Store the alz pointer in the provider struct so we don't have to do all this work every time `.Configure` is called.
 	// Due to fetch from Azure, it takes approx 30 seconds each time and is called 4-5 time during a single acceptance test.
-	p.alzLib = alz
-	resp.DataSourceData = alz
-	resp.ResourceData = alz
+
+	p.alz = &alzlibWithMutex{
+		AlzLib: alz,
+		mu:     &sync.Mutex{},
+	}
+	resp.DataSourceData = p.alz
+	//resp.ResourceData = p.alz
 	tflog.Debug(ctx, "Provider configuration finished")
 }
 

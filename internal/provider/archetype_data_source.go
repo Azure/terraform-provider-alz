@@ -38,7 +38,7 @@ func NewArchetypeDataSource() datasource.DataSource {
 
 // ArchetypeDataSource defines the data source implementation.
 type ArchetypeDataSource struct {
-	alz *alzlib.AlzLib
+	alz alzlibWithMutex
 }
 
 // mapTypes is used for the generic functions that operate on certain map types.
@@ -412,7 +412,7 @@ func (d *ArchetypeDataSource) Configure(ctx context.Context, req datasource.Conf
 		return
 	}
 
-	data, ok := req.ProviderData.(*alzlib.AlzLib)
+	data, ok := req.ProviderData.(alzlibWithMutex)
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -434,6 +434,9 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	d.alz.mu.Lock()
+	defer d.alz.mu.Unlock()
 
 	mgname := data.Id.ValueString()
 
@@ -541,13 +544,13 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 	}
 
 	// add new policy assignments to deployed management group and run Update to set the correct references, etc.
-	newPas, err := policyAssignmentType2ArmPolicyAssignment(data.PolicyAssignmentsToAdd, d.alz)
+	newPas, err := policyAssignmentType2ArmPolicyAssignment(data.PolicyAssignmentsToAdd, d.alz.AlzLib)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to create policy assignments", err.Error())
 		return
 	}
 
-	if err := mg.UpsertPolicyAssignments(ctx, newPas, d.alz); err != nil {
+	if err := mg.UpsertPolicyAssignments(ctx, newPas, d.alz.AlzLib); err != nil {
 		resp.Diagnostics.AddError("Unable to add policy assignments", err.Error())
 		return
 	}
@@ -557,7 +560,7 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 	// 	return
 	// }
 
-	if err := mg.GeneratePolicyAssignmentAdditionalRoleAssignments(d.alz); err != nil {
+	if err := mg.GeneratePolicyAssignmentAdditionalRoleAssignments(d.alz.AlzLib); err != nil {
 		resp.Diagnostics.AddError("Unable to generate additional role assignments", err.Error())
 		return
 	}
