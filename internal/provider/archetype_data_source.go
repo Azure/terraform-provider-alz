@@ -38,7 +38,7 @@ func NewArchetypeDataSource() datasource.DataSource {
 
 // ArchetypeDataSource defines the data source implementation.
 type ArchetypeDataSource struct {
-	alz alzlibWithMutex
+	alz *alzlibWithMutex
 }
 
 // mapTypes is used for the generic functions that operate on certain map types.
@@ -85,7 +85,7 @@ type ArchetypeDataSourceModel struct {
 // AlzPolicyRoleAssignmentType is a representation of the additional policy assignments
 // that must be created when assigning a given policy.
 type AlzPolicyRoleAssignmentType struct {
-	RoleAssignmentIds types.Set `tfsdk:"role_assignment_ids"`
+	RoleDefinitionIds types.Set `tfsdk:"role_definition_ids"`
 	AdditionalScopes  types.Set `tfsdk:"additional_scopes"`
 }
 
@@ -412,12 +412,12 @@ func (d *ArchetypeDataSource) Configure(ctx context.Context, req datasource.Conf
 		return
 	}
 
-	data, ok := req.ProviderData.(alzlibWithMutex)
+	data, ok := req.ProviderData.(*alzlibWithMutex)
 
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *alzlib.AlzLib, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *alzlibWithMutex, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 		return
 	}
@@ -631,7 +631,7 @@ func convertAlzPolicyRoleAssignments(ctx context.Context, m map[string]alzlib.Po
 		adscopeset, d := types.SetValueFrom(ctx, types.StringType, v.AdditionalScopes)
 		diags.Append(d...)
 		res[k] = AlzPolicyRoleAssignmentType{
-			RoleAssignmentIds: raset,
+			RoleDefinitionIds: raset,
 			AdditionalScopes:  adscopeset,
 		}
 	}
