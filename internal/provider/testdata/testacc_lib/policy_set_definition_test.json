@@ -1,0 +1,61 @@
+{
+  "name": "test",
+  "type": "Microsoft.Authorization/policySetDefinitions",
+  "apiVersion": "2021-06-01",
+  "scope": null,
+  "properties": {
+    "policyType": "Custom",
+    "displayName": "Enforce policies in the Sandbox Landing Zone",
+    "description": "Enforce policies in the Sandbox Landing Zone.",
+    "metadata": {
+      "version": "1.0.0",
+      "category": "Sandbox",
+      "source": "https://github.com/Azure/Enterprise-Scale/",
+      "alzCloudEnvironments": [
+        "AzureCloud",
+        "AzureChinaCloud",
+        "AzureUSGovernment"
+      ]
+    },
+    "parameters": {
+      "effect": {
+        "type": "String",
+        "defaultValue": "Deny",
+        "metadata": {
+          "displayName": "DeployIfNotExists",
+          "description": "Enable or disable the execution of the policy"
+        },
+        "allowedValues": [
+          "DeployIfNotExists",
+          "AuditIfNotExists",
+          "Disabled"
+        ]
+      },
+      "logAnalytics": {
+        "type": "String",
+        "metadata": {
+          "displayName": "Log Analytics workspace",
+          "description": "Select Log Analytics workspace from dropdown list. If this workspace is outside of the scope of the assignment you must manually grant 'Log Analytics Contributor' permissions (or similar) to the policy assignment's principal ID.",
+          "strongType": "omsWorkspace",
+          "assignPermissions": true
+        }
+      }
+    },
+    "policyDefinitions": [
+      {
+        "policyDefinitionReferenceId": "BlobServicesDiagnosticsLogsToWorkspace",
+        "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/BlobServicesDiagnosticsLogsToWorkspace",
+        "parameters": {
+          "effect": {
+            "value": "[parameters('effect')]"
+          },
+          "logAnalytics": {
+            "value": "[parameters('logAnalytics')]"
+          }
+        },
+        "groupNames": []
+      }
+    ],
+    "policyDefinitionGroups": null
+  }
+}

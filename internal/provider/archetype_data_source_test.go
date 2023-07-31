@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
 	"testing"
 
 	"github.com/Azure/alzlib"
@@ -21,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/matt-FFFFFF/terraform-provider-alz/internal/alztypes"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAccAlzArchetypeDataSource(t *testing.T) {
@@ -218,10 +218,10 @@ func TestPolicyAssignmentType2ArmPolicyAssignment(t *testing.T) {
 					Type: to.Ptr("Microsoft.Authorization/policyAssignments"),
 					Properties: &armpolicy.AssignmentProperties{
 						DisplayName:           to.Ptr(""),
-						PolicyDefinitionID:    to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyAssignments/policy1"),
-						EnforcementMode:       to.Ptr(armpolicy.EnforcementModeDefault),
-						NonComplianceMessages: []*armpolicy.NonComplianceMessage{},
-						Parameters:            map[string]*armpolicy.ParameterValuesValue{},
+						PolicyDefinitionID:    to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyDefinitions/BlobServicesDiagnosticsLogsToWorkspace"),
+						EnforcementMode:       nil,
+						NonComplianceMessages: []*armpolicy.NonComplianceMessage(nil),
+						Parameters:            map[string]*armpolicy.ParameterValuesValue(nil),
 					},
 				},
 			},
@@ -231,7 +231,7 @@ func TestPolicyAssignmentType2ArmPolicyAssignment(t *testing.T) {
 			name: "policy set definition id",
 			input: map[string]PolicyAssignmentType{
 				"test2": {
-					PolicySetDefinitionName: types.StringValue("policySet1"),
+					PolicySetDefinitionName: types.StringValue("test"),
 				},
 			},
 			expected: map[string]*armpolicy.Assignment{
@@ -241,10 +241,10 @@ func TestPolicyAssignmentType2ArmPolicyAssignment(t *testing.T) {
 					Type: to.Ptr("Microsoft.Authorization/policyAssignments"),
 					Properties: &armpolicy.AssignmentProperties{
 						DisplayName:           to.Ptr(""),
-						PolicyDefinitionID:    to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyAssignments/policySet1"),
-						EnforcementMode:       to.Ptr(armpolicy.EnforcementModeDefault),
-						NonComplianceMessages: []*armpolicy.NonComplianceMessage{},
-						Parameters:            map[string]*armpolicy.ParameterValuesValue{},
+						PolicyDefinitionID:    to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policySetDefinitions/test"),
+						EnforcementMode:       nil,
+						NonComplianceMessages: []*armpolicy.NonComplianceMessage(nil),
+						Parameters:            map[string]*armpolicy.ParameterValuesValue(nil),
 					},
 				},
 			},
@@ -254,7 +254,7 @@ func TestPolicyAssignmentType2ArmPolicyAssignment(t *testing.T) {
 			name: "policy definition id and enforcement mode",
 			input: map[string]PolicyAssignmentType{
 				"test3": {
-					PolicyDefinitionName: types.StringValue("policy1"),
+					PolicyDefinitionName: types.StringValue("BlobServicesDiagnosticsLogsToWorkspace"),
 					EnforcementMode:      types.StringValue("DoNotEnforce"),
 				},
 			},
@@ -265,10 +265,10 @@ func TestPolicyAssignmentType2ArmPolicyAssignment(t *testing.T) {
 					Type: to.Ptr("Microsoft.Authorization/policyAssignments"),
 					Properties: &armpolicy.AssignmentProperties{
 						DisplayName:           to.Ptr(""),
-						PolicyDefinitionID:    to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyAssignments/policy1"),
+						PolicyDefinitionID:    to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyDefinitions/BlobServicesDiagnosticsLogsToWorkspace"),
 						EnforcementMode:       to.Ptr(armpolicy.EnforcementModeDoNotEnforce),
-						NonComplianceMessages: []*armpolicy.NonComplianceMessage{},
-						Parameters:            map[string]*armpolicy.ParameterValuesValue{},
+						NonComplianceMessages: []*armpolicy.NonComplianceMessage(nil),
+						Parameters:            map[string]*armpolicy.ParameterValuesValue(nil),
 					},
 				},
 			},
@@ -278,7 +278,7 @@ func TestPolicyAssignmentType2ArmPolicyAssignment(t *testing.T) {
 			name: "policy definition id and non-compliance message",
 			input: map[string]PolicyAssignmentType{
 				"test4": {
-					PolicyDefinitionName: types.StringValue("policy1"),
+					PolicyDefinitionName: types.StringValue("BlobServicesDiagnosticsLogsToWorkspace"),
 					NonComplianceMessage: []PolicyAssignmentNonComplianceMessage{
 						{
 							Message: types.StringValue("test message"),
@@ -293,15 +293,15 @@ func TestPolicyAssignmentType2ArmPolicyAssignment(t *testing.T) {
 					Type: to.Ptr("Microsoft.Authorization/policyAssignments"),
 					Properties: &armpolicy.AssignmentProperties{
 						DisplayName:        to.Ptr(""),
-						PolicyDefinitionID: to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyAssignments/policy1"),
-						EnforcementMode:    to.Ptr(armpolicy.EnforcementModeDefault),
+						PolicyDefinitionID: to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyDefinitions/BlobServicesDiagnosticsLogsToWorkspace"),
+						EnforcementMode:    nil,
 						NonComplianceMessages: []*armpolicy.NonComplianceMessage{
 							{
 								Message:                     to.Ptr("test message"),
 								PolicyDefinitionReferenceID: nil,
 							},
 						},
-						Parameters: map[string]*armpolicy.ParameterValuesValue{},
+						Parameters: map[string]*armpolicy.ParameterValuesValue(nil),
 					},
 				},
 			},
@@ -311,7 +311,7 @@ func TestPolicyAssignmentType2ArmPolicyAssignment(t *testing.T) {
 			name: "policy definition id and parameters",
 			input: map[string]PolicyAssignmentType{
 				"test5": {
-					PolicyDefinitionName: types.StringValue("policy1"),
+					PolicyDefinitionName: types.StringValue("BlobServicesDiagnosticsLogsToWorkspace"),
 					Parameters: alztypes.PolicyParameterValue{
 						StringValue: types.StringValue(`{"param1": "value1", "param2": 2}`),
 					},
@@ -324,9 +324,9 @@ func TestPolicyAssignmentType2ArmPolicyAssignment(t *testing.T) {
 					Type: to.Ptr("Microsoft.Authorization/policyAssignments"),
 					Properties: &armpolicy.AssignmentProperties{
 						DisplayName:           to.Ptr(""),
-						PolicyDefinitionID:    to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyAssignments/policy1"),
-						EnforcementMode:       to.Ptr(armpolicy.EnforcementModeDefault),
-						NonComplianceMessages: []*armpolicy.NonComplianceMessage{},
+						PolicyDefinitionID:    to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyDefinitions/BlobServicesDiagnosticsLogsToWorkspace"),
+						EnforcementMode:       nil,
+						NonComplianceMessages: []*armpolicy.NonComplianceMessage(nil),
 						Parameters: map[string]*armpolicy.ParameterValuesValue{
 							"param1": {Value: "value1"},
 							"param2": {Value: float64(2)},
@@ -363,9 +363,19 @@ func TestPolicyAssignmentType2ArmPolicyAssignment(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			actual, err := policyAssignmentType2ArmPolicyAssignment(tc.input, az)
-			assert.Equal(t, tc.err, err)
+			require.Equal(t, tc.err, err)
+			if tc.err != nil {
+				return
+			}
 			for ek, ev := range tc.expected {
-				assert.True(t, reflect.DeepEqual(ev, actual[ek]))
+				assert.Equal(t, *ev.ID, *actual[ek].ID)
+				assert.Equal(t, *ev.Name, *actual[ek].Name)
+				assert.Equal(t, *ev.Type, *actual[ek].Type)
+				assert.Equal(t, ev.Properties.DisplayName, actual[ek].Properties.DisplayName)
+				assert.Equal(t, *ev.Properties.PolicyDefinitionID, *actual[ek].Properties.PolicyDefinitionID)
+				assert.Equal(t, ev.Properties.EnforcementMode, actual[ek].Properties.EnforcementMode)
+				assert.Equal(t, ev.Properties.NonComplianceMessages, actual[ek].Properties.NonComplianceMessages)
+				assert.Equal(t, ev.Properties.Parameters, actual[ek].Properties.Parameters)
 			}
 			//assert.Equal(t, tc.expected, actual)
 		})

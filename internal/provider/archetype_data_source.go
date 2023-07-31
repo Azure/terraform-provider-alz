@@ -689,8 +689,8 @@ func deleteAttrStringElementsFromSet(set mapset.Set[string], vals []attr.Value) 
 func policyAssignmentType2ArmPolicyAssignment(pamap map[string]PolicyAssignmentType, az *alzlib.AlzLib) (map[string]*armpolicy.Assignment, error) {
 	const (
 		policyAssignmentIdFmt    = "/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyAssignments/%s"
-		policyDefinitionIdFmt    = "/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyAssignments/%s"
-		policySetDefinitionIdFmt = "/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyAssignments/%s"
+		policyDefinitionIdFmt    = "/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyDefinitions/%s"
+		policySetDefinitionIdFmt = "/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policySetDefinitions/%s"
 		policyAssignementType    = "Microsoft.Authorization/policyAssignments"
 	)
 	res := make(map[string]*armpolicy.Assignment, len(pamap))
@@ -704,16 +704,18 @@ func policyAssignmentType2ArmPolicyAssignment(pamap map[string]PolicyAssignmentT
 
 		// Set policy definition id.
 		if isKnown(src.PolicyDefinitionName) {
-			if !az.PolicyDefinitionExists(src.PolicyDefinitionName.ValueString()) {
-				return nil, fmt.Errorf("policy definition %s not found in AlzLib", src.PolicyDefinitionName.ValueString())
+			n := src.PolicyDefinitionName.ValueString()
+			if !az.PolicyDefinitionExists(n) {
+				return nil, fmt.Errorf("policy definition %s not found in AlzLib", n)
 			}
-			dst.Properties.PolicyDefinitionID = to.Ptr(fmt.Sprintf(policyDefinitionIdFmt, src.PolicyDefinitionName.ValueString()))
+			dst.Properties.PolicyDefinitionID = to.Ptr(fmt.Sprintf(policyDefinitionIdFmt, n))
 		}
 		if isKnown(src.PolicySetDefinitionName) {
-			if !az.PolicySetDefinitionExists(src.PolicySetDefinitionName.ValueString()) {
-				return nil, fmt.Errorf("policy set definition %s not found in AlzLib", src.PolicyDefinitionName.ValueString())
+			n := src.PolicySetDefinitionName.ValueString()
+			if !az.PolicySetDefinitionExists(n) {
+				return nil, fmt.Errorf("policy set definition %s not found in AlzLib", n)
 			}
-			dst.Properties.PolicyDefinitionID = to.Ptr(fmt.Sprintf(policySetDefinitionIdFmt, src.PolicyDefinitionName.ValueString()))
+			dst.Properties.PolicyDefinitionID = to.Ptr(fmt.Sprintf(policySetDefinitionIdFmt, n))
 		}
 		if isKnown(src.PolicyDefinitionId) {
 			dst.Properties.PolicyDefinitionID = to.Ptr(src.PolicyDefinitionId.ValueString())
