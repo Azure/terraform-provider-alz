@@ -176,11 +176,11 @@ func TestConvertAlzPolicyRoleAssignments(t *testing.T) {
 		assert.Len(t, res[k].AdditionalScopes.Elements(), len(v.AdditionalScopes))
 		for i, rd := range v.RoleDefinitionIds {
 			assert.Contains(t, res[k].RoleDefinitionIds.Elements(), types.StringValue(rd))
-			assert.Equal(t, rd, res[k].RoleDefinitionIds.Elements()[i].(basetypes.StringValue).ValueString())
+			assert.Equal(t, rd, res[k].RoleDefinitionIds.Elements()[i].(basetypes.StringValue).ValueString()) //nolint:forcetypeassert
 		}
 		for i, as := range v.AdditionalScopes {
 			assert.Contains(t, res[k].AdditionalScopes.Elements(), types.StringValue(as))
-			assert.Equal(t, as, res[k].AdditionalScopes.Elements()[i].(basetypes.StringValue).ValueString())
+			assert.Equal(t, as, res[k].AdditionalScopes.Elements()[i].(basetypes.StringValue).ValueString()) //nolint:forcetypeassert
 		}
 	}
 }
@@ -190,7 +190,7 @@ func TestPolicyAssignmentType2ArmPolicyAssignment(t *testing.T) {
 
 	az := alzlib.NewAlzLib()
 
-	az.Init(context.Background(), os.DirFS("testdata/testacc_lib"))
+	require.NoError(t, az.Init(context.Background(), os.DirFS("testdata/testacc_lib")))
 
 	testCases := []struct {
 		name     string
