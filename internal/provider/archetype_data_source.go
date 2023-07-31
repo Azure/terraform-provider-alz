@@ -755,7 +755,11 @@ func policyAssignmentType2ArmPolicyAssignment(pamap map[string]PolicyAssignmentT
 	return res, nil
 }
 
-func convertPolicyAssignmentParametersToSdkType(src map[string]any) map[string]*armpolicy.ParameterValuesValue {
+// convertPolicyAssignmentParametersToSdkType converts a map[string]any to a map[string]*armpolicy.ParameterValuesValue
+func convertPolicyAssignmentParametersToSdkType(src map[string]interface{}) map[string]*armpolicy.ParameterValuesValue {
+	if src == nil {
+		return nil
+	}
 	res := make(map[string]*armpolicy.ParameterValuesValue, len(src))
 	for k, v := range src {
 		val := new(armpolicy.ParameterValuesValue)
