@@ -24,6 +24,7 @@ on:
     paths-ignore:
       - ".github/**"
       - ".vscode/**"
+  workflow_dispatch:
   schedule:
     - cron: '45 1 * * 6'
 
