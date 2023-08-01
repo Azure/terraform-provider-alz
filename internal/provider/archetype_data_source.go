@@ -518,8 +518,14 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 		if mg := d.alz.Deployment.GetManagementGroup(parent); mg == nil {
 			external = true
 		}
-
-		if err := d.alz.AddManagementGroupToDeployment(mgname, data.DisplayName.ValueString(), data.ParentId.ValueString(), external, arch); err != nil {
+		req := alzlib.AlzManagementGroupAddRequest{
+			Id:               mgname,
+			DisplayName:      data.DisplayName.ValueString(),
+			ParentId:         parent,
+			ParentIsExternal: external,
+			Archetype:        arch,
+		}
+		if err := d.alz.AddManagementGroupToDeployment(ctx, req); err != nil {
 			resp.Diagnostics.AddError("Unable to add management group", err.Error())
 			return
 		}
