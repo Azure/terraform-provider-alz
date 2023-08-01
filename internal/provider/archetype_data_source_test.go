@@ -27,10 +27,10 @@ func TestAccAlzArchetypeDataSource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		ExternalProviders: map[string]resource.ExternalProvider{
-			"random": {
-				Source: "hashicorp/random",
-			},
+		ExternalProviders:        map[string]resource.ExternalProvider{
+			// "random": {
+			// 	Source: "hashicorp/random",
+			// },
 		},
 		Steps: []resource.TestStep{
 			{
@@ -58,7 +58,7 @@ func testAccExampleDataSourceConfig() string {
 		]
 	}
 
-	resource "random_pet" "test" {}
+//	resource "random_pet" "test" {}
 
 	data "alz_archetype" "test" {
 		id             = "example"
