@@ -94,6 +94,8 @@ func TestConfigureFromEnvironment(t *testing.T) {
 	os.Unsetenv("ARM_USE_MSI")
 	os.Unsetenv("ARM_USE_OIDC")
 	os.Unsetenv("ARM_SKIP_PROVIDER_REGISTRATION")
+	os.Unsetenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN")
+	os.Unsetenv("ACTIONS_ID_TOKEN_REQUEST_URL")
 
 	// Test when no environment variable is set
 	data := &AlzProviderModel{}
