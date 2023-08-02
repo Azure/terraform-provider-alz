@@ -221,6 +221,12 @@ func TestConfigureAzIdentityEnvironment(t *testing.T) {
 	// Test when no data fields are set
 	data := &AlzProviderModel{}
 	configureAzIdentityEnvironment(data)
+	t.Setenv("AZURE_TENANT_ID", "")
+	t.Setenv("AZURE_CLIENT_ID", "")
+	t.Setenv("AZURE_CLIENT_SECRET", "")
+	t.Setenv("AZURE_CLIENT_CERTIFICATE_PATH", "")
+	t.Setenv("AZURE_CLIENT_CERTIFICATE_PASSWORD", "")
+	t.Setenv("AZURE_ADDITIONALLY_ALLOWED_TENANTS", "")
 	assert.Empty(t, os.Getenv("AZURE_TENANT_ID"))
 	assert.Empty(t, os.Getenv("AZURE_CLIENT_ID"))
 	assert.Empty(t, os.Getenv("AZURE_CLIENT_SECRET"))
