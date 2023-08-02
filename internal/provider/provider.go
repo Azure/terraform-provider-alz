@@ -84,8 +84,7 @@ func (p *AlzProvider) Metadata(ctx context.Context, req provider.MetadataRequest
 
 func (p *AlzProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "ALZ provider to generate archetype configuration files for use with the ALZ Terraform module.\n\n" +
-			"> Note this provider can take 30-60 seconds to initialize due to the time it takes to download the Azure Policy definitions.",
+		MarkdownDescription: "ALZ provider to generate archetype configuration files for use with the ALZ Terraform module.",
 
 		Attributes: map[string]schema.Attribute{
 			"allow_lib_overwrite": schema.BoolAttribute{

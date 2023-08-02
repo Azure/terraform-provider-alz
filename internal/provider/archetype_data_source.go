@@ -179,13 +179,15 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 			},
 
 			"policy_assignments_to_add": schema.MapNestedAttribute{
-				MarkdownDescription: "A map of policy assignments names to add to the archetype. The map key is the policy assignment name.",
-				Optional:            true,
+				MarkdownDescription: "A map of policy assignments names to add to the archetype. The map key is the policy assignment name." +
+					"You can also update existing policy assignments by using the same map key as an existing policy assignment name." +
+					"The nested attributes will be merged with the existing policy assignment so you do not need to re-declare everything.",
+				Optional: true,
 				NestedObject: schema.NestedAttributeObject{
 					Validators: []validator.Object{},
 					Attributes: map[string]schema.Attribute{
 						"display_name": schema.StringAttribute{
-							MarkdownDescription: "The policy assignment display name.",
+							MarkdownDescription: "The policy assignment display name. Will use the `name` if not specified.",
 							Optional:            true,
 						},
 

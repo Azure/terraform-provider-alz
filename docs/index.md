@@ -4,14 +4,11 @@ page_title: "alz Provider"
 subcategory: ""
 description: |-
   ALZ provider to generate archetype configuration files for use with the ALZ Terraform module.
-  Note this provider can take 30-60 seconds to initialize due to the time it takes to download the Azure Policy definitions.
 ---
 
 # alz Provider
 
 ALZ provider to generate archetype configuration files for use with the ALZ Terraform module.
-
-> Note this provider can take 30-60 seconds to initialize due to the time it takes to download the Azure Policy definitions.
 
 ## Example Usage
 
