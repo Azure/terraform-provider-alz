@@ -14,6 +14,7 @@ on:
 # Testing only needs permissions to read the repository contents.
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   # Ensure project builds before running testing matrix
@@ -22,23 +23,23 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-      - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
         with:
           go-version-file: 'go.mod'
           cache: true
       - run: go mod download
       - run: go build -v .
       - name: Run linters
-        uses: golangci/golangci-lint-action@639cd343e1d3b897ff35927a75193d57cfcba299 # v3.6.0
+        uses: golangci/golangci-lint-action@v3
         with:
           version: latest
 
   generate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-      - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
         with:
           go-version-file: 'go.mod'
           cache: true
@@ -67,8 +68,8 @@ jobs:
           - '1.4.*'
           - '1.5.*'
     steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-      - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
         with:
           go-version-file: 'go.mod'
           cache: true
@@ -77,12 +78,10 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           allow-no-subscriptions: true
-      - uses: hashicorp/setup-terraform@633666f66e0061ca3b725c73b2ec20cd13a8fdd1 # v2.0.3
+      - uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: ${{ matrix.terraform }}
           terraform_wrapper: false
       - run: go mod download
-      - env:
-          TF_ACC: "1"
-        run: make testacc
+      - run: make testacc
         timeout-minutes: 10
