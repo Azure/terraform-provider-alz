@@ -185,8 +185,8 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 					Validators: []validator.Object{},
 					Attributes: map[string]schema.Attribute{
 						"display_name": schema.StringAttribute{
-							MarkdownDescription: "The policy assignment display name",
-							Required:            true,
+							MarkdownDescription: "The policy assignment display name.",
+							Optional:            true,
 						},
 
 						"policy_definition_name": schema.StringAttribute{
@@ -707,6 +707,9 @@ func policyAssignmentType2ArmPolicyAssignment(pamap map[string]PolicyAssignmentT
 		dst.Name = to.Ptr(name)
 		dst.Type = to.Ptr(policyAssignementType)
 		dst.Properties.DisplayName = to.Ptr(src.DisplayName.ValueString())
+		if src.DisplayName.ValueString() == "" {
+			dst.Properties.DisplayName = to.Ptr(name)
+		}
 
 		// Set policy definition id.
 		if isKnown(src.PolicyDefinitionName) {

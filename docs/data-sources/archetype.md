@@ -68,12 +68,9 @@ Optional:
 <a id="nestedatt--policy_assignments_to_add"></a>
 ### Nested Schema for `policy_assignments_to_add`
 
-Required:
-
-- `display_name` (String) The policy assignment display name
-
 Optional:
 
+- `display_name` (String) The policy assignment display name.
 - `enforcement_mode` (String) The enforcement mode of the policy assignment. Must be one of `Default`, or `DoNotEnforce`.
 - `identity` (String) The identity type. Must be one of `SystemAssigned` or `UserAssigned`.
 - `identity_ids` (Set of String) A list of identity ids to assign to the policy assignment. Required if `identity` is `UserAssigned`.

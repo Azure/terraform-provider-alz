@@ -7,6 +7,11 @@ default: build
 build:
 	go install
 
+# Run tests (not acceptance tests)
+.PHONY: test
+test:
+	go test $(TEST) -v $(TESTARGS) -timeout $(TESTTIMEOUT)
+
 # Run acceptance tests
 .PHONY: testacc
 testacc:
@@ -15,3 +20,7 @@ testacc:
 .PHONY: lint
 lint:
 	golangci-lint run
+
+.PHONY: docs
+docs:
+	go generate

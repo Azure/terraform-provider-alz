@@ -1,6 +1,6 @@
 # Developer Requirements
 
-* [Terraform (Core)](https://www.terraform.io/downloads.html) - version 1.x (0.12.x and above are compatible however 1.x is recommended)
+* [Terraform (Core)](https://www.terraform.io/downloads.html) - version 1.x or above
 * [Go](https://golang.org/doc/install) version 1.20.x (to build the provider plugin)
 
 ## Contributor Guides
@@ -68,6 +68,16 @@ make testacc
 
 **Note:** Acceptance tests read data from Azure and need a valid authorization context. You can log in using `az cli` to do this.
 
+## Building The Provider
+
+1. Clone the repository
+1. Enter the repository directory
+1. Build the provider using the Go `install` command:
+
+```shell
+go install
+```
+
 ### Adding Dependencies
 
 This provider uses [Go modules](https://github.com/golang/go/wiki/Modules).
@@ -115,5 +125,5 @@ provider_installation {
 You can scaffold the documentation by running:
 
 ```sh
-go generate
+make docs
 ```

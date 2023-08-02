@@ -1,28 +1,15 @@
 # Azure Landing Zones (ALZ) Terraform Provider
 
+> ⚠️ ***Warning*** ⚠️ This provider is currently in development and is not yet ready for use. It should be considered experimental and is subject to change.
+
 The ALZ Terraform Provider is a data source provider for Azure Landing Zones.
 It is used to generate data for the [Azure Landing Zones Terraform Module](https://github.com/Azure/terraform-azurerm-alz).
 
 It simplifies the task of creating Azure Management Group hierarchies, together with Azure Policy and authorization.
 
-_This provider is built on the [Terraform Plugin Framework](https://github.com/hashicorp/terraform-plugin-framework)._
+*This provider is built on the [Terraform Plugin Framework](https://github.com/hashicorp/terraform-plugin-framework).*
 
 Please see the [GitHub template repository documentation](https://help.github.com/en/github/creating-cloning-and-archiving-repositories/creating-a-repository-from-a-template) for how to create a new repository from this template on GitHub.
-
-## Requirements
-
-- [Terraform](https://www.terraform.io/downloads.html) >= 1.0
-- [Go](https://golang.org/doc/install) >= 1.20
-
-## Building The Provider
-
-1. Clone the repository
-1. Enter the repository directory
-1. Build the provider using the Go `install` command:
-
-```shell
-go install
-```
 
 ## Using the provider
 
