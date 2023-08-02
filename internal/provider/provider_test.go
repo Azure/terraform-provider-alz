@@ -21,8 +21,18 @@ import (
 // acceptance testing. The factory function will be invoked for every Terraform
 // CLI command executed to create a provider server to which the CLI can
 // reattach.
-var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
-	"alz": providerserver.NewProtocol6WithError(New("test")()),
+// var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
+// 	"alz": providerserver.NewProtocol6WithError(New("test")()),
+// }
+
+// testAccProtoV6ProviderFactoriesUnique is used to ensure that the provider instance used for
+// each acceptance test is unique.
+// This is necessary because this provider make use of state stored in the provider instance.
+// See type AlzProvider.
+func testAccProtoV6ProviderFactoriesUnique() map[string]func() (tfprotov6.ProviderServer, error) {
+	return map[string]func() (tfprotov6.ProviderServer, error){
+		"alz": providerserver.NewProtocol6WithError(New("test")()),
+	}
 }
 
 func testAccPreCheck(t *testing.T) {

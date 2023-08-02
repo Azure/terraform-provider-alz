@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/Azure/terraform-provider-alz/internal/alztypes"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
-	"github.com/matt-FFFFFF/terraform-provider-alz/internal/alztypes"
 	"github.com/stretchr/testify/assert"
 )
 

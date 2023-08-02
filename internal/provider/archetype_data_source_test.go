@@ -13,12 +13,12 @@ import (
 	"github.com/Azure/alzlib"
 	"github.com/Azure/alzlib/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy"
+	"github.com/Azure/terraform-provider-alz/internal/alztypes"
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/matt-FFFFFF/terraform-provider-alz/internal/alztypes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -26,19 +26,32 @@ import (
 func TestAccAlzArchetypeDataSource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		ExternalProviders:        map[string]resource.ExternalProvider{
-			// "random": {
-			// 	Source: "hashicorp/random",
-			// },
-		},
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccExampleDataSourceConfig(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.alz_archetype.test", "id", "example"),
-					resource.TestCheckResourceAttr("data.alz_archetype.test", "alz_policy_assignments.%", "1"),
 					resource.TestCheckOutput("test", "westeurope"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccFullAlz(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccFullAlzConfig(),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.alz_archetype.root", "id", "root"),
+					resource.TestCheckResourceAttr("data.alz_archetype.root", "alz_policy_assignments.%", "13"),
+					resource.TestCheckResourceAttr("data.alz_archetype.root", "alz_policy_definitions.%", "114"),
+					resource.TestCheckResourceAttr("data.alz_archetype.root", "alz_policy_set_definitions.%", "12"),
+					resource.TestCheckResourceAttr("data.alz_archetype.root", "alz_role_definitions.%", "5"),
 				),
 			},
 		},
@@ -95,6 +108,117 @@ func testAccExampleDataSourceConfig() string {
 		value = jsondecode(data.alz_archetype.test.alz_policy_assignments["BlobServicesDiagnosticsLogsToWorkspace"]).location
 	}
 	`, libPath)
+}
+
+// testAccExampleDataSourceConfig returns a test configuration for TestAccAlzArchetypeDataSource.
+func testAccFullAlzConfig() string {
+	return `provider "alz" {}
+
+data "alz_archetype" "root" {
+	id             = "root"
+	parent_id      = "00000000-0000-0000-0000-000000000000"
+	base_archetype = "root"
+	defaults = {
+		location = "westeurope"
+		log_analytics_workspace_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg/providers/Microsoft.OperationalInsights/workspaces/la"
+	}
+}
+
+data "alz_archetype" "landing_zones" {
+	id             = "landing_zones"
+	parent_id      = data.alz_archetype.root.id
+	base_archetype = "landing_zones"
+	defaults = {
+		location = "westeurope"
+		log_analytics_workspace_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg/providers/Microsoft.OperationalInsights/workspaces/la"
+	}
+}
+
+data "alz_archetype" "platform" {
+	id             = "platform"
+	parent_id      = data.alz_archetype.root.id
+	base_archetype = "platform"
+	defaults = {
+		location = "westeurope"
+		log_analytics_workspace_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg/providers/Microsoft.OperationalInsights/workspaces/la"
+	}
+}
+
+data "alz_archetype" "sandboxes" {
+	id             = "sandboxes"
+	parent_id      = data.alz_archetype.root.id
+	base_archetype = "sandboxes"
+	defaults = {
+		location = "westeurope"
+		log_analytics_workspace_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg/providers/Microsoft.OperationalInsights/workspaces/la"
+	}
+}
+
+data "alz_archetype" "connectivity" {
+	id             = "connectivity"
+	parent_id      = data.alz_archetype.platform.id
+	base_archetype = "connectivity"
+	defaults = {
+		location = "westeurope"
+		log_analytics_workspace_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg/providers/Microsoft.OperationalInsights/workspaces/la"
+	}
+}
+
+data "alz_archetype" "identity" {
+	id             = "identity"
+	parent_id      = data.alz_archetype.platform.id
+	base_archetype = "identity"
+	defaults = {
+		location = "westeurope"
+		log_analytics_workspace_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg/providers/Microsoft.OperationalInsights/workspaces/la"
+	}
+}
+
+data "alz_archetype" "management" {
+	id             = "management"
+	parent_id      = data.alz_archetype.platform.id
+	base_archetype = "management"
+	defaults = {
+		location = "westeurope"
+		log_analytics_workspace_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg/providers/Microsoft.OperationalInsights/workspaces/la"
+	}
+}
+
+data "alz_archetype" "corp" {
+	id             = "corp"
+	parent_id      = data.alz_archetype.landing_zones.id
+	base_archetype = "corp"
+	defaults = {
+		location = "westeurope"
+		log_analytics_workspace_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg/providers/Microsoft.OperationalInsights/workspaces/la"
+	}
+}
+
+data "alz_archetype" "online" {
+	id             = "online"
+	parent_id      = data.alz_archetype.landing_zones.id
+	base_archetype = "online"
+	defaults = {
+		location = "westeurope"
+		log_analytics_workspace_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg/providers/Microsoft.OperationalInsights/workspaces/la"
+	}
+}
+
+# Test that the data source is returning the correct value for the policy location
+output "test" {
+	value = {
+		root          = data.alz_archetype.root
+		landing_zones = data.alz_archetype.landing_zones
+		platform      = data.alz_archetype.platform
+		sandboxes     = data.alz_archetype.sandboxes
+		connectivity  = data.alz_archetype.connectivity
+		identity      = data.alz_archetype.identity
+		management    = data.alz_archetype.management
+		corp          = data.alz_archetype.corp
+		online        = data.alz_archetype.online
+	}
+}
+`
 }
 
 // TestAddAttrStringElementsToSet tests that addAttrStringElementsToSet adds a value to a set.

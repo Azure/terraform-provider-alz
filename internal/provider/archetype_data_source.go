@@ -13,6 +13,8 @@ import (
 	"github.com/Azure/alzlib/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy"
+	"github.com/Azure/terraform-provider-alz/internal/alztypes"
+	"github.com/Azure/terraform-provider-alz/internal/alzvalidators"
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -25,8 +27,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/matt-FFFFFF/terraform-provider-alz/internal/alztypes"
-	"github.com/matt-FFFFFF/terraform-provider-alz/internal/alzvalidators"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.

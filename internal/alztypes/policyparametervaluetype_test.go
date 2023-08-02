@@ -7,8 +7,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/Azure/terraform-provider-alz/internal/alztypes"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/matt-FFFFFF/terraform-provider-alz/internal/alztypes"
 	"github.com/stretchr/testify/assert"
 )
 

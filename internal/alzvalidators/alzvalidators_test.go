@@ -7,9 +7,9 @@ import (
 	"context"
 	"testing"
 
+	"github.com/Azure/terraform-provider-alz/internal/alzvalidators"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/matt-FFFFFF/terraform-provider-alz/internal/alzvalidators"
 )
 
 func TestArmTypeResourceIds(t *testing.T) {
