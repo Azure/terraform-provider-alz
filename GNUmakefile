@@ -1,5 +1,5 @@
 TEST?=$$(go list ./... |grep -v 'vendor'|grep -v 'examples')
-TESTTIMEOUT=180m
+TESTTIMEOUT=10m
 
 default: build
 
@@ -10,7 +10,7 @@ build:
 # Run acceptance tests
 .PHONY: testacc
 testacc:
-	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout $(TESTTIMEOUT) -ldflags="-X=github.com/Azure/terraform-provider-alz/version.ProviderVersion=acc"
+	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout $(TESTTIMEOUT)
 
 .PHONY: lint
 lint:
