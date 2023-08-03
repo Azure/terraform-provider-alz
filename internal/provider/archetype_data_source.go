@@ -48,7 +48,7 @@ type mapTypes interface {
 		armpolicy.SetDefinition |
 		armauthorization.RoleAssignment |
 		armauthorization.RoleDefinition |
-		alzlib.PolicyAssignmentAdditionalRoleAssignments
+		alzlib.PolicyRoleAssignments
 }
 
 // checkExistsInAlzLib is a helper struct to check if an item exists in the AlzLib.
@@ -82,11 +82,11 @@ type ArchetypeDataSourceModel struct {
 	SubscriptionIds              types.Set                              `tfsdk:"subscription_ids"`                 // set of string
 }
 
-// AlzPolicyRoleAssignmentType is a representation of the additional policy assignments
+// AlzPolicyRoleAssignmentType is a representation of the policy assignments
 // that must be created when assigning a given policy.
 type AlzPolicyRoleAssignmentType struct {
 	RoleDefinitionIds types.Set `tfsdk:"role_definition_ids"`
-	AdditionalScopes  types.Set `tfsdk:"additional_scopes"`
+	Scopes            types.Set `tfsdk:"scopes"`
 }
 
 // ArchetypeDataSourceModelDefaults describes the defaults used in the alz data processing.
@@ -396,8 +396,8 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 							Computed:            true,
 						},
 
-						"additional_scopes": schema.SetAttribute{
-							MarkdownDescription: "A set of additional scopes to assign with the policy assignment.",
+						"scopes": schema.SetAttribute{
+							MarkdownDescription: "A set of scopes to assign with the policy assignment.",
 							ElementType:         types.StringType,
 							Computed:            true,
 						},
@@ -625,7 +625,7 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 	data.AlzRoleDefinitions = m
 
 	tflog.Debug(ctx, "Converting additional role assignments")
-	policyras, diags := convertAlzPolicyRoleAssignments(ctx, mg.GetAdditionalRoleAssignmentsByPolicyAssignmentMap())
+	policyras, diags := convertAlzPolicyRoleAssignments(ctx, mg.GetPolicyRoleAssignmentsMap())
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -637,17 +637,17 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 }
 
 // convertAlzPolicyRoleAssignments converts a map[string]alzlib.PolicyAssignmentAdditionalRoleAssignments to a map[string]AlzPolicyRoleAssignmentType.
-func convertAlzPolicyRoleAssignments(ctx context.Context, m map[string]alzlib.PolicyAssignmentAdditionalRoleAssignments) (map[string]AlzPolicyRoleAssignmentType, diag.Diagnostics) {
+func convertAlzPolicyRoleAssignments(ctx context.Context, m map[string]alzlib.PolicyRoleAssignments) (map[string]AlzPolicyRoleAssignmentType, diag.Diagnostics) {
 	res := make(map[string]AlzPolicyRoleAssignmentType, len(m))
 	diags := make(diag.Diagnostics, 0)
 	for k, v := range m {
 		raset, d := types.SetValueFrom(ctx, types.StringType, v.RoleDefinitionIds)
 		diags.Append(d...)
-		adscopeset, d := types.SetValueFrom(ctx, types.StringType, v.AdditionalScopes)
+		scopeset, d := types.SetValueFrom(ctx, types.StringType, v.Scopes)
 		diags.Append(d...)
 		res[k] = AlzPolicyRoleAssignmentType{
 			RoleDefinitionIds: raset,
-			AdditionalScopes:  adscopeset,
+			Scopes:            scopeset,
 		}
 	}
 	return res, diags

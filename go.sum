@@ -1,5 +1,5 @@
-github.com/Azure/alzlib v0.4.2 h1:l7Jfau2GQomzvWM0qfOssK57b4ka2QoYV+jvSQ6Kruo=
-github.com/Azure/alzlib v0.4.2/go.mod h1:3tok1J/Qu0SoNO1Bm6bolpMrF1dIruuKj7HaukdeGJE=
+github.com/Azure/alzlib v0.5.0 h1:bQfP09WFkT4KuLlzhrIUUVl5wTk0Y5IiSuk+0Yh2tDU=
+github.com/Azure/alzlib v0.5.0/go.mod h1:3tok1J/Qu0SoNO1Bm6bolpMrF1dIruuKj7HaukdeGJE=
 github.com/Azure/azure-sdk-for-go/sdk/azcore v1.7.0 h1:8q4SaHjFsClSvuVne0ID/5Ka8u3fcIHyqkLjcFpNRHQ=
 github.com/Azure/azure-sdk-for-go/sdk/azcore v1.7.0/go.mod h1:bjGvMhVMb+EEm3VRNQawDMUyMMjo+S5ewNjflkep/0Q=
 github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.3.0 h1:vcYCAze6p19qBW7MhZybIsqD8sMV8js0NyQM8JDnVtg=

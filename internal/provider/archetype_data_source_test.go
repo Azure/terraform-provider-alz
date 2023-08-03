@@ -279,16 +279,16 @@ func TestConvertAlzPolicyRoleAssignments(t *testing.T) {
 	assert.Empty(t, diags)
 
 	// Test with empty input
-	res, diags = convertAlzPolicyRoleAssignments(context.Background(), make(map[string]alzlib.PolicyAssignmentAdditionalRoleAssignments))
+	res, diags = convertAlzPolicyRoleAssignments(context.Background(), make(map[string]alzlib.PolicyRoleAssignments))
 	assert.NotNil(t, res)
 	assert.Empty(t, res)
 	assert.Empty(t, diags)
 
 	// Test with non-empty input
-	src := map[string]alzlib.PolicyAssignmentAdditionalRoleAssignments{
+	src := map[string]alzlib.PolicyRoleAssignments{
 		"assignment1": {
 			RoleDefinitionIds: []string{"role1", "role2"},
-			AdditionalScopes:  []string{"scope1", "scope2"},
+			Scopes:            []string{"scope1", "scope2"},
 		},
 	}
 	res, diags = convertAlzPolicyRoleAssignments(context.Background(), src)
@@ -298,14 +298,14 @@ func TestConvertAlzPolicyRoleAssignments(t *testing.T) {
 	for k, v := range src {
 		assert.Contains(t, res, k)
 		assert.Len(t, res[k].RoleDefinitionIds.Elements(), len(v.RoleDefinitionIds))
-		assert.Len(t, res[k].AdditionalScopes.Elements(), len(v.AdditionalScopes))
+		assert.Len(t, res[k].Scopes.Elements(), len(v.Scopes))
 		for i, rd := range v.RoleDefinitionIds {
 			assert.Contains(t, res[k].RoleDefinitionIds.Elements(), types.StringValue(rd))
 			assert.Equal(t, rd, res[k].RoleDefinitionIds.Elements()[i].(basetypes.StringValue).ValueString()) //nolint:forcetypeassert
 		}
-		for i, as := range v.AdditionalScopes {
-			assert.Contains(t, res[k].AdditionalScopes.Elements(), types.StringValue(as))
-			assert.Equal(t, as, res[k].AdditionalScopes.Elements()[i].(basetypes.StringValue).ValueString()) //nolint:forcetypeassert
+		for i, as := range v.Scopes {
+			assert.Contains(t, res[k].Scopes.Elements(), types.StringValue(as))
+			assert.Equal(t, as, res[k].Scopes.Elements()[i].(basetypes.StringValue).ValueString()) //nolint:forcetypeassert
 		}
 	}
 }
