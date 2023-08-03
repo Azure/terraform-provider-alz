@@ -76,10 +76,10 @@ type ArchetypeDataSourceModel struct {
 	PolicyDefinitionsToRemove    types.Set                              `tfsdk:"policy_definitions_to_remove"`     // set of string
 	PolicySetDefinitionsToAdd    types.Set                              `tfsdk:"policy_set_definitions_to_add"`    // set of string
 	PolicySetDefinitionsToRemove types.Set                              `tfsdk:"policy_set_definitions_to_remove"` // set of string
-	RoleAssignmentsToAdd         map[string]RoleAssignmentType          `tfsdk:"role_assignments_to_add"`          // map of RoleAssignmentType
-	RoleDefinitionsToAdd         types.Set                              `tfsdk:"role_definitions_to_add"`          // set of string
-	RoleDefinitionsToRemove      types.Set                              `tfsdk:"role_definitions_to_remove"`       // set of string
-	SubscriptionIds              types.Set                              `tfsdk:"subscription_ids"`                 // set of string
+	//RoleAssignmentsToAdd         map[string]RoleAssignmentType          `tfsdk:"role_assignments_to_add"`          // map of RoleAssignmentType
+	RoleDefinitionsToAdd    types.Set `tfsdk:"role_definitions_to_add"`    // set of string
+	RoleDefinitionsToRemove types.Set `tfsdk:"role_definitions_to_remove"` // set of string
+	SubscriptionIds         types.Set `tfsdk:"subscription_ids"`           // set of string
 }
 
 // AlzPolicyRoleAssignmentType is a representation of the policy assignments
@@ -114,11 +114,11 @@ type PolicyAssignmentNonComplianceMessage struct {
 	PolicyDefinitionReferenceId types.String `tfsdk:"policy_definition_reference_id"`
 }
 
-type RoleAssignmentType struct {
-	DefinitionName types.String `tfsdk:"definition_name"`
-	DefinitionId   types.String `tfsdk:"definition_id"`
-	ObjectId       types.String `tfsdk:"object_id"`
-}
+// type RoleAssignmentType struct {
+// 	DefinitionName types.String `tfsdk:"definition_name"`
+// 	DefinitionId   types.String `tfsdk:"definition_id"`
+// 	ObjectId       types.String `tfsdk:"object_id"`
+// }
 
 func (d *ArchetypeDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_archetype"
@@ -294,37 +294,37 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 				ElementType:         types.StringType,
 			},
 
-			"role_assignments_to_add": schema.MapNestedAttribute{
-				MarkdownDescription: "A list of role definition names to add to the archetype.",
-				Optional:            true,
-				NestedObject: schema.NestedAttributeObject{
-					Validators: []validator.Object{},
-					Attributes: map[string]schema.Attribute{
-						"definition_id": schema.StringAttribute{
-							MarkdownDescription: "The role definition name. Conflicts with `definition_name`.",
-							Optional:            true,
-							Validators: []validator.String{
-								alzvalidators.ArmTypeResourceId("Microsoft.Authorization", "roleDefinitions"),
-								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("definition_name")),
-							},
-						},
-						"definition_name": schema.StringAttribute{
-							MarkdownDescription: "The role definition resource id. Conflicts with `definition_id`.",
-							Optional:            true,
-							Validators: []validator.String{
-								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("definition_id")),
-							},
-						},
-						"object_id": schema.StringAttribute{
-							MarkdownDescription: "The principal object id to assign.",
-							Required:            true,
-							Validators: []validator.String{
-								stringvalidator.RegexMatches(regexp.MustCompile(`^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$`), "The subscription id must be a valid lowercase UUID."),
-							},
-						},
-					},
-				},
-			},
+			// "role_assignments_to_add": schema.MapNestedAttribute{
+			// 	MarkdownDescription: "A list of role definition names to add to the archetype.",
+			// 	Optional:            true,
+			// 	NestedObject: schema.NestedAttributeObject{
+			// 		Validators: []validator.Object{},
+			// 		Attributes: map[string]schema.Attribute{
+			// 			"definition_id": schema.StringAttribute{
+			// 				MarkdownDescription: "The role definition name. Conflicts with `definition_name`.",
+			// 				Optional:            true,
+			// 				Validators: []validator.String{
+			// 					alzvalidators.ArmTypeResourceId("Microsoft.Authorization", "roleDefinitions"),
+			// 					stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("definition_name")),
+			// 				},
+			// 			},
+			// 			"definition_name": schema.StringAttribute{
+			// 				MarkdownDescription: "The role definition resource id. Conflicts with `definition_id`.",
+			// 				Optional:            true,
+			// 				Validators: []validator.String{
+			// 					stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("definition_id")),
+			// 				},
+			// 			},
+			// 			"object_id": schema.StringAttribute{
+			// 				MarkdownDescription: "The principal's object id to assign.",
+			// 				Required:            true,
+			// 				Validators: []validator.String{
+			// 					stringvalidator.RegexMatches(regexp.MustCompile(`^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$`), "The subscription id must be a valid lowercase UUID."),
+			// 				},
+			// 			},
+			// 		},
+			// 	},
+			// },
 
 			"defaults": schema.SingleNestedAttribute{
 				MarkdownDescription: "Archetype default values",
@@ -494,8 +494,6 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 	}
 
 	// TODO: implement code to create *armauthorization.RoleAssignment from RoleAssignmentsToAdd.
-	// TODO: implement code to populate subscription ids
-	// TODO: implement code to create *armpolicy.Assignment from PolicyAssignmentsToAdd.
 
 	if err := deleteAttrStringElementsFromSet(arch.PolicyAssignments, data.PolicyAssignmentsToRemove.Elements()); err != nil {
 		resp.Diagnostics.AddError("Unable to remove policy assignments", err.Error())
