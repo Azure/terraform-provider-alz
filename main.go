@@ -38,8 +38,7 @@ func main() {
 	flag.Parse()
 
 	opts := providerserver.ServeOpts{
-		// TODO: Update this string with the published name of your provider.
-		Address:         "registry.terraform.io/Azure/alz",
+		Address:         "registry.terraform.io/azure/alz",
 		Debug:           debug,
 		ProtocolVersion: 6,
 	}

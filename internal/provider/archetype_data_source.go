@@ -430,13 +430,20 @@ func (d *ArchetypeDataSource) Configure(ctx context.Context, req datasource.Conf
 func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var data ArchetypeDataSourceModel
 
+	if d.alz == nil {
+		resp.Diagnostics.AddError(
+			"Provider not configured",
+			"The provider has not been configured. Please see the provider documentation for configuration instructions.",
+		)
+		return
+	}
+
 	// Read Terraform configuration data into the model.
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
 	d.alz.mu.Lock()
 	defer d.alz.mu.Unlock()
 
