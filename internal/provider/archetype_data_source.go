@@ -381,11 +381,11 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 				ElementType:         types.StringType,
 			},
 
-			"alz_role_assignments": schema.MapAttribute{
-				MarkdownDescription: "A map of generated role assignments. The values are ARM JSON role assignments.",
-				Computed:            true,
-				ElementType:         types.StringType,
-			},
+			// "alz_role_assignments": schema.MapAttribute{
+			// 	MarkdownDescription: "A map of generated role assignments. The values are ARM JSON role assignments.",
+			// 	Computed:            true,
+			// 	ElementType:         types.StringType,
+			// },
 
 			"alz_role_definitions": schema.MapAttribute{
 				MarkdownDescription: "A map of generated role assignments. The values are ARM JSON role definitions.",
@@ -464,7 +464,6 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 		resp.Diagnostics.AddError("Default location not set", "Unable to find default location in the archetype attributes. This should have been caught by the schema validation.")
 	}
 	wkpv.DefaultLocation = defloc
-	//wkpv.DefaultLogAnalyticsWorkspaceId = data.Defaults.DefaultLaWorkspaceId.ValueString()
 	if isKnown(data.Defaults.DefaultLaWorkspaceId) {
 		wkpv.DefaultLogAnalyticsWorkspaceId = to.Ptr(data.Defaults.DefaultLaWorkspaceId.ValueString())
 	}
