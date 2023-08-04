@@ -59,10 +59,10 @@ type checkExistsInAlzLib struct {
 
 // ArchetypeDataSourceModel describes the data source data model.
 type ArchetypeDataSourceModel struct {
-	AlzPolicyAssignments         types.Map                              `tfsdk:"alz_policy_assignments"`      // map of string, computed
-	AlzPolicyDefinitions         types.Map                              `tfsdk:"alz_policy_definitions"`      // map of string, computed
-	AlzPolicySetDefinitions      types.Map                              `tfsdk:"alz_policy_set_definitions"`  // map of string, computed
-	AlzRoleAssignments           types.Map                              `tfsdk:"alz_role_assignments"`        // map of string, computed
+	AlzPolicyAssignments    types.Map `tfsdk:"alz_policy_assignments"`     // map of string, computed
+	AlzPolicyDefinitions    types.Map `tfsdk:"alz_policy_definitions"`     // map of string, computed
+	AlzPolicySetDefinitions types.Map `tfsdk:"alz_policy_set_definitions"` // map of string, computed
+	//AlzRoleAssignments           types.Map                              `tfsdk:"alz_role_assignments"`        // map of string, computed
 	AlzPolicyRoleAssignments     map[string]AlzPolicyRoleAssignmentType `tfsdk:"alz_policy_role_assignments"` // map of string, computed
 	AlzRoleDefinitions           types.Map                              `tfsdk:"alz_role_definitions"`        // map of string, computed
 	BaseArchetype                types.String                           `tfsdk:"base_archetype"`
@@ -79,7 +79,7 @@ type ArchetypeDataSourceModel struct {
 	//RoleAssignmentsToAdd         map[string]RoleAssignmentType          `tfsdk:"role_assignments_to_add"`          // map of RoleAssignmentType
 	RoleDefinitionsToAdd    types.Set `tfsdk:"role_definitions_to_add"`    // set of string
 	RoleDefinitionsToRemove types.Set `tfsdk:"role_definitions_to_remove"` // set of string
-	SubscriptionIds         types.Set `tfsdk:"subscription_ids"`           // set of string
+	//SubscriptionIds         types.Set `tfsdk:"subscription_ids"`           // set of string
 }
 
 // AlzPolicyRoleAssignmentType is a representation of the policy assignments
@@ -91,8 +91,9 @@ type AlzPolicyRoleAssignmentType struct {
 
 // ArchetypeDataSourceModelDefaults describes the defaults used in the alz data processing.
 type ArchetypeDataSourceModelDefaults struct {
-	DefaultLocation      types.String `tfsdk:"location"`
-	DefaultLaWorkspaceId types.String `tfsdk:"log_analytics_workspace_id"`
+	DefaultLocation               types.String `tfsdk:"location"`
+	DefaultLaWorkspaceId          types.String `tfsdk:"log_analytics_workspace_id"`
+	PrivateDnsZoneResourceGroupId types.String `tfsdk:"private_dns_zone_resource_group_id"`
 }
 
 // PolicyAssignmentType describes the policy assignment data model.
@@ -341,19 +342,26 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 							alzvalidators.ArmTypeResourceId("Microsoft.OperationalInsights", "workspaces"),
 						},
 					},
+					"private_dns_zone_resource_group_id": schema.StringAttribute{
+						MarkdownDescription: "Resource group resource id containing private DNS zones. Used in the Deploy-Private-DNS-Zones assignment.",
+						Optional:            true,
+						Validators: []validator.String{
+							alzvalidators.ArmTypeResourceId("Microsoft.Resources", "resourceGroups"),
+						},
+					},
 				},
 			},
 
-			"subscription_ids": schema.SetAttribute{
-				MarkdownDescription: "A list of subscription ids to add to the management group.",
-				Optional:            true,
-				ElementType:         types.StringType,
-				Validators: []validator.Set{
-					setvalidator.ValueStringsAre(
-						stringvalidator.RegexMatches(regexp.MustCompile(`^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$`), "The subscription id must be a valid lowercase UUID."),
-					),
-				},
-			},
+			// "subscription_ids": schema.SetAttribute{
+			// 	MarkdownDescription: "A list of subscription ids to add to the management group.",
+			// 	Optional:            true,
+			// 	ElementType:         types.StringType,
+			// 	Validators: []validator.Set{
+			// 		setvalidator.ValueStringsAre(
+			// 			stringvalidator.RegexMatches(regexp.MustCompile(`^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$`), "The subscription id must be a valid lowercase UUID."),
+			// 		),
+			// 	},
+			// },
 
 			"alz_policy_assignments": schema.MapAttribute{
 				MarkdownDescription: "A map of generated policy assignments. The values are ARM JSON policy assignments.",
@@ -451,12 +459,18 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 
 	// Set well known policy values.
 	wkpv := new(alzlib.WellKnownPolicyValues)
-	defloc := data.Defaults.DefaultLocation.ValueString()
-	if defloc == "" {
+	defloc := to.Ptr(data.Defaults.DefaultLocation.ValueString())
+	if *defloc == "" {
 		resp.Diagnostics.AddError("Default location not set", "Unable to find default location in the archetype attributes. This should have been caught by the schema validation.")
 	}
 	wkpv.DefaultLocation = defloc
-	wkpv.DefaultLogAnalyticsWorkspaceId = data.Defaults.DefaultLaWorkspaceId.ValueString()
+	//wkpv.DefaultLogAnalyticsWorkspaceId = data.Defaults.DefaultLaWorkspaceId.ValueString()
+	if isKnown(data.Defaults.DefaultLaWorkspaceId) {
+		wkpv.DefaultLogAnalyticsWorkspaceId = to.Ptr(data.Defaults.DefaultLaWorkspaceId.ValueString())
+	}
+	if isKnown(data.Defaults.PrivateDnsZoneResourceGroupId) {
+		wkpv.PrivateDnsZoneResourceGroupId = to.Ptr(data.Defaults.PrivateDnsZoneResourceGroupId.ValueString())
+	}
 
 	// Make a copy of the archetype so we can customize it.
 	arch, err := d.alz.CopyArchetype(data.BaseArchetype.ValueString(), wkpv)
@@ -606,13 +620,13 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 	}
 	data.AlzPolicySetDefinitions = m
 
-	tflog.Debug(ctx, "Converting role assignments")
-	m, diags = convertMapOfStringToMapValue(mg.GetRoleAssignmentsMap())
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	data.AlzRoleAssignments = m
+	// tflog.Debug(ctx, "Converting role assignments")
+	// m, diags = convertMapOfStringToMapValue(mg.GetRoleAssignmentsMap())
+	// resp.Diagnostics.Append(diags...)
+	// if resp.Diagnostics.HasError() {
+	// 	return
+	// }
+	// data.AlzRoleAssignments = m
 
 	tflog.Debug(ctx, "Converting role definitions")
 	m, diags = convertMapOfStringToMapValue(mg.GetRoleDefinitionsMap())

@@ -46,6 +46,13 @@ func TestArmTypeResourceIds(t *testing.T) {
 			),
 			expErrors: 0,
 		},
+		"rg-match": {
+			rid: types.StringValue("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/foo"),
+			validator: alzvalidators.ArmTypeResourceId(
+				"Microsoft.Resources",
+				"resourceGroups",
+			),
+		},
 	}
 
 	for name, test := range testCases {
