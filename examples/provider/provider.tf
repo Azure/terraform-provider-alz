@@ -1,3 +1,1 @@
-provider "alz" {
-  # example configuration here
-}
+provider "alz" {}

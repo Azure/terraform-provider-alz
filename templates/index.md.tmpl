@@ -1,0 +1,45 @@
+---
+page_title: "Provider: ALZ"
+subcategory: ""
+description: |-
+  Use the Azure Landing Zones (ALZ) provider to generate data to allow you to easily provision your ALZ configuration. You must configure the provider with the proper credentials before you can use it.
+---
+
+# {{ upper .ProviderShortName }}
+
+ Use the Azure Landing Zones (ALZ) provider to generate data to allow you to easily provision your ALZ configuration.
+ It does not deploy any resources, but generates data to to enable integration with the [AzureRM](https://github.com/Azure/terraform-provider-azurerm) provider.
+
+Use the navigation to the left to read about the available resources.
+
+~> ⚠️ ***Warning*** ⚠️ This provider is currently in development and is not yet ready for use. It should be considered experimental and is subject to change.
+
+~> **Important:** For production use, you should constrain the acceptable provider versions via configuration,
+to ensure that new versions with breaking changes will not be automatically installed.
+For more information, see [Versions](#versions).
+
+~> **Important:** This provider requires [Terraform >= 1.0](https://www.terraform.io/language/upgrade-guides/1-0).
+
+## Example Usage
+
+{{ tffile "examples/provider/provider.tf" }}
+
+## Authentication and Configuration
+
+Configuration for the ALZ provider can be derived from several sources, which are applied in the following order:
+
+1. Parameters in the provider configuration
+1. Environment variables
+
+## Versions
+
+For production use, you should constrain the acceptable provider versions via
+configuration, to ensure that new versions with breaking changes will not be
+automatically installed by `terraform init` in the future:
+
+{{ tffile "examples/provider/terraform_block.tf" }}
+
+As this provider is still at version zero, you should constrain the acceptable
+provider versions on the minor version.
+
+{{ .SchemaMarkdown | trimspace }}
