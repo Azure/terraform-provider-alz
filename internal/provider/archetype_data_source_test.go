@@ -48,7 +48,7 @@ func TestAccAlzArchetypeDataSource(t *testing.T) {
 }
 
 // TestAccFullAlz is a full in-memory creation of the ALZ reference architecture.
-func TestAccFullAlz(t *testing.T) {
+func TestAccAlzArchetypeDataSourceFullAlz(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
@@ -58,7 +58,7 @@ func TestAccFullAlz(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.alz_archetype.root", "id", "root"),
 					resource.TestCheckResourceAttr("data.alz_archetype.root", "alz_policy_assignments.%", "13"),
-					resource.TestCheckResourceAttr("data.alz_archetype.root", "alz_policy_definitions.%", "114"),
+					resource.TestCheckResourceAttr("data.alz_archetype.root", "alz_policy_definitions.%", "124"),
 					resource.TestCheckResourceAttr("data.alz_archetype.root", "alz_policy_set_definitions.%", "12"),
 					resource.TestCheckResourceAttr("data.alz_archetype.root", "alz_role_definitions.%", "5"),
 				),
