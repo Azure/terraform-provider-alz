@@ -50,7 +50,8 @@ func (d *ArchetypeKeysDataSource) Metadata(ctx context.Context, req datasource.M
 func (d *ArchetypeKeysDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: "Archetype keys data source. Used to generate used in `for_each` loops for Terraform resources, without a dependency on any data that is only known after apply.",
+		MarkdownDescription: "Archetype keys data source. Produces sets of strings to be used in `for_each` loops for Terraform resources, without a dependency on any data that is only known after apply." +
+			"The values are the keys to the data maps produced by the `alz_archetype` resource. You can use this to create a local map, combining the keys with the data from the `alz_archetype` resource.",
 
 		Attributes: map[string]schema.Attribute{
 			"base_archetype": schema.StringAttribute{

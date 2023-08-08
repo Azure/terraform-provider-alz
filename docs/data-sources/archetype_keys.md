@@ -3,12 +3,12 @@
 page_title: "alz_archetype_keys Data Source - terraform-provider-alz"
 subcategory: ""
 description: |-
-  Archetype keys data source. Used to generate used in for_each loops for Terraform resources, without a dependency on any data that is only known after apply.
+  Archetype keys data source. Produces sets of strings to be used in for_each loops for Terraform resources, without a dependency on any data that is only known after apply.The values are the keys to the data maps produced by the alz_archetype resource. You can use this to create a local map, combining the keys with the data from the alz_archetype resource.
 ---
 
 # alz_archetype_keys (Data Source)
 
-Archetype keys data source. Used to generate used in `for_each` loops for Terraform resources, without a dependency on any data that is only known after apply.
+Archetype keys data source. Produces sets of strings to be used in `for_each` loops for Terraform resources, without a dependency on any data that is only known after apply.The values are the keys to the data maps produced by the `alz_archetype` resource. You can use this to create a local map, combining the keys with the data from the `alz_archetype` resource.
 
 ## Example Usage
 
@@ -44,3 +44,4 @@ data "alz_archetype_keys" "example" {
 - `alz_policy_definition_keys` (Set of String) A set of policy definition names belonging to the archetype.
 - `alz_policy_set_definition_keys` (Set of String) A set of policy set definition names belonging to the archetype.
 - `alz_role_definition_keys` (Set of String) A set of role definition names belonging to the archetype.
+- `id` (String) A an id used for acceptance testing.

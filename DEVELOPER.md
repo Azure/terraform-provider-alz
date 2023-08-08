@@ -104,11 +104,11 @@ For example, add the following to `~/.terraformrc` for a provider binary located
 provider_installation {
 
   # Use /home/developer/go/bin as an overridden package directory
-  # for the hashicorp/azurerm provider. This disables the version and checksum
+  # for the azure/alz provider. This disables the version and checksum
   # verifications for this provider and forces Terraform to look for the
   # azurerm provider plugin in the given directory.
   dev_overrides {
-    "Azure/alz" = "/home/developer/go/bin"
+    "azure/alz" = "/home/developer/go/bin"
   }
 
   # For all other providers, install them directly from their origin provider
