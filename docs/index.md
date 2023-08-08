@@ -3,12 +3,12 @@
 page_title: "alz Provider"
 subcategory: ""
 description: |-
-  ALZ provider to generate archetype configuration files for use with the ALZ Terraform module.
+  ALZ provider to generate archetype data for use with the ALZ Terraform module.
 ---
 
 # alz Provider
 
-ALZ provider to generate archetype configuration files for use with the ALZ Terraform module.
+ALZ provider to generate archetype data for use with the ALZ Terraform module.
 
 ## Example Usage
 

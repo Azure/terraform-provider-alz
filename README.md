@@ -19,16 +19,17 @@ Here is how to use the provider to generate the data required to create the ALZ 
 
 ```hcl
 provider "alz" {
-  defaults = {
-    location = "westeurope"
-  }
-
   # See documentation for the customization options.
 }
 
-data "alz_management_group" "root" {
-  name      = "root"
-  archetype = "root"
+data "alz_archetype" "root" {
+  id             = "alz-root"
+  display_name   = "alz-root"
+  base_archetype = "root"
+  parent_id      = "parentmg" # the id of the parent management group
+  defaults       = {
+    location = "westeurope"
+  }
 
   # See documentation for the customization options.
 }

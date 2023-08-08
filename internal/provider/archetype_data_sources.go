@@ -478,7 +478,7 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 		return
 	}
 
-	// Add/remove items from archetype before adding the management group.
+	// Add/remove policy definiitons from archetype before adding the management group.
 	if err := addAttrStringElementsToSet(arch.PolicyDefinitions, data.PolicyDefinitionsToAdd.Elements()); err != nil {
 		resp.Diagnostics.AddError("Unable to add policy definitions", err.Error())
 		return
@@ -488,6 +488,7 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 		return
 	}
 
+	// Add/remove policy set definiitons from archetype before adding the management group.
 	if err := addAttrStringElementsToSet(arch.PolicySetDefinitions, data.PolicySetDefinitionsToAdd.Elements()); err != nil {
 		resp.Diagnostics.AddError("Unable to add policy set definitions", err.Error())
 		return
@@ -497,6 +498,7 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 		return
 	}
 
+	// Add/remove role definiitons from archetype before adding the management group.
 	if err := addAttrStringElementsToSet(arch.RoleDefinitions, data.RoleDefinitionsToAdd.Elements()); err != nil {
 		resp.Diagnostics.AddError("Unable to add role definitions", err.Error())
 		return
@@ -506,12 +508,25 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 		return
 	}
 
-	// TODO: implement code to create *armauthorization.RoleAssignment from RoleAssignmentsToAdd.
-
+	// remove policy assignments from archetype before adding the management group.
 	if err := deleteAttrStringElementsFromSet(arch.PolicyAssignments, data.PolicyAssignmentsToRemove.Elements()); err != nil {
 		resp.Diagnostics.AddError("Unable to remove policy assignments", err.Error())
 		return
 	}
+	// panames := mapset.NewSet[string]()
+	// panames.Append(arch.PolicyAssignments.ToSlice()...)
+
+	// par := make([]string, 0, len(data.PolicyAssignmentsToRemove.Elements()))
+	// if diags := data.PolicyAssignmentsToRemove.ElementsAs(ctx, &par, false); diags.HasError() {
+	// 	resp.Diagnostics.Append(diags...)
+	// 	return
+	// }
+	// panames.RemoveAll(par...)
+	// for k := range data.PolicyAssignmentsToAdd {
+	// 	panames.Add(k)
+	// }
+
+	// data.AlzPolicyAssignmentNames = panames.ToSlice()
 
 	checks := []checkExistsInAlzLib{
 		{arch.PolicyDefinitions, d.alz.PolicyDefinitionExists},

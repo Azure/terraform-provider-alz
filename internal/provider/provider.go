@@ -84,7 +84,7 @@ func (p *AlzProvider) Metadata(ctx context.Context, req provider.MetadataRequest
 
 func (p *AlzProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "ALZ provider to generate archetype configuration files for use with the ALZ Terraform module.",
+		MarkdownDescription: "ALZ provider to generate archetype data for use with the ALZ Terraform module.",
 
 		Attributes: map[string]schema.Attribute{
 			"allow_lib_overwrite": schema.BoolAttribute{
@@ -289,6 +289,7 @@ func (p *AlzProvider) Resources(ctx context.Context) []func() resource.Resource 
 func (p *AlzProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewArchetypeDataSource,
+		NewArchetypeKeysDataSource,
 	}
 }
 

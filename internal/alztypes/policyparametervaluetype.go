@@ -69,7 +69,7 @@ func (v PolicyParameterValue) StringSemanticEquals(ctx context.Context, newValua
 		return false, diags
 	}
 
-	unmarshalMap := make(map[PolicyParameterValue]*PolicyParameterMap)
+	unmarshalMap := make(map[PolicyParameterValue]*PolicyParameterMap, 2)
 	unmarshalMap[v] = new(PolicyParameterMap)
 	unmarshalMap[newValue] = new(PolicyParameterMap)
 

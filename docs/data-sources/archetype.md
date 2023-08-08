@@ -13,10 +13,16 @@ Archetype data source.
 ## Example Usage
 
 ```terraform
+data "azurerm_client_config" "current" {}
+
 data "alz_archetype" "example" {
   defaults = {
     location = "westeurope"
   }
+  id             = "alz-root"
+  base_archetype = "root"
+  display_name   = "alz-root"
+  parent_id      = data.azurerm_client_config.current.tenant_id
 }
 ```
 
@@ -39,10 +45,8 @@ data "alz_archetype" "example" {
 - `policy_definitions_to_remove` (Set of String) A list of policy definition names to remove from the archetype.
 - `policy_set_definitions_to_add` (Set of String) A list of policy set definition names to add to the archetype.
 - `policy_set_definitions_to_remove` (Set of String) A list of policy set definition names to remove from the archetype.
-- `role_assignments_to_add` (Attributes Map) A list of role definition names to add to the archetype. (see [below for nested schema](#nestedatt--role_assignments_to_add))
 - `role_definitions_to_add` (Set of String) A list of role definition names to add to the archetype.
 - `role_definitions_to_remove` (Set of String) A list of role definition names to remove from the archetype.
-- `subscription_ids` (Set of String) A list of subscription ids to add to the management group.
 
 ### Read-Only
 
@@ -50,7 +54,6 @@ data "alz_archetype" "example" {
 - `alz_policy_definitions` (Map of String) A map of generated policy assignments. The values are ARM JSON policy definitions.
 - `alz_policy_role_assignments` (Attributes Map) A map of role assignments by policy assignment name. The values are a nested object containing the role definition ids and any additionl scopes. (see [below for nested schema](#nestedatt--alz_policy_role_assignments))
 - `alz_policy_set_definitions` (Map of String) A map of generated policy assignments. The values are ARM JSON policy set definitions.
-- `alz_role_assignments` (Map of String) A map of generated role assignments. The values are ARM JSON role assignments.
 - `alz_role_definitions` (Map of String) A map of generated role assignments. The values are ARM JSON role definitions.
 
 <a id="nestedatt--defaults"></a>
@@ -63,6 +66,7 @@ Required:
 Optional:
 
 - `log_analytics_workspace_id` (String) Default Log Analytics workspace id
+- `private_dns_zone_resource_group_id` (String) Resource group resource id containing private DNS zones. Used in the Deploy-Private-DNS-Zones assignment.
 
 
 <a id="nestedatt--policy_assignments_to_add"></a>
@@ -93,23 +97,10 @@ Optional:
 
 
 
-<a id="nestedatt--role_assignments_to_add"></a>
-### Nested Schema for `role_assignments_to_add`
-
-Required:
-
-- `object_id` (String) The principal object id to assign.
-
-Optional:
-
-- `definition_id` (String) The role definition name. Conflicts with `definition_name`.
-- `definition_name` (String) The role definition resource id. Conflicts with `definition_id`.
-
-
 <a id="nestedatt--alz_policy_role_assignments"></a>
 ### Nested Schema for `alz_policy_role_assignments`
 
 Read-Only:
 
-- `additional_scopes` (Set of String) A set of additional scopes to assign with the policy assignment.
 - `role_definition_ids` (Set of String) A set of role definition ids to assign with the policy assignment.
+- `scopes` (Set of String) A set of scopes to assign with the policy assignment.

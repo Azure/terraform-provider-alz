@@ -33,8 +33,10 @@ func testAccProtoV6ProviderFactoriesUnique() map[string]func() (tfprotov6.Provid
 	return map[string]func() (tfprotov6.ProviderServer, error){
 		"alz": providerserver.NewProtocol6WithError(New("test")()),
 	}
+
 }
 
+// testAccPreCheck ensures that the environment is properly configured for acceptance testing.
 func testAccPreCheck(t *testing.T) {
 	// You can add code here to run prior to any test case execution, for example assertions
 	// about the appropriate environment variables being set are common to see in a pre-check
