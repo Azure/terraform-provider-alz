@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -26,6 +27,7 @@ type ArchetypeKeysDataSource struct {
 
 // ArchetypeKeysDataSourceModel describes the data source data model.
 type ArchetypeKeysDataSourceModel struct {
+	Id                           types.String `tfsdk:"id"`                               // string
 	AlzPolicyAssignmentKeys      types.Set    `tfsdk:"alz_policy_assignment_keys"`       // set of string
 	AlzPolicyDefinitionKeys      types.Set    `tfsdk:"alz_policy_definition_keys"`       // set of string
 	AlzPolicySetDefinitionKeys   types.Set    `tfsdk:"alz_policy_set_definition_keys"`   // set of string
@@ -54,6 +56,11 @@ func (d *ArchetypeKeysDataSource) Schema(ctx context.Context, req datasource.Sch
 			"base_archetype": schema.StringAttribute{
 				MarkdownDescription: "The base archetype name to use. This has been generated from the provider lib directories.",
 				Required:            true,
+			},
+
+			"id": schema.StringAttribute{
+				MarkdownDescription: "A an id used for acceptance testing.",
+				Computed:            true,
 			},
 
 			"alz_policy_assignment_keys": schema.SetAttribute{
@@ -170,6 +177,11 @@ func (d *ArchetypeKeysDataSource) Read(ctx context.Context, req datasource.ReadR
 	d.alz.mu.Lock()
 	defer d.alz.mu.Unlock()
 
+	if diags := resp.State.SetAttribute(ctx, path.Root("id"), data.BaseArchetype.ValueString()); diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
+
 	// Make a copy of the archetype so we can customize it.
 	arch, err := d.alz.CopyArchetype(data.BaseArchetype.ValueString(), nil)
 	if err != nil {
@@ -217,26 +229,24 @@ func (d *ArchetypeKeysDataSource) Read(ctx context.Context, req datasource.ReadR
 		return
 	}
 
-	pa, diags := types.SetValueFrom(ctx, types.StringType, arch.PolicyAssignments.ToSlice())
-	resp.Diagnostics.Append(diags...)
-	data.AlzPolicyAssignmentKeys = pa
-
-	pd, diags := types.SetValueFrom(ctx, types.StringType, arch.PolicyDefinitions.ToSlice())
-	resp.Diagnostics.Append(diags...)
-	data.AlzPolicyAssignmentKeys = pd
-
-	psd, diags := types.SetValueFrom(ctx, types.StringType, arch.PolicySetDefinitions.ToSlice())
-	resp.Diagnostics.Append(diags...)
-	data.AlzPolicyAssignmentKeys = psd
-
-	rd, diags := types.SetValueFrom(ctx, types.StringType, arch.RoleDefinitions.ToSlice())
-	resp.Diagnostics.Append(diags...)
-	data.AlzPolicyAssignmentKeys = rd
-
-	if resp.Diagnostics.HasError() {
+	if diags := resp.State.SetAttribute(ctx, path.Root("alz_policy_assignment_keys"), arch.PolicyAssignments.ToSlice()); diags.HasError() {
+		resp.Diagnostics.Append(diags...)
 		return
 	}
+	if diags := resp.State.SetAttribute(ctx, path.Root("alz_policy_definition_keys"), arch.PolicyDefinitions.ToSlice()); diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
+	if diags := resp.State.SetAttribute(ctx, path.Root("alz_policy_set_definition_keys"), arch.PolicySetDefinitions.ToSlice()); diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
+	if diags := resp.State.SetAttribute(ctx, path.Root("alz_role_definition_keys"), arch.RoleDefinitions.ToSlice()); diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
+	types.SetValueFrom(ctx, types.StringType, arch.PolicyAssignments.ToSlice())
 
-	//Save data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	// //Save data into Terraform state
+	// resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
