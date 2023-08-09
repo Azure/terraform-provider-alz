@@ -1,6 +1,6 @@
 module github.com/Azure/terraform-provider-alz
 
-go 1.20
+go 1.21
 
 require (
 	github.com/Azure/alzlib v0.6.3

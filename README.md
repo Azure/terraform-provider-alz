@@ -13,31 +13,7 @@ Please see the [GitHub template repository documentation](https://help.github.co
 
 ## Using the provider
 
-***This example will be extended when the Terraform module is created.***
-
-Here is how to use the provider to generate the data required to create the ALZ organizational root management group.
-
-```hcl
-provider "alz" {
-  # See documentation for the customization options.
-}
-
-data "alz_archetype" "root" {
-  id             = "alz-root"
-  display_name   = "alz-root"
-  base_archetype = "root"
-  parent_id      = "parentmg" # the id of the parent management group
-  defaults       = {
-    location = "westeurope"
-  }
-
-  # See documentation for the customization options.
-}
-
-output "root_mg" {
-  value = data.alz_management_group.root
-}
-```
+See the associated [module documentation](https://github.com/Azure/terraform-azurerm-alz) and examples for how to use the provider.
 
 ## Developing the Provider
 
