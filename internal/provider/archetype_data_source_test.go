@@ -273,40 +273,34 @@ func TestConvertPolicyAssignmentParametersToSdkType(t *testing.T) {
 
 func TestConvertAlzPolicyRoleAssignments(t *testing.T) {
 	// Test with nil input
-	res, diags := convertAlzPolicyRoleAssignments(context.Background(), nil)
-	assert.NotNil(t, res)
+	res := convertAlzPolicyRoleAssignments(nil)
+	assert.Nil(t, res)
 	assert.Empty(t, res)
-	assert.Empty(t, diags)
 
 	// Test with empty input
-	res, diags = convertAlzPolicyRoleAssignments(context.Background(), make(map[string]alzlib.PolicyRoleAssignments))
-	assert.NotNil(t, res)
+	res = convertAlzPolicyRoleAssignments(make([]alzlib.PolicyRoleAssignment, 0))
+	assert.Nil(t, res)
 	assert.Empty(t, res)
-	assert.Empty(t, diags)
 
 	// Test with non-empty input
-	src := map[string]alzlib.PolicyRoleAssignments{
-		"assignment1": {
-			RoleDefinitionIds: []string{"role1", "role2"},
-			Scopes:            []string{"scope1", "scope2"},
+	src := []alzlib.PolicyRoleAssignment{
+		{
+			RoleDefinitionId: "test1",
+			Scope:            "test1",
+			Source:           "test1",
+			SourceType:       alzlib.AssignmentScope,
+			AssignmentName:   "test1",
 		},
 	}
-	res, diags = convertAlzPolicyRoleAssignments(context.Background(), src)
+	res = convertAlzPolicyRoleAssignments(src)
 	assert.NotNil(t, res)
 	assert.Len(t, res, len(src))
-	assert.Empty(t, diags)
 	for k, v := range src {
-		assert.Contains(t, res, k)
-		assert.Len(t, res[k].RoleDefinitionIds.Elements(), len(v.RoleDefinitionIds))
-		assert.Len(t, res[k].Scopes.Elements(), len(v.Scopes))
-		for i, rd := range v.RoleDefinitionIds {
-			assert.Contains(t, res[k].RoleDefinitionIds.Elements(), types.StringValue(rd))
-			assert.Equal(t, rd, res[k].RoleDefinitionIds.Elements()[i].(basetypes.StringValue).ValueString()) //nolint:forcetypeassert
-		}
-		for i, as := range v.Scopes {
-			assert.Contains(t, res[k].Scopes.Elements(), types.StringValue(as))
-			assert.Equal(t, as, res[k].Scopes.Elements()[i].(basetypes.StringValue).ValueString()) //nolint:forcetypeassert
-		}
+		assert.Equal(t, v.RoleDefinitionId, res[k].RoleDefinitionId.ValueString())
+		assert.Equal(t, v.Scope, res[k].Scope.ValueString())
+		assert.Equal(t, v.Source, res[k].Source.ValueString())
+		assert.Equal(t, v.SourceType.String(), res[k].SourceType.ValueString())
+		assert.Equal(t, v.AssignmentName, res[k].AssignmentName.ValueString())
 	}
 }
 

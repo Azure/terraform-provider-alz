@@ -85,10 +85,10 @@ type ArchetypeDataSourceModel struct {
 // that must be created when assigning a given policy.
 type AlzPolicyRoleAssignmentType struct {
 	RoleDefinitionId types.String `tfsdk:"role_definition_id"`
-	Scope            types.String `tfsdk:"scopes"`
+	Scope            types.String `tfsdk:"scope"`
 	Source           types.String `tfsdk:"source"`
 	SourceType       types.String `tfsdk:"source_type"`
-	AssignmantName   types.String `tfsdk:"assignment_name"`
+	AssignmentName   types.String `tfsdk:"assignment_name"`
 }
 
 // ArchetypeDataSourceModelDefaults describes the defaults used in the alz data processing.
@@ -400,15 +400,28 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"role_definition_ids": schema.SetAttribute{
-							MarkdownDescription: "A set of role definition ids to assign with the policy assignment.",
-							ElementType:         types.StringType,
+						"role_definition_id": schema.StringAttribute{
+							MarkdownDescription: "The role definition id to assign with the policy assignment.",
 							Computed:            true,
 						},
 
-						"scopes": schema.SetAttribute{
-							MarkdownDescription: "A set of scopes to assign with the policy assignment.",
-							ElementType:         types.StringType,
+						"scope": schema.StringAttribute{
+							MarkdownDescription: "The scope to assign with the policy assignment.",
+							Computed:            true,
+						},
+
+						"source": schema.StringAttribute{
+							MarkdownDescription: "The source of the policy assignment.",
+							Computed:            true,
+						},
+
+						"source_type": schema.StringAttribute{
+							MarkdownDescription: "The source of the policy assignment.",
+							Computed:            true,
+						},
+
+						"assignment_name": schema.StringAttribute{
+							MarkdownDescription: "The name of the policy assignment.",
 							Computed:            true,
 						},
 					},
@@ -661,13 +674,17 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 
 // convertAlzPolicyRoleAssignments converts a map[string]alzlib.PolicyAssignmentAdditionalRoleAssignments to a map[string]AlzPolicyRoleAssignmentType.
 func convertAlzPolicyRoleAssignments(src []alzlib.PolicyRoleAssignment) []AlzPolicyRoleAssignmentType {
-	res := make([]AlzPolicyRoleAssignmentType, 0, len(src))
+	if len(src) == 0 {
+		return nil
+	}
+	res := make([]AlzPolicyRoleAssignmentType, len(src))
 	for i, v := range src {
 		res[i] = AlzPolicyRoleAssignmentType{
 			RoleDefinitionId: types.StringValue(v.RoleDefinitionId),
 			Scope:            types.StringValue(v.Scope),
+			Source:           types.StringValue(v.Source),
 			SourceType:       types.StringValue(v.SourceType.String()),
-			AssignmantName:   types.StringValue(v.AssignmentName),
+			AssignmentName:   types.StringValue(v.AssignmentName),
 		}
 	}
 	return res
