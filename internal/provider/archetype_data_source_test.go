@@ -287,8 +287,6 @@ func TestConvertAlzPolicyRoleAssignments(t *testing.T) {
 		{
 			RoleDefinitionId: "test1",
 			Scope:            "test1",
-			Source:           "test1",
-			SourceType:       alzlib.AssignmentScope,
 			AssignmentName:   "test1",
 		},
 	}
@@ -298,8 +296,6 @@ func TestConvertAlzPolicyRoleAssignments(t *testing.T) {
 	for k, v := range src {
 		assert.Equal(t, v.RoleDefinitionId, res[k].RoleDefinitionId.ValueString())
 		assert.Equal(t, v.Scope, res[k].Scope.ValueString())
-		assert.Equal(t, v.Source, res[k].Source.ValueString())
-		assert.Equal(t, v.SourceType.String(), res[k].SourceType.ValueString())
 		assert.Equal(t, v.AssignmentName, res[k].AssignmentName.ValueString())
 	}
 }

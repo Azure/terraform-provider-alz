@@ -58,10 +58,9 @@ type checkExistsInAlzLib struct {
 
 // ArchetypeDataSourceModel describes the data source data model.
 type ArchetypeDataSourceModel struct {
-	AlzPolicyAssignments    types.Map `tfsdk:"alz_policy_assignments"`     // map of string, computed
-	AlzPolicyDefinitions    types.Map `tfsdk:"alz_policy_definitions"`     // map of string, computed
-	AlzPolicySetDefinitions types.Map `tfsdk:"alz_policy_set_definitions"` // map of string, computed
-	//AlzRoleAssignments           types.Map                              `tfsdk:"alz_role_assignments"`        // map of string, computed
+	AlzPolicyAssignments         types.Map                        `tfsdk:"alz_policy_assignments"`      // map of string, computed
+	AlzPolicyDefinitions         types.Map                        `tfsdk:"alz_policy_definitions"`      // map of string, computed
+	AlzPolicySetDefinitions      types.Map                        `tfsdk:"alz_policy_set_definitions"`  // map of string, computed
 	AlzPolicyRoleAssignments     []AlzPolicyRoleAssignmentType    `tfsdk:"alz_policy_role_assignments"` // map of string, computed
 	AlzRoleDefinitions           types.Map                        `tfsdk:"alz_role_definitions"`        // map of string, computed
 	BaseArchetype                types.String                     `tfsdk:"base_archetype"`
@@ -75,10 +74,8 @@ type ArchetypeDataSourceModel struct {
 	PolicyDefinitionsToRemove    types.Set                        `tfsdk:"policy_definitions_to_remove"`     // set of string
 	PolicySetDefinitionsToAdd    types.Set                        `tfsdk:"policy_set_definitions_to_add"`    // set of string
 	PolicySetDefinitionsToRemove types.Set                        `tfsdk:"policy_set_definitions_to_remove"` // set of string
-	//RoleAssignmentsToAdd         map[string]RoleAssignmentType          `tfsdk:"role_assignments_to_add"`          // map of RoleAssignmentType
-	RoleDefinitionsToAdd    types.Set `tfsdk:"role_definitions_to_add"`    // set of string
-	RoleDefinitionsToRemove types.Set `tfsdk:"role_definitions_to_remove"` // set of string
-	//SubscriptionIds         types.Set `tfsdk:"subscription_ids"`           // set of string
+	RoleDefinitionsToAdd         types.Set                        `tfsdk:"role_definitions_to_add"`          // set of string
+	RoleDefinitionsToRemove      types.Set                        `tfsdk:"role_definitions_to_remove"`       // set of string
 }
 
 // AlzPolicyRoleAssignmentType is a representation of the policy assignments
@@ -86,8 +83,6 @@ type ArchetypeDataSourceModel struct {
 type AlzPolicyRoleAssignmentType struct {
 	RoleDefinitionId types.String `tfsdk:"role_definition_id"`
 	Scope            types.String `tfsdk:"scope"`
-	Source           types.String `tfsdk:"source"`
-	SourceType       types.String `tfsdk:"source_type"`
 	AssignmentName   types.String `tfsdk:"assignment_name"`
 }
 
@@ -297,38 +292,6 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 				ElementType:         types.StringType,
 			},
 
-			// "role_assignments_to_add": schema.MapNestedAttribute{
-			// 	MarkdownDescription: "A list of role definition names to add to the archetype.",
-			// 	Optional:            true,
-			// 	NestedObject: schema.NestedAttributeObject{
-			// 		Validators: []validator.Object{},
-			// 		Attributes: map[string]schema.Attribute{
-			// 			"definition_id": schema.StringAttribute{
-			// 				MarkdownDescription: "The role definition name. Conflicts with `definition_name`.",
-			// 				Optional:            true,
-			// 				Validators: []validator.String{
-			// 					alzvalidators.ArmTypeResourceId("Microsoft.Authorization", "roleDefinitions"),
-			// 					stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("definition_name")),
-			// 				},
-			// 			},
-			// 			"definition_name": schema.StringAttribute{
-			// 				MarkdownDescription: "The role definition resource id. Conflicts with `definition_id`.",
-			// 				Optional:            true,
-			// 				Validators: []validator.String{
-			// 					stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("definition_id")),
-			// 				},
-			// 			},
-			// 			"object_id": schema.StringAttribute{
-			// 				MarkdownDescription: "The principal's object id to assign.",
-			// 				Required:            true,
-			// 				Validators: []validator.String{
-			// 					stringvalidator.RegexMatches(regexp.MustCompile(`^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$`), "The subscription id must be a valid lowercase UUID."),
-			// 				},
-			// 			},
-			// 		},
-			// 	},
-			// },
-
 			"defaults": schema.SingleNestedAttribute{
 				MarkdownDescription: "Archetype default values",
 				Required:            true,
@@ -354,17 +317,6 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 				},
 			},
 
-			// "subscription_ids": schema.SetAttribute{
-			// 	MarkdownDescription: "A list of subscription ids to add to the management group.",
-			// 	Optional:            true,
-			// 	ElementType:         types.StringType,
-			// 	Validators: []validator.Set{
-			// 		setvalidator.ValueStringsAre(
-			// 			stringvalidator.RegexMatches(regexp.MustCompile(`^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$`), "The subscription id must be a valid lowercase UUID."),
-			// 		),
-			// 	},
-			// },
-
 			"alz_policy_assignments": schema.MapAttribute{
 				MarkdownDescription: "A map of generated policy assignments. The values are ARM JSON policy assignments.",
 				Computed:            true,
@@ -382,12 +334,6 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 				Computed:            true,
 				ElementType:         types.StringType,
 			},
-
-			// "alz_role_assignments": schema.MapAttribute{
-			// 	MarkdownDescription: "A map of generated role assignments. The values are ARM JSON role assignments.",
-			// 	Computed:            true,
-			// 	ElementType:         types.StringType,
-			// },
 
 			"alz_role_definitions": schema.MapAttribute{
 				MarkdownDescription: "A map of generated role assignments. The values are ARM JSON role definitions.",
@@ -407,16 +353,6 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 
 						"scope": schema.StringAttribute{
 							MarkdownDescription: "The scope to assign with the policy assignment.",
-							Computed:            true,
-						},
-
-						"source": schema.StringAttribute{
-							MarkdownDescription: "The source of the policy assignment.",
-							Computed:            true,
-						},
-
-						"source_type": schema.StringAttribute{
-							MarkdownDescription: "The source of the policy assignment.",
 							Computed:            true,
 						},
 
@@ -682,8 +618,6 @@ func convertAlzPolicyRoleAssignments(src []alzlib.PolicyRoleAssignment) []AlzPol
 		res[i] = AlzPolicyRoleAssignmentType{
 			RoleDefinitionId: types.StringValue(v.RoleDefinitionId),
 			Scope:            types.StringValue(v.Scope),
-			Source:           types.StringValue(v.Source),
-			SourceType:       types.StringValue(v.SourceType.String()),
 			AssignmentName:   types.StringValue(v.AssignmentName),
 		}
 	}
