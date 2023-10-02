@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -30,8 +29,16 @@ type PolicyRoleAssignmentResource struct {
 
 // PolicyRoleAssignmentResourceModel describes the resource data model.
 type PolicyRoleAssignmentResourceModel struct {
-	Id          types.String `tfsdk:"id"`
-	Assignments types.Set    `tfsdk:"assignments"`
+	Id          types.String                                  `tfsdk:"id"`
+	Assignments []PolicyRoleAssignmentAssignmentResourceModel `tfsdk:"assignments"`
+}
+
+// PolicyRoleAssignmentAssignmentResourceModel describes the resource data model.
+type PolicyRoleAssignmentAssignmentResourceModel struct {
+	AssignmentName   types.String `tfsdk:"assignment_name"`
+	Scope            types.String `tfsdk:"scope"`
+	RoleDefinitionID types.String `tfsdk:"role_definition_id"`
+	ResourceID       types.String `tfsdk:"resource_id"`
 }
 
 // PolicyRoleAssignmentGoResourceModel describes the resource data model.
@@ -42,18 +49,28 @@ type PolicyRoleAssignmentGoResourceModel struct {
 
 type PolicyRoleAssignmentGoAssignmentResourceModel struct {
 	AssignmentName   string
-	Scope            string
-	RoleDefinitionID string
-	ResourceID       string
+	Scope            *string
+	RoleDefinitionID *string
+	ResourceID       *string
 }
 
-func (r PolicyRoleAssignmentResourceModel) ToGoType(ctx context.Context) (PolicyRoleAssignmentGoResourceModel, diag.Diagnostics) {
-	rtn := PolicyRoleAssignmentGoResourceModel{}
-	rtn.Id = r.Id.ValueString()
-	rtn.Assignments = make([]PolicyRoleAssignmentGoAssignmentResourceModel, 0)
-	diags := r.Assignments.ElementsAs(ctx, rtn.Assignments, false)
-	return rtn, diags
-}
+// func (r PolicyRoleAssignmentResourceModel) ToGoType(ctx context.Context) (PolicyRoleAssignmentGoResourceModel, diag.Diagnostics) {
+// 	rtn := PolicyRoleAssignmentGoResourceModel{}
+// 	rtn.Id = r.Id.ValueString()
+// 	rtn.Assignments = make([]PolicyRoleAssignmentGoAssignmentResourceModel, len(r.Assignments))
+// 	if len(r.Assignments) == 0 {
+// 		return rtn, nil
+// 	}
+// 	for i, assignment := range r.Assignments {
+// 		rtn.Assignments[i] = PolicyRoleAssignmentGoAssignmentResourceModel{
+// 			AssignmentName:   *assignment.AssignmentName.ValueStringPointer(),
+// 			Scope:            assignment.Scope.ValueStringPointer(),
+// 			RoleDefinitionID: assignment.RoleDefinitionID.ValueStringPointer(),
+// 			ResourceID:       assignment.ResourceID.ValueStringPointer(),
+// 		}
+// 		return rtn, diags
+// 	}
+// }
 
 func (r PolicyRoleAssignmentResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_policy_role_assignment"
@@ -155,15 +172,14 @@ func (r *PolicyRoleAssignmentResource) Read(ctx context.Context, req resource.Re
 		return
 	}
 
-	// If applicable, this is a great opportunity to initialize any necessary
-	// provider client data and make a call using it.
-	// httpResp, err := r.client.Do(httpReq)
-	// if err != nil {
-	//     resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read example, got error: %s", err))
-	//     return
-	// }
+	for _, v := range data.Assignments {
+		if v.ResourceID.IsNull() || v.RoleDefinitionID.IsUnknown() {
+			continue
+		}
+		// GET resource id from Azure
 
-	// Save updated data into Terraform state
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
