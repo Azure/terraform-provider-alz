@@ -293,10 +293,11 @@ func TestConvertAlzPolicyRoleAssignments(t *testing.T) {
 	res = convertAlzPolicyRoleAssignments(src)
 	assert.NotNil(t, res)
 	assert.Len(t, res, len(src))
-	for k, v := range src {
-		assert.Equal(t, v.RoleDefinitionId, res[k].RoleDefinitionId.ValueString())
-		assert.Equal(t, v.Scope, res[k].Scope.ValueString())
-		assert.Equal(t, v.AssignmentName, res[k].AssignmentName.ValueString())
+	for _, v := range src {
+		key := genPolicyRoleAssignmentId(v)
+		assert.Equal(t, v.RoleDefinitionId, res[key].RoleDefinitionId.ValueString())
+		assert.Equal(t, v.Scope, res[key].Scope.ValueString())
+		assert.Equal(t, v.AssignmentName, res[key].AssignmentName.ValueString())
 	}
 }
 
