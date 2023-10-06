@@ -48,38 +48,6 @@ type PolicyRoleAssignmentsAssignmentResourceModel struct {
 	ResourceID       types.String `tfsdk:"resource_id"`
 }
 
-// PolicyRoleAssignmentGoResourceModel describes the resource data model.
-// type PolicyRoleAssignmentGoResourceModel struct {
-// 	Id          string
-// 	Assignments []PolicyRoleAssignmentGoAssignmentResourceModel
-// }
-
-// PolicyRoleAssignmentGoAssignmentResourceModel describes the go data model.
-// type PolicyRoleAssignmentGoAssignmentResourceModel struct {
-// 	AssignmentName   *string
-// 	Scope            *string
-// 	RoleDefinitionID *string
-// 	ResourceID       *string
-// }
-
-// func (r PolicyRoleAssignmentResourceModel) ToGoType(ctx context.Context) (PolicyRoleAssignmentGoResourceModel, diag.Diagnostics) {
-// 	rtn := PolicyRoleAssignmentGoResourceModel{}
-// 	rtn.Id = r.Id.ValueString()
-// 	rtn.Assignments = make([]PolicyRoleAssignmentGoAssignmentResourceModel, len(r.Assignments))
-// 	if len(r.Assignments) == 0 {
-// 		return rtn, nil
-// 	}
-// 	for i, assignment := range r.Assignments {
-// 		rtn.Assignments[i] = PolicyRoleAssignmentGoAssignmentResourceModel{
-// 			AssignmentName:   *assignment.AssignmentName.ValueStringPointer(),
-// 			Scope:            assignment.Scope.ValueStringPointer(),
-// 			RoleDefinitionID: assignment.RoleDefinitionID.ValueStringPointer(),
-// 			ResourceID:       assignment.ResourceID.ValueStringPointer(),
-// 		}
-// 		return rtn, diags
-// 	}
-// }
-
 func (r PolicyRoleAssignmentsResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_policy_role_assignments"
 }
@@ -160,7 +128,6 @@ func (r *PolicyRoleAssignmentsResource) Create(ctx context.Context, req resource
 	}
 
 	// Save data into Terraform state
-
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
