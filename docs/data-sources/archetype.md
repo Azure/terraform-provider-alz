@@ -52,7 +52,7 @@ data "alz_archetype" "example" {
 
 - `alz_policy_assignments` (Map of String) A map of generated policy assignments. The values are ARM JSON policy assignments.
 - `alz_policy_definitions` (Map of String) A map of generated policy assignments. The values are ARM JSON policy definitions.
-- `alz_policy_role_assignments` (Attributes Map) A map of role assignments by policy assignment name. The values are a nested object containing the role definition ids and any additionl scopes. (see [below for nested schema](#nestedatt--alz_policy_role_assignments))
+- `alz_policy_role_assignments` (Attributes Map) A map of role assignments generated from the policy assignments. The values are a nested object containing the role definition ids and any additionl scopes. (see [below for nested schema](#nestedatt--alz_policy_role_assignments))
 - `alz_policy_set_definitions` (Map of String) A map of generated policy assignments. The values are ARM JSON policy set definitions.
 - `alz_role_definitions` (Map of String) A map of generated role assignments. The values are ARM JSON role definitions.
 
@@ -102,5 +102,6 @@ Optional:
 
 Read-Only:
 
-- `role_definition_ids` (Set of String) A set of role definition ids to assign with the policy assignment.
-- `scopes` (Set of String) A set of scopes to assign with the policy assignment.
+- `assignment_name` (String) The name of the policy assignment.
+- `role_definition_id` (String) The role definition id to assign with the policy assignment.
+- `scope` (String) The scope to assign with the policy assignment.

@@ -22,7 +22,7 @@ func NewArchetypeKeysDataSource() datasource.DataSource {
 
 // ArchetypeKeysDataSource defines the data source implementation.
 type ArchetypeKeysDataSource struct {
-	alz *alzlibWithMutex
+	alz *alzProviderData
 }
 
 // ArchetypeKeysDataSourceModel describes the data source data model.
@@ -145,7 +145,7 @@ func (d *ArchetypeKeysDataSource) Configure(ctx context.Context, req datasource.
 		return
 	}
 
-	data, ok := req.ProviderData.(*alzlibWithMutex)
+	data, ok := req.ProviderData.(*alzProviderData)
 
 	if !ok {
 		resp.Diagnostics.AddError(

@@ -19,6 +19,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -47,12 +48,17 @@ type AlzProvider struct {
 	// provider is built and ran locally, and "test" when running acceptance
 	// testing.
 	version string
-	alz     *alzlibWithMutex
+	alz     *alzProviderData
 }
 
-type alzlibWithMutex struct {
+type AlzProviderClients struct {
+	RoleAssignmentsClient *armauthorization.RoleAssignmentsClient
+}
+
+type alzProviderData struct {
 	*alzlib.AlzLib
-	mu *sync.Mutex
+	mu      *sync.Mutex
+	clients *AlzProviderClients
 }
 
 // AlzProviderModel describes the provider data model.
@@ -237,12 +243,28 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 	// Set the default values if not already set in the config or by environment.
 	configureDefaults(&data)
 
-	// Create the AlzLib.
-	alz, diags := configureAlzLib(data, fmt.Sprintf("%s/%s", userAgentBase, p.version))
+	// Get a token credential.
+	cred, diags := getTokenCredential(data)
 	resp.Diagnostics = append(resp.Diagnostics, diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	// Create the clients
+	clients, diags := getClients(cred, data, fmt.Sprintf("%s/%s", userAgentBase, p.version))
+	resp.Diagnostics = append(resp.Diagnostics, diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Create the AlzLib.
+	alz, diags := configureAlzLib(cred, data, fmt.Sprintf("%s/%s", userAgentBase, p.version))
+	resp.Diagnostics = append(resp.Diagnostics, diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Configure clients
 
 	// Create the fs.FS library file systems based on the configuration.
 	libdirfs := make([]fs.FS, 0)
@@ -273,17 +295,20 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 	// Store the alz pointer in the provider struct so we don't have to do all this work every time `.Configure` is called.
 	// Due to fetch from Azure, it takes approx 30 seconds each time and is called 4-5 time during a single acceptance test.
 
-	p.alz = &alzlibWithMutex{
-		AlzLib: alz,
-		mu:     &sync.Mutex{},
+	p.alz = &alzProviderData{
+		AlzLib:  alz,
+		mu:      &sync.Mutex{},
+		clients: clients,
 	}
 	resp.DataSourceData = p.alz
-	//resp.ResourceData = p.alz
+	resp.ResourceData = p.alz
 	tflog.Debug(ctx, "Provider configuration finished")
 }
 
 func (p *AlzProvider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{}
+	return []func() resource.Resource{
+		NewPolicyRoleAssignmentResource,
+	}
 }
 
 func (p *AlzProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
@@ -440,9 +465,51 @@ func listElementsToStrings(list []attr.Value) []string {
 }
 
 // configureAlzLib configures the alzlib for use by the provider.
-func configureAlzLib(data AlzProviderModel, userAgent string) (*alzlib.AlzLib, diag.Diagnostics) {
+func configureAlzLib(token *azidentity.ChainedTokenCredential, data AlzProviderModel, userAgent string) (*alzlib.AlzLib, diag.Diagnostics) {
 	var diags diag.Diagnostics
+	popts := new(policy.ClientOptions)
+	popts.DisableRPRegistration = data.SkipProviderRegistration.ValueBool()
+	popts.PerRetryPolicies = append(popts.PerRetryPolicies, withUserAgent(userAgent))
 
+	alz := alzlib.NewAlzLib()
+	cf, err := armpolicy.NewClientFactory("", token, popts)
+	if err != nil {
+		diags.AddError("failed to create Azure Policy client factory: %v", err.Error())
+		return nil, diags
+	}
+
+	alz.AddPolicyClient(cf)
+
+	alz.Options.AllowOverwrite = data.AllowLibOverwrite.ValueBool()
+
+	return alz, diags
+}
+
+func getClients(token *azidentity.ChainedTokenCredential, data AlzProviderModel, userAgent string) (*AlzProviderClients, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	clients := new(AlzProviderClients)
+
+	popts := new(policy.ClientOptions)
+	popts.DisableRPRegistration = data.SkipProviderRegistration.ValueBool()
+	popts.PerRetryPolicies = append(popts.PerRetryPolicies, withUserAgent(userAgent))
+
+	client, err := armauthorization.NewRoleAssignmentsClient("", token, popts)
+
+	// Create the clients
+	//roleAssignmentsClient, err := newRoleAssignmentsClient(data)
+	if err != nil {
+		diags.AddError("failed to create Azure Role Assignments client: %v", err.Error())
+		return clients, diags
+	}
+
+	clients.RoleAssignmentsClient = client
+
+	return clients, diags
+}
+
+// getTokenCredential gets a token credential based on the provider data.
+func getTokenCredential(data AlzProviderModel) (*azidentity.ChainedTokenCredential, diag.Diagnostics) {
+	var diags diag.Diagnostics
 	var cloudConfig cloud.Configuration
 	env := data.Environment.ValueString()
 	switch strings.ToLower(env) {
@@ -467,28 +534,7 @@ func configureAlzLib(data AlzProviderModel, userAgent string) (*alzlib.AlzLib, d
 		TenantID: data.TenantId.ValueString(),
 	}
 
-	cred, d := newDefaultAzureCredential(data, option)
-	diags = append(diags, d...)
-	if diags.HasError() {
-		return nil, diags
-	}
-
-	popts := new(policy.ClientOptions)
-	popts.DisableRPRegistration = data.SkipProviderRegistration.ValueBool()
-	popts.PerRetryPolicies = append(popts.PerRetryPolicies, withUserAgent(userAgent))
-
-	alz := alzlib.NewAlzLib()
-	cf, err := armpolicy.NewClientFactory("", cred, popts)
-	if err != nil {
-		diags.AddError("failed to create Azure Policy client factory: %v", err.Error())
-		return nil, diags
-	}
-
-	alz.AddPolicyClient(cf)
-
-	alz.Options.AllowOverwrite = data.AllowLibOverwrite.ValueBool()
-
-	return alz, diags
+	return newDefaultAzureCredential(data, option)
 }
 
 // configureDefaults sets default values if they aren't already set.

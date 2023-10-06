@@ -16,6 +16,7 @@ import (
 	"github.com/Azure/terraform-provider-alz/internal/alztypes"
 	"github.com/Azure/terraform-provider-alz/internal/alzvalidators"
 	mapset "github.com/deckarep/golang-set/v2"
+	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -38,7 +39,7 @@ func NewArchetypeDataSource() datasource.DataSource {
 
 // ArchetypeDataSource defines the data source implementation.
 type ArchetypeDataSource struct {
-	alz *alzlibWithMutex
+	alz *alzProviderData
 }
 
 // mapTypes is used for the generic functions that operate on certain map types.
@@ -58,24 +59,24 @@ type checkExistsInAlzLib struct {
 
 // ArchetypeDataSourceModel describes the data source data model.
 type ArchetypeDataSourceModel struct {
-	AlzPolicyAssignments         types.Map                        `tfsdk:"alz_policy_assignments"`      // map of string, computed
-	AlzPolicyDefinitions         types.Map                        `tfsdk:"alz_policy_definitions"`      // map of string, computed
-	AlzPolicySetDefinitions      types.Map                        `tfsdk:"alz_policy_set_definitions"`  // map of string, computed
-	AlzPolicyRoleAssignments     []AlzPolicyRoleAssignmentType    `tfsdk:"alz_policy_role_assignments"` // map of string, computed
-	AlzRoleDefinitions           types.Map                        `tfsdk:"alz_role_definitions"`        // map of string, computed
-	BaseArchetype                types.String                     `tfsdk:"base_archetype"`
-	Defaults                     ArchetypeDataSourceModelDefaults `tfsdk:"defaults"`
-	DisplayName                  types.String                     `tfsdk:"display_name"`
-	Id                           types.String                     `tfsdk:"id"`
-	ParentId                     types.String                     `tfsdk:"parent_id"`
-	PolicyAssignmentsToAdd       map[string]PolicyAssignmentType  `tfsdk:"policy_assignments_to_add"`        // map of PolicyAssignmentType
-	PolicyAssignmentsToRemove    types.Set                        `tfsdk:"policy_assignments_to_remove"`     // set of string
-	PolicyDefinitionsToAdd       types.Set                        `tfsdk:"policy_definitions_to_add"`        // set of string
-	PolicyDefinitionsToRemove    types.Set                        `tfsdk:"policy_definitions_to_remove"`     // set of string
-	PolicySetDefinitionsToAdd    types.Set                        `tfsdk:"policy_set_definitions_to_add"`    // set of string
-	PolicySetDefinitionsToRemove types.Set                        `tfsdk:"policy_set_definitions_to_remove"` // set of string
-	RoleDefinitionsToAdd         types.Set                        `tfsdk:"role_definitions_to_add"`          // set of string
-	RoleDefinitionsToRemove      types.Set                        `tfsdk:"role_definitions_to_remove"`       // set of string
+	AlzPolicyAssignments         types.Map                              `tfsdk:"alz_policy_assignments"`      // map of string, computed
+	AlzPolicyDefinitions         types.Map                              `tfsdk:"alz_policy_definitions"`      // map of string, computed
+	AlzPolicySetDefinitions      types.Map                              `tfsdk:"alz_policy_set_definitions"`  // map of string, computed
+	AlzPolicyRoleAssignments     map[string]AlzPolicyRoleAssignmentType `tfsdk:"alz_policy_role_assignments"` // map of string, computed
+	AlzRoleDefinitions           types.Map                              `tfsdk:"alz_role_definitions"`        // map of string, computed
+	BaseArchetype                types.String                           `tfsdk:"base_archetype"`
+	Defaults                     ArchetypeDataSourceModelDefaults       `tfsdk:"defaults"`
+	DisplayName                  types.String                           `tfsdk:"display_name"`
+	Id                           types.String                           `tfsdk:"id"`
+	ParentId                     types.String                           `tfsdk:"parent_id"`
+	PolicyAssignmentsToAdd       map[string]PolicyAssignmentType        `tfsdk:"policy_assignments_to_add"`        // map of PolicyAssignmentType
+	PolicyAssignmentsToRemove    types.Set                              `tfsdk:"policy_assignments_to_remove"`     // set of string
+	PolicyDefinitionsToAdd       types.Set                              `tfsdk:"policy_definitions_to_add"`        // set of string
+	PolicyDefinitionsToRemove    types.Set                              `tfsdk:"policy_definitions_to_remove"`     // set of string
+	PolicySetDefinitionsToAdd    types.Set                              `tfsdk:"policy_set_definitions_to_add"`    // set of string
+	PolicySetDefinitionsToRemove types.Set                              `tfsdk:"policy_set_definitions_to_remove"` // set of string
+	RoleDefinitionsToAdd         types.Set                              `tfsdk:"role_definitions_to_add"`          // set of string
+	RoleDefinitionsToRemove      types.Set                              `tfsdk:"role_definitions_to_remove"`       // set of string
 }
 
 // AlzPolicyRoleAssignmentType is a representation of the policy assignments
@@ -341,8 +342,8 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 				ElementType:         types.StringType,
 			},
 
-			"alz_policy_role_assignments": schema.ListNestedAttribute{
-				MarkdownDescription: "A list of role assignments generated from the policy assignments. The values are a nested object containing the role definition ids and any additionl scopes.",
+			"alz_policy_role_assignments": schema.MapNestedAttribute{
+				MarkdownDescription: "A map of role assignments generated from the policy assignments. The values are a nested object containing the role definition ids and any additionl scopes.",
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -373,7 +374,7 @@ func (d *ArchetypeDataSource) Configure(ctx context.Context, req datasource.Conf
 		return
 	}
 
-	data, ok := req.ProviderData.(*alzlibWithMutex)
+	data, ok := req.ProviderData.(*alzProviderData)
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -609,13 +610,13 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 }
 
 // convertAlzPolicyRoleAssignments converts a map[string]alzlib.PolicyAssignmentAdditionalRoleAssignments to a map[string]AlzPolicyRoleAssignmentType.
-func convertAlzPolicyRoleAssignments(src []alzlib.PolicyRoleAssignment) []AlzPolicyRoleAssignmentType {
+func convertAlzPolicyRoleAssignments(src []alzlib.PolicyRoleAssignment) map[string]AlzPolicyRoleAssignmentType {
 	if len(src) == 0 {
 		return nil
 	}
-	res := make([]AlzPolicyRoleAssignmentType, len(src))
-	for i, v := range src {
-		res[i] = AlzPolicyRoleAssignmentType{
+	res := make(map[string]AlzPolicyRoleAssignmentType, len(src))
+	for _, v := range src {
+		res[genPolicyRoleAssignmentId(v)] = AlzPolicyRoleAssignmentType{
 			RoleDefinitionId: types.StringValue(v.RoleDefinitionId),
 			Scope:            types.StringValue(v.Scope),
 			AssignmentName:   types.StringValue(v.AssignmentName),
@@ -759,4 +760,9 @@ func convertPolicyAssignmentParametersToSdkType(src map[string]interface{}) map[
 
 func isKnown(val attr.Value) bool {
 	return !val.IsNull() && !val.IsUnknown()
+}
+
+func genPolicyRoleAssignmentId(pra alzlib.PolicyRoleAssignment) string {
+	u := uuid.NewSHA1(uuid.NameSpaceURL, []byte(pra.AssignmentName+pra.RoleDefinitionId+pra.Scope))
+	return u.String()
 }
