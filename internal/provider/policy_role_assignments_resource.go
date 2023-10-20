@@ -55,7 +55,7 @@ func (r PolicyRoleAssignmentsResource) Metadata(ctx context.Context, req resourc
 func (r *PolicyRoleAssignmentsResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: "Policy role assignment resource",
+		MarkdownDescription: "Policy role assignment resource. This should receive data from Terraform once the policy assignments have been created and the identity principal IDs are known.",
 
 		Attributes: map[string]schema.Attribute{
 			"assignments": schema.MapNestedAttribute{

@@ -190,7 +190,7 @@ func (d *ArchetypeKeysDataSource) Read(ctx context.Context, req datasource.ReadR
 		return
 	}
 
-	// Add/remove policy definiitons from archetype before adding the management group.
+	// Add/remove policy definitions from archetype before adding the management group.
 	if err := addAttrStringElementsToSet(arch.PolicyDefinitions, data.PolicyDefinitionsToAdd.Elements()); err != nil {
 		resp.Diagnostics.AddError("Unable to add policy definitions", err.Error())
 		return
@@ -200,7 +200,7 @@ func (d *ArchetypeKeysDataSource) Read(ctx context.Context, req datasource.ReadR
 		return
 	}
 
-	// Add/remove policy set definiitons from archetype before adding the management group.
+	// Add/remove policy set definitions from archetype before adding the management group.
 	if err := addAttrStringElementsToSet(arch.PolicySetDefinitions, data.PolicySetDefinitionsToAdd.Elements()); err != nil {
 		resp.Diagnostics.AddError("Unable to add policy set definitions", err.Error())
 		return
@@ -210,7 +210,7 @@ func (d *ArchetypeKeysDataSource) Read(ctx context.Context, req datasource.ReadR
 		return
 	}
 
-	// Add/remove role definiitons from archetype before adding the management group.
+	// Add/remove role definitions from archetype before adding the management group.
 	if err := addAttrStringElementsToSet(arch.RoleDefinitions, data.RoleDefinitionsToAdd.Elements()); err != nil {
 		resp.Diagnostics.AddError("Unable to add role definitions", err.Error())
 		return
@@ -246,7 +246,7 @@ func (d *ArchetypeKeysDataSource) Read(ctx context.Context, req datasource.ReadR
 		resp.Diagnostics.Append(diags...)
 		return
 	}
-	types.SetValueFrom(ctx, types.StringType, arch.PolicyAssignments.ToSlice())
+	//types.SetValueFrom(ctx, types.StringType, arch.PolicyAssignments.ToSlice())
 
 	// //Save data into Terraform state
 	// resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
