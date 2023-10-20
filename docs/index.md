@@ -2,23 +2,24 @@
 page_title: "Provider: ALZ"
 subcategory: ""
 description: |-
-  Use the Azure Landing Zones (ALZ) provider to generate data to allow you to easily provision your ALZ configuration. You must configure the provider with the proper credentials before you can use it.
+  Use the Azure Landing Zones (ALZ) provider to generate data to allow you to easily provision your ALZ configuration.
+  You must configure the provider with the proper credentials before you can use it.
+
+  This provider has been designed to work with the [ALZ Terraform module](https://registry.terraform.io/modules/Azure/avm-ptn-alz/azurerm/latest).
+  We suggest that you consume this provider from within the module, rather than directly in your Terraform configuration.
 ---
 
 # ALZ
 
- Use the Azure Landing Zones (ALZ) provider to generate data to allow you to easily provision your ALZ configuration.
- It does not deploy any resources, but generates data to to enable integration with the [AzureRM](https://github.com/Azure/terraform-provider-azurerm) provider.
+Use the Azure Landing Zones (ALZ) provider to generate data to allow you to easily provision your ALZ configuration.
+Its principal use is to generate data to deploy resources with the [AzureRM](https://github.com/Azure/terraform-provider-azurerm) provider.
+However, the provider does deploy some resources directly, in order to work around limitations in Terraform.
 
 Use the navigation to the left to read about the available resources.
 
-~> ⚠️ ***Warning*** ⚠️ This provider is currently in development and is not yet ready for use. It should be considered experimental and is subject to change.
+~> **Important** This provider has been designed to work with the [ALZ Terraform module](https://registry.terraform.io/modules/Azure/avm-ptn-alz/azurerm/latest). We suggest that you consume this provider from within the module, rather than directly in your Terraform configuration.
 
-~> **Important:** For production use, you should constrain the acceptable provider versions via configuration,
-to ensure that new versions with breaking changes will not be automatically installed.
-For more information, see [Versions](#versions).
-
-~> **Important:** This provider requires [Terraform >= 1.0](https://www.terraform.io/language/upgrade-guides/1-0).
+~> **Warning** This provider is currently in development and is not yet ready for use. It should be considered experimental and is subject to change.
 
 ## Example Usage
 

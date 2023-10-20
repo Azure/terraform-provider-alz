@@ -126,7 +126,7 @@ func (d *ArchetypeDataSource) Metadata(ctx context.Context, req datasource.Metad
 func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: "Archetype data source.",
+		MarkdownDescription: "Archetype data source. This provides data in order to create resources. Where possible, the data is provided in the form of ARM JSON.",
 
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
