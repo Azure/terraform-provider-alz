@@ -734,7 +734,7 @@ func policyAssignmentType2ArmPolicyAssignment(pamap map[string]PolicyAssignmentT
 		}
 
 		// set non-compliance message
-		var validModesForNonComplianceMessage = map[string]bool{"All":true, "Indexed":true, "PolicySet":true}
+		var validModesForNonComplianceMessage = map[string]bool{"All": true, "Indexed": true, "PolicySet": true}
 		_, validMode := validModesForNonComplianceMessage[policyDefinitionMode]
 
 		if len(src.NonComplianceMessage) > 0 && validMode {
