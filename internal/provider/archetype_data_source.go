@@ -689,6 +689,8 @@ func policyAssignmentType2ArmPolicyAssignment(pamap map[string]PolicyAssignmentT
 		dst.Type = to.Ptr(policyAssignementType)
 		dst.Properties.DisplayName = to.Ptr(src.DisplayName.ValueString())
 
+		policyDefinitionMode := "NotSupported"
+
 		// Set policy definition id.
 		if isKnown(src.PolicyDefinitionName) {
 			n := src.PolicyDefinitionName.ValueString()
@@ -696,6 +698,12 @@ func policyAssignmentType2ArmPolicyAssignment(pamap map[string]PolicyAssignmentT
 				return nil, fmt.Errorf("policy definition %s not found in AlzLib", n)
 			}
 			dst.Properties.PolicyDefinitionID = to.Ptr(fmt.Sprintf(policyDefinitionIdFmt, n))
+			mode, err := az.GetPolicyDefinitionMode(n)
+			if err != nil {
+				return nil, fmt.Errorf("unable to get policy definition mode for policy definition %s: %w", n, err)
+			}
+			policyDefinitionMode = mode
+
 		}
 		if isKnown(src.PolicySetDefinitionName) {
 			n := src.PolicySetDefinitionName.ValueString()
@@ -703,9 +711,16 @@ func policyAssignmentType2ArmPolicyAssignment(pamap map[string]PolicyAssignmentT
 				return nil, fmt.Errorf("policy set definition %s not found in AlzLib", n)
 			}
 			dst.Properties.PolicyDefinitionID = to.Ptr(fmt.Sprintf(policySetDefinitionIdFmt, n))
+			policyDefinitionMode = "PolicySet"
 		}
 		if isKnown(src.PolicyDefinitionId) {
-			dst.Properties.PolicyDefinitionID = to.Ptr(src.PolicyDefinitionId.ValueString())
+			n := src.PolicyDefinitionId.ValueString()
+			dst.Properties.PolicyDefinitionID = to.Ptr(n)
+			mode, err := az.GetPolicyDefinitionMode(n)
+			if err != nil {
+				return nil, fmt.Errorf("unable to get policy definition mode for policy definition %s: %w", n, err)
+			}
+			policyDefinitionMode = mode
 		}
 
 		// Set enforcement mode.
@@ -719,7 +734,10 @@ func policyAssignmentType2ArmPolicyAssignment(pamap map[string]PolicyAssignmentT
 		}
 
 		// set non-compliance message
-		if len(src.NonComplianceMessage) > 0 {
+		var validModesForNonComplianceMessage = map[string]bool{"All":true, "Indexed":true, "PolicySet":true}
+		_, validMode := validModesForNonComplianceMessage[policyDefinitionMode]
+
+		if len(src.NonComplianceMessage) > 0 && validMode {
 			dst.Properties.NonComplianceMessages = make([]*armpolicy.NonComplianceMessage, len(src.NonComplianceMessage))
 			for i, msg := range src.NonComplianceMessage {
 				dst.Properties.NonComplianceMessages[i] = &armpolicy.NonComplianceMessage{
