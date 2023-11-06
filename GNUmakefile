@@ -24,3 +24,7 @@ lint:
 .PHONY: docs
 docs:
 	go generate
+
+.PHONY: fmt
+fmt:
+	golangci-lint run --fix
