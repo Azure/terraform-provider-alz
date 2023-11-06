@@ -19,12 +19,16 @@ Use the navigation to the left to read about the available resources.
 
 ~> **Important** This provider has been designed to work with the [ALZ Terraform module](https://registry.terraform.io/modules/Azure/avm-ptn-alz/azurerm/latest). We suggest that you consume this provider from within the module, rather than directly in your Terraform configuration.
 
-~> **Warning** This provider is currently in development and is not yet ready for use. It should be considered experimental and is subject to change.
+~> **Warning** This provider is still in development but is ready for initial testing and feedback via [GitHub Issues](https://github.com/Azure/terraform-provider-alz/issues).
 
 ## Example Usage
 
 ```terraform
-provider "alz" {}
+provider "alz" {
+  lib_dirs = [
+    "${path.root}/lib"
+  ]
+}
 ```
 
 ## Authentication and Configuration
