@@ -1,7 +1,7 @@
 dario.cat/mergo v1.0.0 h1:AGCNq9Evsj31mOgNPcLyXc+4PNABt905YmuqPYYpBWk=
 dario.cat/mergo v1.0.0/go.mod h1:uNxQE+84aUszobStD9th8a29P2fMDhsBdgRYvZOxGmk=
-github.com/Azure/alzlib v0.10.0 h1:rV0vP7mxiOVLsIFoDWbQw+yqnWfwpSs9TcAk9doADVY=
-github.com/Azure/alzlib v0.10.0/go.mod h1:5wa9FQSewL/W/CAgHhDKRN8PRPeLefg7+bakU6LgqXc=
+github.com/Azure/alzlib v0.11.0 h1:+EbKJ3yjxL3bN979n1IWjXxG7RtfL7670EXbNnheI7o=
+github.com/Azure/alzlib v0.11.0/go.mod h1:ThoCRbmbZlGc0zZnGTaZg0GGTNzpgoBgrl9K7mjnAXg=
 github.com/Azure/azure-sdk-for-go/sdk/azcore v1.9.0 h1:fb8kj/Dh4CSwgsOzHeZY4Xh68cFVbzXx+ONXGMY//4w=
 github.com/Azure/azure-sdk-for-go/sdk/azcore v1.9.0/go.mod h1:uReU2sSxZExRPBAg3qKzmAucSi51+SP1OhohieR821Q=
 github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.4.0 h1:BMAjVKJM0U/CYF27gA0ZMmXGkOcvfFtD0oHVZ1TIPRI=
