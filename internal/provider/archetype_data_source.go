@@ -687,7 +687,11 @@ func policyAssignmentType2ArmPolicyAssignment(pamap map[string]PolicyAssignmentT
 		dst.ID = to.Ptr(fmt.Sprintf(policyAssignmentIdFmt, name))
 		dst.Name = to.Ptr(name)
 		dst.Type = to.Ptr(policyAssignementType)
-		dst.Properties.DisplayName = to.Ptr(src.DisplayName.ValueString())
+
+		// Set display name
+		if isKnown(src.DisplayName) {
+			dst.Properties.DisplayName = to.Ptr(src.DisplayName.ValueString())
+		}
 
 		// Set policy definition id.
 		if isKnown(src.PolicyDefinitionName) {
