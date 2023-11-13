@@ -321,6 +321,30 @@ func TestPolicyAssignmentType2ArmPolicyAssignment(t *testing.T) {
 			err:      nil,
 		},
 		{
+			name: "policy definition id and display name",
+			input: map[string]PolicyAssignmentType{
+				"test1": {
+					PolicyDefinitionName: types.StringValue("BlobServicesDiagnosticsLogsToWorkspace"),
+					DisplayName:          types.StringValue("BlobServicesDiagnosticsLogsToWorkspace"),
+				},
+			},
+			expected: map[string]*armpolicy.Assignment{
+				"test1": {
+					ID:   to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyAssignments/test1"),
+					Name: to.Ptr("test1"),
+					Type: to.Ptr("Microsoft.Authorization/policyAssignments"),
+					Properties: &armpolicy.AssignmentProperties{
+						DisplayName:           to.Ptr("BlobServicesDiagnosticsLogsToWorkspace"),
+						PolicyDefinitionID:    to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyDefinitions/BlobServicesDiagnosticsLogsToWorkspace"),
+						EnforcementMode:       nil,
+						NonComplianceMessages: []*armpolicy.NonComplianceMessage(nil),
+						Parameters:            map[string]*armpolicy.ParameterValuesValue(nil),
+					},
+				},
+			},
+			err: nil,
+		},
+		{
 			name: "policy definition id",
 			input: map[string]PolicyAssignmentType{
 				"test1": {
@@ -333,7 +357,7 @@ func TestPolicyAssignmentType2ArmPolicyAssignment(t *testing.T) {
 					Name: to.Ptr("test1"),
 					Type: to.Ptr("Microsoft.Authorization/policyAssignments"),
 					Properties: &armpolicy.AssignmentProperties{
-						DisplayName:           to.Ptr(""),
+						DisplayName:           nil,
 						PolicyDefinitionID:    to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyDefinitions/BlobServicesDiagnosticsLogsToWorkspace"),
 						EnforcementMode:       nil,
 						NonComplianceMessages: []*armpolicy.NonComplianceMessage(nil),
@@ -356,7 +380,7 @@ func TestPolicyAssignmentType2ArmPolicyAssignment(t *testing.T) {
 					Name: to.Ptr("test2"),
 					Type: to.Ptr("Microsoft.Authorization/policyAssignments"),
 					Properties: &armpolicy.AssignmentProperties{
-						DisplayName:           to.Ptr(""),
+						DisplayName:           nil,
 						PolicyDefinitionID:    to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policySetDefinitions/test"),
 						EnforcementMode:       nil,
 						NonComplianceMessages: []*armpolicy.NonComplianceMessage(nil),
@@ -380,7 +404,7 @@ func TestPolicyAssignmentType2ArmPolicyAssignment(t *testing.T) {
 					Name: to.Ptr("test3"),
 					Type: to.Ptr("Microsoft.Authorization/policyAssignments"),
 					Properties: &armpolicy.AssignmentProperties{
-						DisplayName:           to.Ptr(""),
+						DisplayName:           nil,
 						PolicyDefinitionID:    to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyDefinitions/BlobServicesDiagnosticsLogsToWorkspace"),
 						EnforcementMode:       to.Ptr(armpolicy.EnforcementModeDoNotEnforce),
 						NonComplianceMessages: []*armpolicy.NonComplianceMessage(nil),
@@ -408,7 +432,7 @@ func TestPolicyAssignmentType2ArmPolicyAssignment(t *testing.T) {
 					Name: to.Ptr("test4"),
 					Type: to.Ptr("Microsoft.Authorization/policyAssignments"),
 					Properties: &armpolicy.AssignmentProperties{
-						DisplayName:        to.Ptr(""),
+						DisplayName:        nil,
 						PolicyDefinitionID: to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyDefinitions/BlobServicesDiagnosticsLogsToWorkspace"),
 						EnforcementMode:    nil,
 						NonComplianceMessages: []*armpolicy.NonComplianceMessage{
@@ -439,7 +463,7 @@ func TestPolicyAssignmentType2ArmPolicyAssignment(t *testing.T) {
 					Name: to.Ptr("test5"),
 					Type: to.Ptr("Microsoft.Authorization/policyAssignments"),
 					Properties: &armpolicy.AssignmentProperties{
-						DisplayName:           to.Ptr(""),
+						DisplayName:           nil,
 						PolicyDefinitionID:    to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyDefinitions/BlobServicesDiagnosticsLogsToWorkspace"),
 						EnforcementMode:       nil,
 						NonComplianceMessages: []*armpolicy.NonComplianceMessage(nil),
