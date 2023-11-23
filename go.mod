@@ -7,7 +7,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.9.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.4.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization v1.0.0
-	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy v0.8.0
+	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy v0.9.0
 	github.com/deckarep/golang-set/v2 v2.3.1
 	github.com/google/uuid v1.4.0
 	github.com/hashicorp/terraform-plugin-docs v0.16.0
