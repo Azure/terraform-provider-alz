@@ -592,7 +592,7 @@ func newDefaultAzureCredential(data AlzProviderModel, options *azidentity.Defaul
 			TenantID:                   data.TenantId.ValueString(),
 			ClientID:                   data.ClientId.ValueString(),
 			RequestToken:               data.OidcRequestToken.ValueString(),
-			RequestUrl:                 data.ClientCertificatePassword.ValueString(),
+			RequestUrl:                 data.OidcRequestUrl.ValueString(),
 			Token:                      data.OidcToken.ValueString(),
 			TokenFilePath:              data.OidcTokenFilePath.ValueString(),
 		})
