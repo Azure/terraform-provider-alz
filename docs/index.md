@@ -25,7 +25,7 @@ Use the navigation to the left to read about the available resources.
 
 ```terraform
 provider "alz" {
-  lib_dirs = [
+  lib_urls = [
     "${path.root}/lib"
   ]
 }
