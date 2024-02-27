@@ -3,7 +3,7 @@ module github.com/Azure/terraform-provider-alz
 go 1.21
 
 require (
-	github.com/Azure/alzlib v0.11.1
+	github.com/Azure/alzlib v0.12.0
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.9.2
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.5.1
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization v1.0.0
