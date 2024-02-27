@@ -63,21 +63,21 @@ provider versions on the minor version.
 
 ### Optional
 
-- `allow_lib_overwrite` (Boolean) Whether to allow overwriting of the library by other lib directories. Default is `false`.
+- `allow_lib_overwrite` (Boolean) Whether to allow overwriting of library artifacts by subsequent libraries. Default is `false`.
 - `auxiliary_tenant_ids` (List of String) A list of auxiliary tenant ids which should be used. If not specified, value will be attempted to be read from the `ARM_AUXILIARY_TENANT_IDS` environment variable. When configuring from the environment, use a semicolon as a delimiter.
 - `client_certificate_password` (String, Sensitive) The password associated with the client certificate. For use when authenticating as a service principal using a client certificate. If not specified, value will be attempted to be read from the `ARM_CLIENT_CERTIFICATE_PASSWORD` environment variable.
 - `client_certificate_path` (String) The path to the client certificate associated with the service principal for use when authenticating as a service principal using a client certificate. If not specified, value will be attempted to be read from the `ARM_CLIENT_CERTIFICATE_PATH` environment variable.
 - `client_id` (String) The client id which should be used. For use when authenticating as a service principal. If not specified, value will be attempted to be read from the `ARM_CLIENT_ID` environment variable.
 - `client_secret` (String, Sensitive) The client secret which should be used. For use when authenticating as a service principal using a client secret. If not specified, value will be attempted to be read from the `ARM_CLIENT_SECRET` environment variable.
 - `environment` (String) The cloud environment which should be used. Possible values are `public`, `usgovernment` and `china`. Defaults to `public`. If not specified, value will be attempted to be read from the `ARM_ENVIRONMENT` environment variable.
-- `lib_dirs` (List of String) A list of directories to search for ALZ artefacts. The directories will be processed in order.
+- `lib_urls` (List of String) A list of directories or URLs to use for ALZ libraries. The URLs will be processed in order. See <https://pkg.go.dev/github.com/hashicorp/go-getter#readme-url-format> for URL syntax. Note that if use_alz_lib is set to true then it will always be the first library used.
 - `oidc_request_token` (String, Sensitive) The bearer token for the request to the OIDC provider. For use when authenticating using OpenID Connect. If not specified, value will be attempted to be read from the first non-empty value of the `ARM_OIDC_REQUEST_TOKEN` and `ACTIONS_ID_TOKEN_REQUEST_TOKEN` environment variables.
 - `oidc_request_url` (String) The URL for the OIDC provider from which to request an id token. For use when authenticating as a service principal using OpenID Connect. If not specified, value will be attempted to be read from the first non-empty value of the `ARM_OIDC_REQUEST_URL` and `ACTIONS_ID_TOKEN_REQUEST_URL` environment variables.
 - `oidc_token` (String, Sensitive) The OIDC id token for use when authenticating as a service principal using OpenID Connect. If not specified, value will be attempted to be read from the `ARM_OIDC_TOKEN` environment variable.
 - `oidc_token_file_path` (String) The path to a file containing an OIDC id token for use when authenticating using OpenID Connect. If not specified, value will be attempted to be read from the `ARM_OIDC_TOKEN_FILE_PATH` environment variable.
 - `skip_provider_registration` (Boolean) Should the provider skip registering all of the resource providers that it supports, if they're not already registered? Default is `false`. If not specified, value will be attempted to be read from the `ARM_SKIP_PROVIDER_REGISTRATION` environment variable.
 - `tenant_id` (String) The Tenant ID which should be used. If not specified, value will be attempted to be read from the `ARM_TENANT_ID` environment variable.
-- `use_alz_lib` (Boolean) Use the built-in ALZ library to resolve archetypes. Default is `true`.
+- `use_alz_lib` (Boolean) Use the default ALZ library to resolve archetypes. Default is `true`.
 - `use_cli` (Boolean) Allow Azure CLI to be used for authentication. Default is `true`. If not specified, value will be attempted to be read from the `ARM_USE_CLI` environment variable.
 - `use_msi` (Boolean) Allow managed service identity to be used for authentication. Default is `false`. If not specified, value will be attempted to be read from the `ARM_USE_MSI` environment variable.
 - `use_oidc` (Boolean) Allow OpenID Connect to be used for authentication. Default is `false`. If not specified, value will be attempted to be read from the `ARM_USE_OIDC` environment variable.

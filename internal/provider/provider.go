@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -21,6 +22,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy"
+	"github.com/hashicorp/go-getter"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -36,7 +38,10 @@ import (
 )
 
 const (
-	userAgentBase = "AzureTerraformAlzProvider"
+	userAgentBase   = "AzureTerraformAlzProvider"
+	alzLibDirBase   = ".alzlib"
+	alzLibUrlFmtStr = "github.com/Azure/Azure-Landing-Zones-Library//platform/alz?ref=%s&depth=1"
+	alzLibRef       = "main"
 )
 
 // Ensure ScaffoldingProvider satisfies various provider interfaces.
@@ -70,7 +75,7 @@ type AlzProviderModel struct {
 	ClientId                  types.String `tfsdk:"client_id"`
 	ClientSecret              types.String `tfsdk:"client_secret"`
 	Environment               types.String `tfsdk:"environment"`
-	LibDirs                   types.List   `tfsdk:"lib_dirs"`
+	LibUrls                   types.List   `tfsdk:"lib_urls"`
 	OidcRequestToken          types.String `tfsdk:"oidc_request_token"`
 	OidcRequestUrl            types.String `tfsdk:"oidc_request_url"`
 	OidcToken                 types.String `tfsdk:"oidc_token"`
@@ -94,7 +99,7 @@ func (p *AlzProvider) Schema(ctx context.Context, req provider.SchemaRequest, re
 
 		Attributes: map[string]schema.Attribute{
 			"allow_lib_overwrite": schema.BoolAttribute{
-				MarkdownDescription: "Whether to allow overwriting of the library by other lib directories. Default is `false`.",
+				MarkdownDescription: "Whether to allow overwriting of library artifacts by subsequent libraries. Default is `false`.",
 				Optional:            true,
 			},
 
@@ -142,8 +147,8 @@ func (p *AlzProvider) Schema(ctx context.Context, req provider.SchemaRequest, re
 				},
 			},
 
-			"lib_dirs": schema.ListAttribute{
-				MarkdownDescription: "A list of directories to search for ALZ artefacts. The directories will be processed in order.",
+			"lib_urls": schema.ListAttribute{
+				MarkdownDescription: "A list of directories or URLs to use for ALZ libraries. The URLs will be processed in order. See <https://pkg.go.dev/github.com/hashicorp/go-getter#readme-url-format> for URL syntax. Note that if use_alz_lib is set to true then it will always be the first library used.",
 				ElementType:         types.StringType,
 				Optional:            true,
 				Validators: []validator.List{
@@ -187,7 +192,7 @@ func (p *AlzProvider) Schema(ctx context.Context, req provider.SchemaRequest, re
 			},
 
 			"use_alz_lib": schema.BoolAttribute{
-				MarkdownDescription: "Use the built-in ALZ library to resolve archetypes. Default is `true`.",
+				MarkdownDescription: "Use the default ALZ library to resolve archetypes. Default is `true`.",
 				Optional:            true,
 			},
 
@@ -267,26 +272,29 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 	// Configure clients
 
 	// Create the fs.FS library file systems based on the configuration.
-	libdirfs := make([]fs.FS, 0)
+	urls := make([]string, 0)
 	if data.UseAlzLib.ValueBool() {
-		libdirfs = append(libdirfs, alzlib.Lib)
+		urls = append(urls, fmt.Sprintf(alzLibUrlFmtStr, alzLibRef))
 	}
-	if len(data.LibDirs.Elements()) != 0 {
+	if len(data.LibUrls.Elements()) != 0 {
 		// We turn the list of elements into a list of strings,
 		// if we use the Elements() method, we get a list of *attr.Value and the .String() method
 		// results in a string wrapped in double quotes.
-		dirs := make([]string, 0, len(data.LibDirs.Elements()))
-		if diags := data.LibDirs.ElementsAs(ctx, &dirs, false); diags.HasError() {
+		dirs := make([]string, 0, len(data.LibUrls.Elements()))
+		if diags := data.LibUrls.ElementsAs(ctx, &dirs, false); diags.HasError() {
 			resp.Diagnostics = append(resp.Diagnostics, diags...)
 			return
 		}
-		for _, v := range dirs {
-			libdirfs = append(libdirfs, os.DirFS(v))
-		}
+		urls = append(urls, dirs...)
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
+	libdirfs, err := getLibs(ctx, urls)
+	if err != nil {
+		resp.Diagnostics.AddError("Failed to download libraries", err.Error())
+		return
+	}
 	if err := alz.Init(ctx, libdirfs...); err != nil {
 		resp.Diagnostics.AddError("Failed to initialize AlzLib", err.Error())
 		return
@@ -650,4 +658,23 @@ func newDefaultAzureCredential(data AlzProviderModel, options *azidentity.Defaul
 	}
 
 	return chain, nil
+}
+
+// getLibs downloads the libraries from the URLs and returns a slice of fs.FS
+// for use in the alzlib.
+func getLibs(ctx context.Context, urls []string) ([]fs.FS, error) {
+	res := make([]fs.FS, len(urls))
+	for i, src := range urls {
+		dst := filepath.Join(alzLibDirBase, strconv.Itoa(i))
+		if _, err := os.Stat(dst); err == nil {
+			if err := os.RemoveAll(dst); err != nil {
+				return nil, fmt.Errorf("failed to remove existing directory %s: %w", dst, err)
+			}
+		}
+		if err := getter.Get(dst, src, getter.WithContext(ctx)); err != nil {
+			return nil, err
+		}
+		res[i] = os.DirFS(dst)
+	}
+	return res, nil
 }

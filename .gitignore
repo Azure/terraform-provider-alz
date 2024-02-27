@@ -36,3 +36,6 @@ website/vendor
 
 # compiled binary
 terraform-provider-alz
+
+# .alzlib directory containing library files
+.alzlib

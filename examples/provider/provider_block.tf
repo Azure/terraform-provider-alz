@@ -1,5 +1,5 @@
 provider "alz" {
-  lib_dirs = [
+  lib_urls = [
     "${path.root}/lib"
   ]
 }

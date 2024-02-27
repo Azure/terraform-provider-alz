@@ -75,7 +75,7 @@ func testAccExampleDataSourceConfig() string {
 	return fmt.Sprintf(`
 provider "alz" {
   use_alz_lib = false
-  lib_dirs = [
+  lib_urls = [
     "%s",
   ]
 }
