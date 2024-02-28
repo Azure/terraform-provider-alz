@@ -26,7 +26,8 @@ Use the navigation to the left to read about the available resources.
 ```terraform
 provider "alz" {
   lib_urls = [
-    "${path.root}/lib"
+    "${path.root}/lib",
+    "github.com/MyOrg/MyRepo//some/dir?ref=v1.1.0&depth=1",
   ]
 }
 ```
@@ -64,6 +65,7 @@ provider versions on the minor version.
 ### Optional
 
 - `allow_lib_overwrite` (Boolean) Whether to allow overwriting of library artifacts by subsequent libraries. Default is `false`.
+- `alz_lib_ref` (String) The reference to the ALZ library to use. Default (for now) is `main`.
 - `auxiliary_tenant_ids` (List of String) A list of auxiliary tenant ids which should be used. If not specified, value will be attempted to be read from the `ARM_AUXILIARY_TENANT_IDS` environment variable. When configuring from the environment, use a semicolon as a delimiter.
 - `client_certificate_password` (String, Sensitive) The password associated with the client certificate. For use when authenticating as a service principal using a client certificate. If not specified, value will be attempted to be read from the `ARM_CLIENT_CERTIFICATE_PASSWORD` environment variable.
 - `client_certificate_path` (String) The path to the client certificate associated with the service principal for use when authenticating as a service principal using a client certificate. If not specified, value will be attempted to be read from the `ARM_CLIENT_CERTIFICATE_PATH` environment variable.
