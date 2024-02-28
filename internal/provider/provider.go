@@ -68,6 +68,7 @@ type alzProviderData struct {
 
 // AlzProviderModel describes the provider data model.
 type AlzProviderModel struct {
+	AlzLibRef                 types.String `tfsdk:"alz_lib_ref"`
 	AllowLibOverwrite         types.Bool   `tfsdk:"allow_lib_overwrite"`
 	AuxiliaryTenantIds        types.List   `tfsdk:"auxiliary_tenant_ids"`
 	ClientCertificatePassword types.String `tfsdk:"client_certificate_password"`
@@ -196,6 +197,11 @@ func (p *AlzProvider) Schema(ctx context.Context, req provider.SchemaRequest, re
 				Optional:            true,
 			},
 
+			"alz_lib_ref": schema.StringAttribute{
+				MarkdownDescription: "The reference to the ALZ library to use. Default (for now) is `main`.",
+				Optional:            true,
+			},
+
 			"use_cli": schema.BoolAttribute{
 				MarkdownDescription: "Allow Azure CLI to be used for authentication. Default is `true`. If not specified, value will be attempted to be read from the `ARM_USE_CLI` environment variable.",
 				Optional:            true,
@@ -274,7 +280,7 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 	// Create the fs.FS library file systems based on the configuration.
 	urls := make([]string, 0)
 	if data.UseAlzLib.ValueBool() {
-		urls = append(urls, fmt.Sprintf(alzLibUrlFmtStr, alzLibRef))
+		urls = append(urls, fmt.Sprintf(alzLibUrlFmtStr, data.AlzLibRef.ValueString()))
 	}
 	if len(data.LibUrls.Elements()) != 0 {
 		// We turn the list of elements into a list of strings,
@@ -580,6 +586,11 @@ func configureDefaults(data *AlzProviderModel) {
 	// Do not allow library overwrite by default.
 	if data.AllowLibOverwrite.IsNull() {
 		data.AllowLibOverwrite = types.BoolValue(false)
+	}
+
+	// Set alzLibRef
+	if data.AlzLibRef.IsNull() {
+		data.AlzLibRef = types.StringValue(alzLibRef)
 	}
 }
 
