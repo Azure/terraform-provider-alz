@@ -22,7 +22,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy"
-	"github.com/hashicorp/go-getter"
+	"github.com/hashicorp/go-getter/v2"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -675,6 +675,12 @@ func newDefaultAzureCredential(data AlzProviderModel, options *azidentity.Defaul
 // for use in the alzlib.
 func getLibs(ctx context.Context, urls []string) ([]fs.FS, error) {
 	res := make([]fs.FS, len(urls))
+	pwd, err := os.Getwd()
+	client := &getter.Client{}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get working directory: %w", err)
+	}
+
 	for i, src := range urls {
 		dst := filepath.Join(alzLibDirBase, strconv.Itoa(i))
 		if _, err := os.Stat(dst); err == nil {
@@ -682,8 +688,12 @@ func getLibs(ctx context.Context, urls []string) ([]fs.FS, error) {
 				return nil, fmt.Errorf("failed to remove existing directory %s: %w", dst, err)
 			}
 		}
-
-		if err := getter.Get(dst, src, getter.WithContext(ctx)); err != nil {
+		req := &getter.Request{
+			Src: src,
+			Dst: dst,
+			Pwd: pwd,
+		}
+		if _, err := client.Get(ctx, req); err != nil {
 			return nil, err
 		}
 		res[i] = os.DirFS(dst)
