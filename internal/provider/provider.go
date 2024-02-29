@@ -69,13 +69,13 @@ type alzProviderData struct {
 // AlzProviderModel describes the provider data model.
 type AlzProviderModel struct {
 	AlzLibRef                 types.String `tfsdk:"alz_lib_ref"`
-	AllowLibOverwrite         types.Bool   `tfsdk:"allow_lib_overwrite"`
 	AuxiliaryTenantIds        types.List   `tfsdk:"auxiliary_tenant_ids"`
 	ClientCertificatePassword types.String `tfsdk:"client_certificate_password"`
 	ClientCertificatePath     types.String `tfsdk:"client_certificate_path"`
 	ClientId                  types.String `tfsdk:"client_id"`
 	ClientSecret              types.String `tfsdk:"client_secret"`
 	Environment               types.String `tfsdk:"environment"`
+	LibOverwriteEnabled       types.Bool   `tfsdk:"ib_overwrite_enabled"`
 	LibUrls                   types.List   `tfsdk:"lib_urls"`
 	OidcRequestToken          types.String `tfsdk:"oidc_request_token"`
 	OidcRequestUrl            types.String `tfsdk:"oidc_request_url"`
@@ -99,8 +99,8 @@ func (p *AlzProvider) Schema(ctx context.Context, req provider.SchemaRequest, re
 		MarkdownDescription: "ALZ provider to generate archetype data for use with the ALZ Terraform module.",
 
 		Attributes: map[string]schema.Attribute{
-			"allow_lib_overwrite": schema.BoolAttribute{
-				MarkdownDescription: "Whether to allow overwriting of library artifacts by subsequent libraries. Default is `false`.",
+			"lib_overwrite_enabled": schema.BoolAttribute{
+				MarkdownDescription: "Whether to allow overwriting of the library by other lib directories. Default is `false`.",
 				Optional:            true,
 			},
 
@@ -494,7 +494,7 @@ func configureAlzLib(token *azidentity.ChainedTokenCredential, data AlzProviderM
 
 	alz.AddPolicyClient(cf)
 
-	alz.Options.AllowOverwrite = data.AllowLibOverwrite.ValueBool()
+	alz.Options.AllowOverwrite = data.LibOverwriteEnabled.ValueBool()
 
 	return alz, diags
 }
@@ -584,8 +584,8 @@ func configureDefaults(data *AlzProviderModel) {
 	}
 
 	// Do not allow library overwrite by default.
-	if data.AllowLibOverwrite.IsNull() {
-		data.AllowLibOverwrite = types.BoolValue(false)
+	if data.LibOverwriteEnabled.IsNull() {
+		data.LibOverwriteEnabled = types.BoolValue(false)
 	}
 
 	// Set alzLibRef
