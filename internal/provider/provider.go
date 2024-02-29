@@ -75,7 +75,7 @@ type AlzProviderModel struct {
 	ClientId                  types.String `tfsdk:"client_id"`
 	ClientSecret              types.String `tfsdk:"client_secret"`
 	Environment               types.String `tfsdk:"environment"`
-	LibOverwriteEnabled       types.Bool   `tfsdk:"ib_overwrite_enabled"`
+	LibOverwriteEnabled       types.Bool   `tfsdk:"lib_overwrite_enabled"`
 	LibUrls                   types.List   `tfsdk:"lib_urls"`
 	OidcRequestToken          types.String `tfsdk:"oidc_request_token"`
 	OidcRequestUrl            types.String `tfsdk:"oidc_request_url"`
@@ -682,6 +682,7 @@ func getLibs(ctx context.Context, urls []string) ([]fs.FS, error) {
 				return nil, fmt.Errorf("failed to remove existing directory %s: %w", dst, err)
 			}
 		}
+
 		if err := getter.Get(dst, src, getter.WithContext(ctx)); err != nil {
 			return nil, err
 		}
