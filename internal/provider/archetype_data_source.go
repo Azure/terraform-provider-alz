@@ -267,7 +267,9 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 							MarkdownDescription: "The parameters to use for the policy assignment. " +
 								"**Note:** This is a JSON string, and not a map. This is because the parameter values have different types, which confuses the type system used by the provider sdk. " +
 								"Use `jsonencode()` to construct the map. " +
-								"The map keys must be strings, the values are `any` type.",
+								"The map keys must be strings, the values are `any` type." +
+								"\n\n" +
+								"Example: `jsonencode({\"param1\": \"value1\", \"param2\": 2})`",
 							CustomType: alztypes.PolicyParameterType{},
 							Optional:   true,
 						},
