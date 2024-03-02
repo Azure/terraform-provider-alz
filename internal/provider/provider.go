@@ -282,7 +282,7 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 	urls := make([]string, 0)
 	if data.UseAlzLib.ValueBool() {
 		q := url.Values{}
-		q.Add("ref", alzLibRef)
+		q.Add("ref", data.AlzLibRef.ValueString())
 		q.Add("depth", "1")
 		urls = append(urls, alzLibUrlFmtStr+q.Encode())
 	}
