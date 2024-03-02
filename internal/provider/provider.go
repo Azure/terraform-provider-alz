@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -40,8 +41,8 @@ import (
 const (
 	userAgentBase   = "AzureTerraformAlzProvider"
 	alzLibDirBase   = ".alzlib"
-	alzLibUrlFmtStr = "github.com/Azure/Azure-Landing-Zones-Library//platform/alz?ref=%s&depth=1"
-	alzLibRef       = "main"
+	alzLibUrlFmtStr = "github.com/Azure/Azure-Landing-Zones-Library//platform/alz?"
+	alzLibRef       = "platform/alz/2024.03.00"
 )
 
 // Ensure ScaffoldingProvider satisfies various provider interfaces.
@@ -280,7 +281,10 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 	// Create the fs.FS library file systems based on the configuration.
 	urls := make([]string, 0)
 	if data.UseAlzLib.ValueBool() {
-		urls = append(urls, fmt.Sprintf(alzLibUrlFmtStr, data.AlzLibRef.ValueString()))
+		q := url.Values{}
+		q.Add("ref", alzLibRef)
+		q.Add("depth", "1")
+		urls = append(urls, alzLibUrlFmtStr+q.Encode())
 	}
 	if len(data.LibUrls.Elements()) != 0 {
 		// We turn the list of elements into a list of strings,

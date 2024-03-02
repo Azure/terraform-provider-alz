@@ -58,8 +58,8 @@ func TestAccAlzArchetypeDataSourceFullAlz(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.alz_archetype.root", "id", "root"),
 					resource.TestCheckResourceAttr("data.alz_archetype.root", "alz_policy_assignments.%", "13"),
-					resource.TestCheckResourceAttr("data.alz_archetype.root", "alz_policy_definitions.%", "126"),
-					resource.TestCheckResourceAttr("data.alz_archetype.root", "alz_policy_set_definitions.%", "13"),
+					resource.TestCheckResourceAttr("data.alz_archetype.root", "alz_policy_definitions.%", "132"),
+					resource.TestCheckResourceAttr("data.alz_archetype.root", "alz_policy_set_definitions.%", "15"),
 					resource.TestCheckResourceAttr("data.alz_archetype.root", "alz_role_definitions.%", "5"),
 				),
 			},
