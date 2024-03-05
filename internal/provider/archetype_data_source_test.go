@@ -11,16 +11,12 @@ import (
 	"testing"
 
 	"github.com/Azure/alzlib"
-	"github.com/Azure/alzlib/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy"
 	"github.com/Azure/terraform-provider-alz/internal/alztypes"
-	mapset "github.com/deckarep/golang-set/v2"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
+
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // TestAccAlzArchetypeDataSource tests the data source for alz_archetype.
@@ -91,7 +87,7 @@ data "alz_archetype" "test" {
     log_analytics_workspace_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg/providers/Microsoft.OperationalInsights/workspaces/la"
   }
 
-  policy_assignments_to_add = {
+  policy_assignments_to_modify = {
     BlobServicesDiagnosticsLogsToWorkspace = {
       parameters = jsonencode({
         logAnalytics = "test"
@@ -222,30 +218,6 @@ output "test" {
 `
 }
 
-// TestAddAttrStringElementsToSet tests that addAttrStringElementsToSet adds a value to a set.
-func TestAddAttrStringElementsToSet(t *testing.T) {
-	arch := &alzlib.Archetype{
-		PolicyDefinitions: mapset.NewThreadUnsafeSet[string]("a", "b", "c"),
-	}
-	vals := []attr.Value{
-		basetypes.NewStringValue("d"),
-	}
-	assert.NoError(t, addAttrStringElementsToSet(arch.PolicyDefinitions, vals))
-	assert.True(t, arch.PolicyDefinitions.Contains("d"))
-}
-
-// TestDeleteAttrStringElementsToSet tests that deleteAttrStringElementsToSet removes a value from a set.
-func TestDeleteAttrStringElementsToSet(t *testing.T) {
-	arch := &alzlib.Archetype{
-		PolicyDefinitions: mapset.NewThreadUnsafeSet[string]("a", "b", "c"),
-	}
-	vals := []attr.Value{
-		basetypes.NewStringValue("c"),
-	}
-	assert.NoError(t, deleteAttrStringElementsFromSet(arch.PolicyDefinitions, vals))
-	assert.True(t, !arch.PolicyDefinitions.Contains("c"))
-}
-
 func TestConvertPolicyAssignmentParametersToSdkType(t *testing.T) {
 	// Test with nil input
 	res := convertPolicyAssignmentParametersToSdkType(nil)
@@ -301,223 +273,40 @@ func TestConvertAlzPolicyRoleAssignments(t *testing.T) {
 	}
 }
 
-func TestPolicyAssignmentType2ArmPolicyAssignment(t *testing.T) {
-	t.Parallel()
-
-	az := alzlib.NewAlzLib()
-
-	require.NoError(t, az.Init(context.Background(), os.DirFS("testdata/testacc_lib")))
-
-	testCases := []struct {
-		name     string
-		input    map[string]PolicyAssignmentType
-		expected map[string]*armpolicy.Assignment
-		err      error
-	}{
-		{
-			name:     "empty input",
-			input:    map[string]PolicyAssignmentType{},
-			expected: map[string]*armpolicy.Assignment{},
-			err:      nil,
+// TestPolicyAssignmentType2ArmPolicyValues tests the policyAssignmentType2ArmPolicyValues function.
+func TestPolicyAssignmentType2ArmPolicyValues(t *testing.T) {
+	paramsIn, _ := alztypes.PolicyParameterType{}.ValueFromString(context.Background(), types.StringValue(`{
+		"param1": "value1",
+		"param2": 123,
+		"param3": true
+	}`))
+	pa := PolicyAssignmentType{
+		EnforcementMode: types.StringValue("DoNotEnforce"),
+		NonComplianceMessage: []PolicyAssignmentNonComplianceMessage{
+			{
+				Message:                     types.StringValue("Non-compliance message 1"),
+				PolicyDefinitionReferenceId: types.StringValue("PolicyDefinition1"),
+			},
+			{
+				Message:                     types.StringValue("Non-compliance message 2"),
+				PolicyDefinitionReferenceId: types.StringValue("PolicyDefinition2"),
+			},
 		},
-		{
-			name: "policy definition id and display name",
-			input: map[string]PolicyAssignmentType{
-				"test1": {
-					PolicyDefinitionName: types.StringValue("BlobServicesDiagnosticsLogsToWorkspace"),
-					DisplayName:          types.StringValue("BlobServicesDiagnosticsLogsToWorkspace"),
-				},
-			},
-			expected: map[string]*armpolicy.Assignment{
-				"test1": {
-					ID:   to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyAssignments/test1"),
-					Name: to.Ptr("test1"),
-					Type: to.Ptr("Microsoft.Authorization/policyAssignments"),
-					Properties: &armpolicy.AssignmentProperties{
-						DisplayName:           to.Ptr("BlobServicesDiagnosticsLogsToWorkspace"),
-						PolicyDefinitionID:    to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyDefinitions/BlobServicesDiagnosticsLogsToWorkspace"),
-						EnforcementMode:       nil,
-						NonComplianceMessages: []*armpolicy.NonComplianceMessage(nil),
-						Parameters:            map[string]*armpolicy.ParameterValuesValue(nil),
-					},
-				},
-			},
-			err: nil,
-		},
-		{
-			name: "policy definition id",
-			input: map[string]PolicyAssignmentType{
-				"test1": {
-					PolicyDefinitionName: types.StringValue("BlobServicesDiagnosticsLogsToWorkspace"),
-				},
-			},
-			expected: map[string]*armpolicy.Assignment{
-				"test1": {
-					ID:   to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyAssignments/test1"),
-					Name: to.Ptr("test1"),
-					Type: to.Ptr("Microsoft.Authorization/policyAssignments"),
-					Properties: &armpolicy.AssignmentProperties{
-						DisplayName:           nil,
-						PolicyDefinitionID:    to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyDefinitions/BlobServicesDiagnosticsLogsToWorkspace"),
-						EnforcementMode:       nil,
-						NonComplianceMessages: []*armpolicy.NonComplianceMessage(nil),
-						Parameters:            map[string]*armpolicy.ParameterValuesValue(nil),
-					},
-				},
-			},
-			err: nil,
-		},
-		{
-			name: "policy set definition id",
-			input: map[string]PolicyAssignmentType{
-				"test2": {
-					PolicySetDefinitionName: types.StringValue("test"),
-				},
-			},
-			expected: map[string]*armpolicy.Assignment{
-				"test2": {
-					ID:   to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyAssignments/test2"),
-					Name: to.Ptr("test2"),
-					Type: to.Ptr("Microsoft.Authorization/policyAssignments"),
-					Properties: &armpolicy.AssignmentProperties{
-						DisplayName:           nil,
-						PolicyDefinitionID:    to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policySetDefinitions/test"),
-						EnforcementMode:       nil,
-						NonComplianceMessages: []*armpolicy.NonComplianceMessage(nil),
-						Parameters:            map[string]*armpolicy.ParameterValuesValue(nil),
-					},
-				},
-			},
-			err: nil,
-		},
-		{
-			name: "policy definition id and enforcement mode",
-			input: map[string]PolicyAssignmentType{
-				"test3": {
-					PolicyDefinitionName: types.StringValue("BlobServicesDiagnosticsLogsToWorkspace"),
-					EnforcementMode:      types.StringValue("DoNotEnforce"),
-				},
-			},
-			expected: map[string]*armpolicy.Assignment{
-				"test3": {
-					ID:   to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyAssignments/test3"),
-					Name: to.Ptr("test3"),
-					Type: to.Ptr("Microsoft.Authorization/policyAssignments"),
-					Properties: &armpolicy.AssignmentProperties{
-						DisplayName:           nil,
-						PolicyDefinitionID:    to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyDefinitions/BlobServicesDiagnosticsLogsToWorkspace"),
-						EnforcementMode:       to.Ptr(armpolicy.EnforcementModeDoNotEnforce),
-						NonComplianceMessages: []*armpolicy.NonComplianceMessage(nil),
-						Parameters:            map[string]*armpolicy.ParameterValuesValue(nil),
-					},
-				},
-			},
-			err: nil,
-		},
-		{
-			name: "policy definition id and non-compliance message",
-			input: map[string]PolicyAssignmentType{
-				"test4": {
-					PolicyDefinitionName: types.StringValue("BlobServicesDiagnosticsLogsToWorkspace"),
-					NonComplianceMessage: []PolicyAssignmentNonComplianceMessage{
-						{
-							Message: types.StringValue("test message"),
-						},
-					},
-				},
-			},
-			expected: map[string]*armpolicy.Assignment{
-				"test4": {
-					ID:   to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyAssignments/test4"),
-					Name: to.Ptr("test4"),
-					Type: to.Ptr("Microsoft.Authorization/policyAssignments"),
-					Properties: &armpolicy.AssignmentProperties{
-						DisplayName:        nil,
-						PolicyDefinitionID: to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyDefinitions/BlobServicesDiagnosticsLogsToWorkspace"),
-						EnforcementMode:    nil,
-						NonComplianceMessages: []*armpolicy.NonComplianceMessage{
-							{
-								Message:                     to.Ptr("test message"),
-								PolicyDefinitionReferenceID: nil,
-							},
-						},
-						Parameters: map[string]*armpolicy.ParameterValuesValue(nil),
-					},
-				},
-			},
-			err: nil,
-		},
-		{
-			name: "policy definition id and parameters",
-			input: map[string]PolicyAssignmentType{
-				"test5": {
-					PolicyDefinitionName: types.StringValue("BlobServicesDiagnosticsLogsToWorkspace"),
-					Parameters: alztypes.PolicyParameterValue{
-						StringValue: types.StringValue(`{"param1": "value1", "param2": 2}`),
-					},
-				},
-			},
-			expected: map[string]*armpolicy.Assignment{
-				"test5": {
-					ID:   to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyAssignments/test5"),
-					Name: to.Ptr("test5"),
-					Type: to.Ptr("Microsoft.Authorization/policyAssignments"),
-					Properties: &armpolicy.AssignmentProperties{
-						DisplayName:           nil,
-						PolicyDefinitionID:    to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyDefinitions/BlobServicesDiagnosticsLogsToWorkspace"),
-						EnforcementMode:       nil,
-						NonComplianceMessages: []*armpolicy.NonComplianceMessage(nil),
-						Parameters: map[string]*armpolicy.ParameterValuesValue{
-							"param1": {Value: "value1"},
-							"param2": {Value: float64(2)},
-						},
-					},
-				},
-			},
-			err: nil,
-		},
-		{
-			name: "unknown policy definition name",
-			input: map[string]PolicyAssignmentType{
-				"test6": {
-					PolicyDefinitionName: types.StringValue("unknown"),
-				},
-			},
-			expected: nil,
-			err:      fmt.Errorf("policy definition unknown not found in AlzLib"),
-		},
-		{
-			name: "unknown policy set definition name",
-			input: map[string]PolicyAssignmentType{
-				"test7": {
-					PolicySetDefinitionName: types.StringValue("unknown"),
-				},
-			},
-			expected: nil,
-			err:      fmt.Errorf("policy set definition unknown not found in AlzLib"),
-		},
+		Parameters: paramsIn.(alztypes.PolicyParameterValue),
 	}
 
-	for _, tc := range testCases {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			actual, err := policyAssignmentType2ArmPolicyAssignment(tc.input, az)
-			require.Equal(t, tc.err, err)
-			if tc.err != nil {
-				return
-			}
-			for ek, ev := range tc.expected {
-				assert.Equal(t, *ev.ID, *actual[ek].ID)
-				assert.Equal(t, *ev.Name, *actual[ek].Name)
-				assert.Equal(t, *ev.Type, *actual[ek].Type)
-				assert.Equal(t, ev.Properties.DisplayName, actual[ek].Properties.DisplayName)
-				assert.Equal(t, *ev.Properties.PolicyDefinitionID, *actual[ek].Properties.PolicyDefinitionID)
-				assert.Equal(t, ev.Properties.EnforcementMode, actual[ek].Properties.EnforcementMode)
-				assert.Equal(t, ev.Properties.NonComplianceMessages, actual[ek].Properties.NonComplianceMessages)
-				assert.Equal(t, ev.Properties.Parameters, actual[ek].Properties.Parameters)
-			}
-			//assert.Equal(t, tc.expected, actual)
-		})
-	}
+	enforcementMode, identity, nonComplianceMessages, parameters, err := policyAssignmentType2ArmPolicyValues(pa)
+
+	assert.NoError(t, err)
+	assert.Equal(t, armpolicy.EnforcementModeDoNotEnforce, *enforcementMode)
+	assert.Nil(t, identity)
+	assert.Len(t, nonComplianceMessages, 2)
+	assert.Equal(t, "Non-compliance message 1", *nonComplianceMessages[0].Message)
+	assert.Equal(t, "PolicyDefinition1", *nonComplianceMessages[0].PolicyDefinitionReferenceID)
+	assert.Equal(t, "Non-compliance message 2", *nonComplianceMessages[1].Message)
+	assert.Equal(t, "PolicyDefinition2", *nonComplianceMessages[1].PolicyDefinitionReferenceID)
+	assert.Len(t, parameters, 3)
+	assert.Equal(t, "value1", parameters["param1"].Value)
+	assert.Equal(t, float64(123), parameters["param2"].Value)
+	assert.Equal(t, true, parameters["param3"].Value)
 }

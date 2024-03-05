@@ -27,17 +27,6 @@ data "alz_archetype_keys" "example" {
 
 - `base_archetype` (String) The base archetype name to use. This has been generated from the provider lib directories.
 
-### Optional
-
-- `policy_assignments_to_add` (Set of String) A list of policy assignment names to add to the archetype.
-- `policy_assignments_to_remove` (Set of String) A list of policy assignment names to remove from the archetype.
-- `policy_definitions_to_add` (Set of String) A list of policy definition names to add to the archetype.
-- `policy_definitions_to_remove` (Set of String) A list of policy definition names to remove from the archetype.
-- `policy_set_definitions_to_add` (Set of String) A list of policy set definition names to add to the archetype.
-- `policy_set_definitions_to_remove` (Set of String) A list of policy set definition names to remove from the archetype.
-- `role_definitions_to_add` (Set of String) A list of role definition names to add to the archetype.
-- `role_definitions_to_remove` (Set of String) A list of role definition names to remove from the archetype.
-
 ### Read-Only
 
 - `alz_policy_assignment_keys` (Set of String) A set of policy assignment names belonging to the archetype.

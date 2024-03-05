@@ -194,12 +194,13 @@ func (p *AlzProvider) Schema(ctx context.Context, req provider.SchemaRequest, re
 			},
 
 			"use_alz_lib": schema.BoolAttribute{
-				MarkdownDescription: "Use the default ALZ library to resolve archetypes. Default is `true`.",
-				Optional:            true,
+				MarkdownDescription: "Use the default ALZ library to resolve archetypes. Default is `true`. " +
+					"The ALZ library is always used first, and then the directories or URLs specified in `lib_urls` are used in order.",
+				Optional: true,
 			},
 
 			"alz_lib_ref": schema.StringAttribute{
-				MarkdownDescription: "The reference to the ALZ library to use. Default (for now) is `main`.",
+				MarkdownDescription: fmt.Sprintf("The reference (tag) in the ALZ library to use. Default is `%s`.", alzLibRef),
 				Optional:            true,
 			},
 
