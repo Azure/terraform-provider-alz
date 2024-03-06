@@ -74,9 +74,7 @@ Optional:
 - `identity_ids` (Set of String) A list of zero or one identity ids to assign to the policy assignment. Required if `identity` is `UserAssigned`.
 - `non_compliance_message` (Attributes Set) The non-compliance messages to use for the policy assignment. (see [below for nested schema](#nestedatt--policy_assignments_to_modify--non_compliance_message))
 - `overrides` (Attributes List) The overrides for this policy assignment. There are a maximum of 10 overrides allowed per assignment. If specified here the overrides will replace the existing overrides.The overrides are processed in the order they are specified. (see [below for nested schema](#nestedatt--policy_assignments_to_modify--overrides))
-- `parameters` (String) The parameters to use for the policy assignment. **Note:** This is a JSON string, and not a map. This is because the parameter values have different types, which confuses the type system used by the provider sdk. Use `jsonencode()` to construct the map. The map keys must be strings, the values are `any` type.
-
-Example: `jsonencode({"param1": "value1", "param2": 2})`
+- `parameters` (String) The parameters to use for the policy assignment. **Note:** This is a JSON string, and not a map. This is because the parameter values have different types, which confuses the type system used by the provider sdk. Use `jsonencode()` to construct the map. The map keys must be strings, the values are `any` type. Example: `jsonencode({"param1": "value1", "param2": 2})`
 - `resource_selectors` (Attributes List) The resource selectors to use for the policy assignment. A maximum of 10 resource selectors are allowed per assignment. If specified here the resource selectors will replace the existing resource selectors. (see [below for nested schema](#nestedatt--policy_assignments_to_modify--resource_selectors))
 
 <a id="nestedatt--policy_assignments_to_modify--non_compliance_message"></a>
@@ -139,7 +137,7 @@ Required:
 
 Optional:
 
-- `in` (Set of String) The list of values that the selector will match. The values are the policy definition reference ids. Conflicts with `in`.
+- `in` (Set of String) The list of values that the selector will match. The values are the policy definition reference ids. Conflicts with `not_in`.
 - `not_in` (Set of String) The list of values that the selector will not match. The values are the policy definition reference ids. Conflicts with `in`.
 
 
