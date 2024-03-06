@@ -11,10 +11,12 @@ import (
 	"testing"
 
 	"github.com/Azure/alzlib"
+	"github.com/Azure/alzlib/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy"
 	"github.com/Azure/terraform-provider-alz/internal/alztypes"
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/stretchr/testify/assert"
 )
@@ -218,30 +220,30 @@ output "test" {
 `
 }
 
-func TestConvertPolicyAssignmentParametersToSdkType(t *testing.T) {
-	// Test with nil input
-	res := convertPolicyAssignmentParametersToSdkType(nil)
-	assert.Nil(t, res)
+// func TestConvertPolicyAssignmentParametersToSdkType(t *testing.T) {
+// 	// Test with nil input
+// 	res := convertPolicyAssignmentParametersToSdkType(nil)
+// 	assert.Nil(t, res)
 
-	// Test with empty input
-	res = convertPolicyAssignmentParametersToSdkType(make(map[string]interface{}))
-	assert.NotNil(t, res)
-	assert.Empty(t, res)
+// 	// Test with empty input
+// 	res = convertPolicyAssignmentParametersToSdkType(make(map[string]interface{}))
+// 	assert.NotNil(t, res)
+// 	assert.Empty(t, res)
 
-	// Test with non-empty input
-	src := map[string]interface{}{
-		"param1": "value1",
-		"param2": 123,
-		"param3": true,
-	}
-	res = convertPolicyAssignmentParametersToSdkType(src)
-	assert.NotNil(t, res)
-	assert.Len(t, res, len(src))
-	for k, v := range src {
-		assert.Contains(t, res, k)
-		assert.Equal(t, v, res[k].Value)
-	}
-}
+// 	// Test with non-empty input
+// 	src := map[string]interface{}{
+// 		"param1": "value1",
+// 		"param2": 123,
+// 		"param3": true,
+// 	}
+// 	res = convertPolicyAssignmentParametersToSdkType(src)
+// 	assert.NotNil(t, res)
+// 	assert.Len(t, res, len(src))
+// 	for k, v := range src {
+// 		assert.Contains(t, res, k)
+// 		assert.Equal(t, v, res[k].Value)
+// 	}
+// }
 
 func TestConvertAlzPolicyRoleAssignments(t *testing.T) {
 	// Test with nil input
@@ -295,7 +297,7 @@ func TestPolicyAssignmentType2ArmPolicyValues(t *testing.T) {
 		Parameters: paramsIn.(alztypes.PolicyParameterValue),
 	}
 
-	enforcementMode, identity, nonComplianceMessages, parameters, err := policyAssignmentType2ArmPolicyValues(pa)
+	enforcementMode, identity, nonComplianceMessages, parameters, _, _, err := policyAssignmentType2ArmPolicyValues(pa)
 
 	assert.NoError(t, err)
 	assert.Equal(t, armpolicy.EnforcementModeDoNotEnforce, *enforcementMode)
@@ -309,4 +311,222 @@ func TestPolicyAssignmentType2ArmPolicyValues(t *testing.T) {
 	assert.Equal(t, "value1", parameters["param1"].Value)
 	assert.Equal(t, float64(123), parameters["param2"].Value)
 	assert.Equal(t, true, parameters["param3"].Value)
+}
+
+// TestConvertPolicyAssignmentParametersToSdkType tests the convertPolicyAssignmentParametersToSdkType function.
+func TestConvertPolicyAssignmentParametersToSdkType(t *testing.T) {
+	// Test with nil input
+	var src alztypes.PolicyParameterValue
+	var res map[string]*armpolicy.ParameterValuesValue
+	res, err := convertPolicyAssignmentParametersToSdkType(src)
+	assert.NoError(t, err)
+	assert.Nil(t, res)
+
+	// Test with empty input
+	src = alztypes.PolicyParameterValue{}
+	res, err = convertPolicyAssignmentParametersToSdkType(src)
+	assert.NoError(t, err)
+	assert.Nil(t, res)
+
+	// Test with non-empty input
+	params, _ := alztypes.PolicyParameterType{}.ValueFromString(context.Background(), types.StringValue(`{
+		"param1": "value1",
+		"param2": 123,
+		"param3": true
+	}`))
+	src = params.(alztypes.PolicyParameterValue)
+
+	res, err = convertPolicyAssignmentParametersToSdkType(src)
+	assert.NoError(t, err)
+	assert.NotNil(t, res)
+	assert.Len(t, res, 3)
+	assert.Equal(t, "value1", res["param1"].Value)
+	assert.Equal(t, float64(123), res["param2"].Value)
+	assert.Equal(t, true, res["param3"].Value)
+}
+
+func TestConvertPolicyAssignmentEnforcementModeToSdkType(t *testing.T) {
+	// Test with unknown enforcement mode
+	src := types.StringValue("Unknown")
+	res := convertPolicyAssignmentEnforcementModeToSdkType(src)
+	assert.Nil(t, res)
+
+	// Test with DoNotEnforce enforcement mode
+	src = types.StringValue("DoNotEnforce")
+	res = convertPolicyAssignmentEnforcementModeToSdkType(src)
+	assert.NotNil(t, res)
+	assert.Equal(t, armpolicy.EnforcementModeDoNotEnforce, *res)
+
+	// Test with Default enforcement mode
+	src = types.StringValue("Default")
+	res = convertPolicyAssignmentEnforcementModeToSdkType(src)
+	assert.NotNil(t, res)
+	assert.Equal(t, armpolicy.EnforcementModeDefault, *res)
+}
+
+func TestConvertPolicyAssignmentNonComplianceMessagesToSdkType(t *testing.T) {
+	src := []PolicyAssignmentNonComplianceMessage{
+		{
+			Message:                     types.StringValue("message1"),
+			PolicyDefinitionReferenceId: types.StringValue("policy1"),
+		},
+		{
+			Message: types.StringValue("message2"),
+		},
+	}
+
+	expected := []*armpolicy.NonComplianceMessage{
+		{
+			Message:                     to.Ptr("message1"),
+			PolicyDefinitionReferenceID: to.Ptr("policy1"),
+		},
+		{
+			Message: to.Ptr("message2"),
+		},
+	}
+
+	result := convertPolicyAssignmentNonComplianceMessagesToSdkType(src)
+	assert.Equal(t, expected, result)
+}
+
+// TestConvertPolicyAssignmentIdentityToSdkType tests the convertPolicyAssignmentIdentityToSdkType function.
+func TestConvertPolicyAssignmentIdentityToSdkType(t *testing.T) {
+	// Test with unknown identity type
+	typ := types.StringValue("UnknownType")
+	ids := basetypes.NewSetUnknown(types.StringType)
+	identity, err := convertPolicyAssignmentIdentityToSdkType(typ, ids)
+	assert.Nil(t, identity)
+	assert.EqualError(t, err, "unknown identity type: UnknownType")
+
+	// Test with SystemAssigned identity type
+	typ = types.StringValue("SystemAssigned")
+	ids = basetypes.NewSetNull(types.StringType)
+	identity, err = convertPolicyAssignmentIdentityToSdkType(typ, ids)
+	assert.NotNil(t, identity)
+	assert.NoError(t, err)
+	assert.Equal(t, armpolicy.ResourceIdentityTypeSystemAssigned, *identity.Type)
+
+	// Test with UserAssigned identity type and empty ids
+	typ = types.StringValue("UserAssigned")
+	ids = basetypes.NewSetNull(types.StringType)
+	identity, err = convertPolicyAssignmentIdentityToSdkType(typ, ids)
+	assert.Nil(t, identity)
+	assert.EqualError(t, err, "one (and only one) identity id is required for user assigned identity")
+
+	// Test with UserAssigned identity type and multiple ids
+	typ = types.StringValue("UserAssigned")
+	ids, _ = types.SetValueFrom(context.Background(), types.StringType, []string{"id1", "id2"})
+	identity, err = convertPolicyAssignmentIdentityToSdkType(typ, ids)
+	assert.Nil(t, identity)
+	assert.EqualError(t, err, "one (and only one) identity id is required for user assigned identity")
+
+	// Test with UserAssigned identity type and valid id
+	typ = types.StringValue("UserAssigned")
+	ids, _ = types.SetValueFrom(context.Background(), types.StringType, []string{"id1"})
+	identity, err = convertPolicyAssignmentIdentityToSdkType(typ, ids)
+	assert.NotNil(t, identity)
+	assert.NoError(t, err)
+	assert.Equal(t, armpolicy.ResourceIdentityTypeUserAssigned, *identity.Type)
+	assert.Len(t, identity.UserAssignedIdentities, 1)
+	assert.Contains(t, identity.UserAssignedIdentities, "id1")
+}
+
+func TestConvertPolicyAssignmentResourceSelectorsToSdkType(t *testing.T) {
+	ctx := context.Background()
+
+	rs1s1in, _ := basetypes.NewSetValueFrom(ctx, types.StringType, []string{"in1", "in2"})
+	rs1s1notIn, _ := basetypes.NewSetValueFrom(ctx, types.StringType, []string{"notin1", "notin2"})
+	rs1s2in, _ := basetypes.NewSetValueFrom(ctx, types.StringType, []string{"in3", "in4"})
+	rs1s2notIn, _ := basetypes.NewSetValueFrom(ctx, types.StringType, []string{"notin3", "notin4"})
+	rs2s1in, _ := basetypes.NewSetValueFrom(ctx, types.StringType, []string{"in5", "in6"})
+	rs2s1notIn, _ := basetypes.NewSetValueFrom(ctx, types.StringType, []string{"notin5", "notin6"})
+
+	notSetStringType, _ := basetypes.NewSetValueFrom(ctx, types.BoolType, []bool{true})
+	t.Run("EmptyInput", func(t *testing.T) {
+		src := []ResourceSelectorType{}
+		res, err := convertPolicyAssignmentResourceSelectorsToSdkType(src)
+		assert.NoError(t, err)
+		assert.Nil(t, res)
+	})
+
+	t.Run("NonEmptyInput", func(t *testing.T) {
+		src := []ResourceSelectorType{
+			{
+				Name: types.StringValue("selector1"),
+				Selectors: []ResourceSelectorSelectorType{
+					{
+						Kind:  types.StringValue("kind1"),
+						In:    rs1s1in,
+						NotIn: rs1s1notIn,
+					},
+					{
+						Kind:  types.StringValue("kind2"),
+						In:    rs1s2in,
+						NotIn: rs1s2notIn,
+					},
+				},
+			},
+			{
+				Name: types.StringValue("selector2"),
+				Selectors: []ResourceSelectorSelectorType{
+					{
+						Kind:  types.StringValue("kind3"),
+						In:    rs2s1in,
+						NotIn: rs2s1notIn,
+					},
+				},
+			},
+		}
+
+		expected := []*armpolicy.ResourceSelector{
+			{
+				Name: to.Ptr("selector1"),
+				Selectors: []*armpolicy.Selector{
+					{
+						Kind:  to.Ptr(armpolicy.SelectorKind("kind1")),
+						In:    to.SliceOfPtrs("in1", "in2"),
+						NotIn: to.SliceOfPtrs("notin1", "notin2"),
+					},
+					{
+						Kind:  to.Ptr(armpolicy.SelectorKind("kind2")),
+						In:    to.SliceOfPtrs("in3", "in4"),
+						NotIn: to.SliceOfPtrs("notin3", "notin4"),
+					},
+				},
+			},
+			{
+				Name: to.Ptr("selector2"),
+				Selectors: []*armpolicy.Selector{
+					{
+						Kind:  to.Ptr(armpolicy.SelectorKind("kind3")),
+						In:    to.SliceOfPtrs("in5", "in6"),
+						NotIn: to.SliceOfPtrs("notin5", "notin6"),
+					},
+				},
+			},
+		}
+
+		res, err := convertPolicyAssignmentResourceSelectorsToSdkType(src)
+		assert.NoError(t, err)
+		assert.Equal(t, expected, res)
+	})
+
+	t.Run("ConversionError", func(t *testing.T) {
+		src := []ResourceSelectorType{
+			{
+				Name: types.StringValue("selector1"),
+				Selectors: []ResourceSelectorSelectorType{
+					{
+						Kind: types.StringValue("kind1"),
+						In:   notSetStringType,
+					},
+				},
+			},
+		}
+
+		// Simulate an error during conversion
+		res, err := convertPolicyAssignmentResourceSelectorsToSdkType(src)
+		assert.ErrorContains(t, err, "unable to convert resource selector selector `in` in value to string expected string, got basetypes.BoolValue")
+		assert.Nil(t, res)
+	})
 }

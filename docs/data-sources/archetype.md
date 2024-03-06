@@ -73,9 +73,11 @@ Optional:
 - `identity` (String) The identity type. Must be one of `SystemAssigned` or `UserAssigned`.
 - `identity_ids` (Set of String) A list of zero or one identity ids to assign to the policy assignment. Required if `identity` is `UserAssigned`.
 - `non_compliance_message` (Attributes Set) The non-compliance messages to use for the policy assignment. (see [below for nested schema](#nestedatt--policy_assignments_to_modify--non_compliance_message))
+- `overrides` (Attributes List) The overrides for this policy assignment. There are a maximum of 10 overrides allowed per assignment. If specified here the overrides will replace the existing overrides.The overrides are processed in the order they are specified. (see [below for nested schema](#nestedatt--policy_assignments_to_modify--overrides))
 - `parameters` (String) The parameters to use for the policy assignment. **Note:** This is a JSON string, and not a map. This is because the parameter values have different types, which confuses the type system used by the provider sdk. Use `jsonencode()` to construct the map. The map keys must be strings, the values are `any` type.
 
 Example: `jsonencode({"param1": "value1", "param2": 2})`
+- `resource_selectors` (Attributes List) The resource selectors to use for the policy assignment. A maximum of 10 resource selectors are allowed per assignment. If specified here the resource selectors will replace the existing resource selectors. (see [below for nested schema](#nestedatt--policy_assignments_to_modify--resource_selectors))
 
 <a id="nestedatt--policy_assignments_to_modify--non_compliance_message"></a>
 ### Nested Schema for `policy_assignments_to_modify.non_compliance_message`
@@ -87,6 +89,59 @@ Required:
 Optional:
 
 - `policy_definition_reference_id` (String) The policy definition reference id (not the resource id) to use for the non compliance message. This references the definition within the policy set.
+
+
+<a id="nestedatt--policy_assignments_to_modify--overrides"></a>
+### Nested Schema for `policy_assignments_to_modify.overrides`
+
+Required:
+
+- `kind` (String) The property the assignment will override. The supported kind is `policyEffect`.
+- `value` (String) The new value which will override the existing value. The supported values are: `addToNetworkGroup`, `append`, `audit`, `auditIfNotExists`, `deny`, `denyAction`, `deployIfNotExists`, `disabled`, `manual`, `modify`, `mutate`.
+
+<https://learn.microsoft.com/azure/governance/policy/concepts/effects>
+
+Optional:
+
+- `selectors` (Attributes List) The selectors to use for the override. (see [below for nested schema](#nestedatt--policy_assignments_to_modify--overrides--selectors))
+
+<a id="nestedatt--policy_assignments_to_modify--overrides--selectors"></a>
+### Nested Schema for `policy_assignments_to_modify.overrides.selectors`
+
+Required:
+
+- `kind` (String) The property of a selector that describes what characteristic will narrow down the scope of the override. Allowed value for kind: `policyEffect` is: `policyDefinitionReferenceId`.
+
+Optional:
+
+- `in` (Set of String) The list of values that the selector will match. The values are the policy definition reference ids. Conflicts with `not_in`.
+- `not_in` (Set of String) The list of values that the selector will not match. The values are the policy definition reference ids. Conflicts with `in`.
+
+
+
+<a id="nestedatt--policy_assignments_to_modify--resource_selectors"></a>
+### Nested Schema for `policy_assignments_to_modify.resource_selectors`
+
+Required:
+
+- `name` (String) The name of the resource selector. The name must be unique within the assignment.
+
+Optional:
+
+- `selectors` (Attributes List) The selectors to use for the resource selector. (see [below for nested schema](#nestedatt--policy_assignments_to_modify--resource_selectors--selectors))
+
+<a id="nestedatt--policy_assignments_to_modify--resource_selectors--selectors"></a>
+### Nested Schema for `policy_assignments_to_modify.resource_selectors.selectors`
+
+Required:
+
+- `kind` (String) The property of a selector that describes what characteristic will narrow down the set of evaluated resources. Each kind can only be used once in a single resource selector. Allowed values are: `resourceLocation`, `resourceType`, `resourceWithoutLocation`. `resourceWithoutLocation` cannot be used in the same resource selector as `resourceLocation`.
+
+Optional:
+
+- `in` (Set of String) The list of values that the selector will match. The values are the policy definition reference ids. Conflicts with `in`.
+- `not_in` (Set of String) The list of values that the selector will not match. The values are the policy definition reference ids. Conflicts with `in`.
+
 
 
 
