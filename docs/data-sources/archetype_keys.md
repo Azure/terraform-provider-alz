@@ -14,9 +14,7 @@ Archetype keys data source. Produces sets of strings to be used in `for_each` lo
 
 ```terraform
 data "alz_archetype_keys" "example" {
-  base_archetype            = "root"
-  policy_definitions_to_add = ["MyPolicyDefinition"]
-  policy_assignments_to_add = ["MyPolicyAssignment"]
+  base_archetype = "root"
 }
 ```
 

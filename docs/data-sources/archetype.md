@@ -19,12 +19,10 @@ data "alz_archetype" "example" {
   defaults = {
     location = "westeurope"
   }
-  id                        = "alz-root"
-  base_archetype            = "root"
-  display_name              = "alz-root"
-  parent_id                 = data.azurerm_client_config.current.tenant_id
-  policy_definitions_to_add = ["MyPolicyDefinition"]
-  policy_assignments_to_add = ["MyPolicyAssignment"]
+  id             = "alz-root"
+  base_archetype = "root"
+  display_name   = "alz-root"
+  parent_id      = data.azurerm_client_config.current.tenant_id
 }
 ```
 
@@ -137,8 +135,8 @@ Required:
 
 Optional:
 
-- `in` (Set of String) The list of values that the selector will match. The values are the policy definition reference ids. Conflicts with `not_in`.
-- `not_in` (Set of String) The list of values that the selector will not match. The values are the policy definition reference ids. Conflicts with `in`.
+- `in` (Set of String) The list of values that the selector will match. Conflicts with `not_in`.
+- `not_in` (Set of String) The list of values that the selector will not match. Conflicts with `in`.
 
 
 

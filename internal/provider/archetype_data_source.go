@@ -314,7 +314,7 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 													},
 												},
 												"in": schema.SetAttribute{
-													MarkdownDescription: "The list of values that the selector will match. The values are the policy definition reference ids. Conflicts with `not_in`.",
+													MarkdownDescription: "The list of values that the selector will match. Conflicts with `not_in`.",
 													Optional:            true,
 													ElementType:         types.StringType,
 													Validators: []validator.Set{
@@ -323,7 +323,7 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 													},
 												},
 												"not_in": schema.SetAttribute{
-													MarkdownDescription: "The list of values that the selector will not match. The values are the policy definition reference ids. Conflicts with `in`.",
+													MarkdownDescription: "The list of values that the selector will not match. Conflicts with `in`.",
 													Optional:            true,
 													ElementType:         types.StringType,
 													Validators: []validator.Set{
