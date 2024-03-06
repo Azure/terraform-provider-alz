@@ -2,10 +2,8 @@ module github.com/Azure/terraform-provider-alz
 
 go 1.22.0
 
-replace github.com/Azure/alzlib => /home/matt/code/alzlib
-
 require (
-	github.com/Azure/alzlib v0.12.1
+	github.com/Azure/alzlib v0.13.0
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.10.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.5.1
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization v1.0.0
