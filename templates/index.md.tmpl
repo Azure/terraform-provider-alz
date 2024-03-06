@@ -43,9 +43,6 @@ automatically installed by `terraform init` in the future:
 As this provider is still at version zero, you should constrain the acceptable
 provider versions on the minor version.
 
-{{ .SchemaMarkdown | trimspace }}
-
-
 ## Azure Landing Zones Library
 
 The provider will download the Azure Landing Zones Library from the [Azure Landing Zones Library GitHub repository](https://github.com/Azure/Azure-Landing-Zones-Library).
@@ -62,3 +59,5 @@ Within the library are the following types of asserts:
 ~> **Important** If the provider does not have access to download the library, please download and use the `lib_urls` to specify the local directory.
 
 For more information please visit the [GitHub repository](https://github.com/Azure/Azure-Landing-Zones-Library).
+
+{{ .SchemaMarkdown | trimspace }}
