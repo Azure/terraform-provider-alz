@@ -27,20 +27,12 @@ type ArchetypeKeysDataSource struct {
 
 // ArchetypeKeysDataSourceModel describes the data source data model.
 type ArchetypeKeysDataSourceModel struct {
-	Id                           types.String `tfsdk:"id"`                               // string
-	AlzPolicyAssignmentKeys      types.Set    `tfsdk:"alz_policy_assignment_keys"`       // set of string
-	AlzPolicyDefinitionKeys      types.Set    `tfsdk:"alz_policy_definition_keys"`       // set of string
-	AlzPolicySetDefinitionKeys   types.Set    `tfsdk:"alz_policy_set_definition_keys"`   // set of string
-	AlzRoleDefinitionKeys        types.Set    `tfsdk:"alz_role_definition_keys"`         // set of string
-	PolicyAssignmentsToAdd       types.Set    `tfsdk:"policy_assignments_to_add"`        // set of string
-	PolicyAssignmentsToRemove    types.Set    `tfsdk:"policy_assignments_to_remove"`     // set of string
-	PolicyDefinitionsToAdd       types.Set    `tfsdk:"policy_definitions_to_add"`        // set of string
-	PolicyDefinitionsToRemove    types.Set    `tfsdk:"policy_definitions_to_remove"`     // set of string
-	PolicySetDefinitionsToAdd    types.Set    `tfsdk:"policy_set_definitions_to_add"`    // set of string
-	PolicySetDefinitionsToRemove types.Set    `tfsdk:"policy_set_definitions_to_remove"` // set of string
-	RoleDefinitionsToAdd         types.Set    `tfsdk:"role_definitions_to_add"`          // set of string
-	RoleDefinitionsToRemove      types.Set    `tfsdk:"role_definitions_to_remove"`       // set of string
-	BaseArchetype                types.String `tfsdk:"base_archetype"`                   // string
+	Id                         types.String `tfsdk:"id"`                             // string
+	BaseArchetype              types.String `tfsdk:"base_archetype"`                 // string
+	AlzPolicyAssignmentKeys    types.Set    `tfsdk:"alz_policy_assignment_keys"`     // set of string
+	AlzPolicyDefinitionKeys    types.Set    `tfsdk:"alz_policy_definition_keys"`     // set of string
+	AlzPolicySetDefinitionKeys types.Set    `tfsdk:"alz_policy_set_definition_keys"` // set of string
+	AlzRoleDefinitionKeys      types.Set    `tfsdk:"alz_role_definition_keys"`       // set of string
 }
 
 func (d *ArchetypeKeysDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -85,54 +77,6 @@ func (d *ArchetypeKeysDataSource) Schema(ctx context.Context, req datasource.Sch
 			"alz_role_definition_keys": schema.SetAttribute{
 				MarkdownDescription: "A set of role definition names belonging to the archetype.",
 				Computed:            true,
-				ElementType:         types.StringType,
-			},
-
-			"role_definitions_to_add": schema.SetAttribute{
-				MarkdownDescription: "A list of role definition names to add to the archetype.",
-				Optional:            true,
-				ElementType:         types.StringType,
-			},
-
-			"role_definitions_to_remove": schema.SetAttribute{
-				MarkdownDescription: "A list of role definition names to remove from the archetype.",
-				Optional:            true,
-				ElementType:         types.StringType,
-			},
-
-			"policy_assignments_to_add": schema.SetAttribute{
-				MarkdownDescription: "A list of policy assignment names to add to the archetype.",
-				Optional:            true,
-				ElementType:         types.StringType,
-			},
-
-			"policy_assignments_to_remove": schema.SetAttribute{
-				MarkdownDescription: "A list of policy assignment names to remove from the archetype.",
-				Optional:            true,
-				ElementType:         types.StringType,
-			},
-
-			"policy_definitions_to_add": schema.SetAttribute{
-				MarkdownDescription: "A list of policy definition names to add to the archetype.",
-				Optional:            true,
-				ElementType:         types.StringType,
-			},
-
-			"policy_definitions_to_remove": schema.SetAttribute{
-				MarkdownDescription: "A list of policy definition names to remove from the archetype.",
-				Optional:            true,
-				ElementType:         types.StringType,
-			},
-
-			"policy_set_definitions_to_add": schema.SetAttribute{
-				MarkdownDescription: "A list of policy set definition names to add to the archetype.",
-				Optional:            true,
-				ElementType:         types.StringType,
-			},
-
-			"policy_set_definitions_to_remove": schema.SetAttribute{
-				MarkdownDescription: "A list of policy set definition names to remove from the archetype.",
-				Optional:            true,
 				ElementType:         types.StringType,
 			},
 		},
@@ -183,50 +127,10 @@ func (d *ArchetypeKeysDataSource) Read(ctx context.Context, req datasource.ReadR
 		return
 	}
 
-	// Make a copy of the archetype so we can customize it.
+	// Make a copy of the archetype.
 	arch, err := d.alz.CopyArchetype(data.BaseArchetype.ValueString(), nil)
 	if err != nil {
 		resp.Diagnostics.AddError("Archetype not found", fmt.Sprintf("Unable to find archetype %s", data.BaseArchetype.ValueString()))
-		return
-	}
-
-	// Add/remove policy definitions from archetype before adding the management group.
-	if err := addAttrStringElementsToSet(arch.PolicyDefinitions, data.PolicyDefinitionsToAdd.Elements()); err != nil {
-		resp.Diagnostics.AddError("Unable to add policy definitions", err.Error())
-		return
-	}
-	if err := deleteAttrStringElementsFromSet(arch.PolicyDefinitions, data.PolicyDefinitionsToRemove.Elements()); err != nil {
-		resp.Diagnostics.AddError("Unable to remove policy definitions", err.Error())
-		return
-	}
-
-	// Add/remove policy set definitions from archetype before adding the management group.
-	if err := addAttrStringElementsToSet(arch.PolicySetDefinitions, data.PolicySetDefinitionsToAdd.Elements()); err != nil {
-		resp.Diagnostics.AddError("Unable to add policy set definitions", err.Error())
-		return
-	}
-	if err := deleteAttrStringElementsFromSet(arch.PolicySetDefinitions, data.PolicySetDefinitionsToRemove.Elements()); err != nil {
-		resp.Diagnostics.AddError("Unable to remove policy set definitions", err.Error())
-		return
-	}
-
-	// Add/remove role definitions from archetype before adding the management group.
-	if err := addAttrStringElementsToSet(arch.RoleDefinitions, data.RoleDefinitionsToAdd.Elements()); err != nil {
-		resp.Diagnostics.AddError("Unable to add role definitions", err.Error())
-		return
-	}
-	if err := deleteAttrStringElementsFromSet(arch.RoleDefinitions, data.RoleDefinitionsToRemove.Elements()); err != nil {
-		resp.Diagnostics.AddError("Unable to remove role definitions", err.Error())
-		return
-	}
-
-	// Add/remove policy assignments from archetype before adding the management group.
-	if err := addAttrStringElementsToSet(arch.PolicyAssignments, data.PolicyAssignmentsToAdd.Elements()); err != nil {
-		resp.Diagnostics.AddError("Unable to remove policy assignments", err.Error())
-		return
-	}
-	if err := deleteAttrStringElementsFromSet(arch.PolicyAssignments, data.PolicyAssignmentsToRemove.Elements()); err != nil {
-		resp.Diagnostics.AddError("Unable to remove policy assignments", err.Error())
 		return
 	}
 
@@ -246,8 +150,4 @@ func (d *ArchetypeKeysDataSource) Read(ctx context.Context, req datasource.ReadR
 		resp.Diagnostics.Append(diags...)
 		return
 	}
-	//types.SetValueFrom(ctx, types.StringType, arch.PolicyAssignments.ToSlice())
-
-	// //Save data into Terraform state
-	// resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
