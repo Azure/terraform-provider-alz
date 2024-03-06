@@ -15,8 +15,10 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy"
 	"github.com/Azure/terraform-provider-alz/internal/alztypes"
 	"github.com/Azure/terraform-provider-alz/internal/alzvalidators"
+	"github.com/Azure/terraform-provider-alz/internal/typehelper"
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -59,24 +61,17 @@ type checkExistsInAlzLib struct {
 
 // ArchetypeDataSourceModel describes the data source data model.
 type ArchetypeDataSourceModel struct {
-	AlzPolicyAssignments         types.Map                              `tfsdk:"alz_policy_assignments"`      // map of string, computed
-	AlzPolicyDefinitions         types.Map                              `tfsdk:"alz_policy_definitions"`      // map of string, computed
-	AlzPolicySetDefinitions      types.Map                              `tfsdk:"alz_policy_set_definitions"`  // map of string, computed
-	AlzPolicyRoleAssignments     map[string]AlzPolicyRoleAssignmentType `tfsdk:"alz_policy_role_assignments"` // map of string, computed
-	AlzRoleDefinitions           types.Map                              `tfsdk:"alz_role_definitions"`        // map of string, computed
-	BaseArchetype                types.String                           `tfsdk:"base_archetype"`
-	Defaults                     ArchetypeDataSourceModelDefaults       `tfsdk:"defaults"`
-	DisplayName                  types.String                           `tfsdk:"display_name"`
-	Id                           types.String                           `tfsdk:"id"`
-	ParentId                     types.String                           `tfsdk:"parent_id"`
-	PolicyAssignmentsToAdd       map[string]PolicyAssignmentType        `tfsdk:"policy_assignments_to_add"`        // map of PolicyAssignmentType
-	PolicyAssignmentsToRemove    types.Set                              `tfsdk:"policy_assignments_to_remove"`     // set of string
-	PolicyDefinitionsToAdd       types.Set                              `tfsdk:"policy_definitions_to_add"`        // set of string
-	PolicyDefinitionsToRemove    types.Set                              `tfsdk:"policy_definitions_to_remove"`     // set of string
-	PolicySetDefinitionsToAdd    types.Set                              `tfsdk:"policy_set_definitions_to_add"`    // set of string
-	PolicySetDefinitionsToRemove types.Set                              `tfsdk:"policy_set_definitions_to_remove"` // set of string
-	RoleDefinitionsToAdd         types.Set                              `tfsdk:"role_definitions_to_add"`          // set of string
-	RoleDefinitionsToRemove      types.Set                              `tfsdk:"role_definitions_to_remove"`       // set of string
+	AlzPolicyAssignments      types.Map                              `tfsdk:"alz_policy_assignments"`     // map of string, computed
+	AlzPolicyDefinitions      types.Map                              `tfsdk:"alz_policy_definitions"`     // map of string, computed
+	AlzPolicySetDefinitions   types.Map                              `tfsdk:"alz_policy_set_definitions"` // map of string, computed
+	AlzPolicyRoleAssignments  map[string]AlzPolicyRoleAssignmentType `tfsdk:"alz_policy_role_assignments"`
+	AlzRoleDefinitions        types.Map                              `tfsdk:"alz_role_definitions"` // map of string, computed
+	BaseArchetype             types.String                           `tfsdk:"base_archetype"`
+	Defaults                  ArchetypeDataSourceModelDefaults       `tfsdk:"defaults"`
+	DisplayName               types.String                           `tfsdk:"display_name"`
+	Id                        types.String                           `tfsdk:"id"`
+	ParentId                  types.String                           `tfsdk:"parent_id"`
+	PolicyAssignmentsToModify map[string]PolicyAssignmentType        `tfsdk:"policy_assignments_to_modify"`
 }
 
 // AlzPolicyRoleAssignmentType is a representation of the policy assignments
@@ -96,15 +91,13 @@ type ArchetypeDataSourceModelDefaults struct {
 
 // PolicyAssignmentType describes the policy assignment data model.
 type PolicyAssignmentType struct {
-	DisplayName             types.String                           `tfsdk:"display_name"`
-	PolicyDefinitionName    types.String                           `tfsdk:"policy_definition_name"`
-	PolicySetDefinitionName types.String                           `tfsdk:"policy_set_definition_name"`
-	PolicyDefinitionId      types.String                           `tfsdk:"policy_definition_id"`
-	EnforcementMode         types.String                           `tfsdk:"enforcement_mode"`
-	Identity                types.String                           `tfsdk:"identity"`
-	IdentityIds             types.Set                              `tfsdk:"identity_ids"`           // set of string
-	NonComplianceMessage    []PolicyAssignmentNonComplianceMessage `tfsdk:"non_compliance_message"` // set of PolicyAssignmentNonComplianceMessage
-	Parameters              alztypes.PolicyParameterValue          `tfsdk:"parameters"`
+	EnforcementMode      types.String                           `tfsdk:"enforcement_mode"`
+	Identity             types.String                           `tfsdk:"identity"`
+	IdentityIds          types.Set                              `tfsdk:"identity_ids"`           // set of string
+	NonComplianceMessage []PolicyAssignmentNonComplianceMessage `tfsdk:"non_compliance_message"` // set of PolicyAssignmentNonComplianceMessage
+	Parameters           alztypes.PolicyParameterValue          `tfsdk:"parameters"`
+	Overrides            []PolicyAssignmentOverrideType         `tfsdk:"overrides"`
+	ResourceSelectors    []ResourceSelectorType                 `tfsdk:"resource_selectors"`
 }
 
 // PolicyAssignmentNonComplianceMessage describes non-compliance message in a policy assignment.
@@ -113,11 +106,28 @@ type PolicyAssignmentNonComplianceMessage struct {
 	PolicyDefinitionReferenceId types.String `tfsdk:"policy_definition_reference_id"`
 }
 
-// type RoleAssignmentType struct {
-// 	DefinitionName types.String `tfsdk:"definition_name"`
-// 	DefinitionId   types.String `tfsdk:"definition_id"`
-// 	ObjectId       types.String `tfsdk:"object_id"`
-// }
+type ResourceSelectorType struct {
+	Name      types.String                   `tfsdk:"name"`
+	Selectors []ResourceSelectorSelectorType `tfsdk:"selectors"`
+}
+
+type ResourceSelectorSelectorType struct {
+	Kind  types.String `tfsdk:"kind"`
+	In    types.Set    `tfsdk:"in"`     // set of string
+	NotIn types.Set    `tfsdk:"not_in"` // set of string
+}
+
+type PolicyAssignmentOverrideType struct {
+	Kind      types.String                           `tfsdk:"kind"`
+	Value     types.String                           `tfsdk:"value"`
+	Selectors []PolicyAssignmentOverrideSelectorType `tfsdk:"selectors"`
+}
+
+type PolicyAssignmentOverrideSelectorType struct {
+	Kind  types.String `tfsdk:"kind"`
+	In    types.Set    `tfsdk:"in"`     // set of string
+	NotIn types.Set    `tfsdk:"not_in"` // set of string
+}
 
 func (d *ArchetypeDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_archetype"
@@ -125,9 +135,7 @@ func (d *ArchetypeDataSource) Metadata(ctx context.Context, req datasource.Metad
 
 func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		// This description is used by the documentation generator and the language server.
 		MarkdownDescription: "Archetype data source. This provides data in order to create resources. Where possible, the data is provided in the form of ARM JSON.",
-
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: "The management group name, forming part of the resource id.",
@@ -153,70 +161,14 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 				Required:            true,
 			},
 
-			"policy_assignments_to_remove": schema.SetAttribute{
-				MarkdownDescription: "A list of policy assignment names to remove from the archetype.",
-				Optional:            true,
-				ElementType:         types.StringType,
-			},
-
-			"policy_definitions_to_remove": schema.SetAttribute{
-				MarkdownDescription: "A list of policy definition names to remove from the archetype.",
-				Optional:            true,
-				ElementType:         types.StringType,
-			},
-
-			"policy_set_definitions_to_remove": schema.SetAttribute{
-				MarkdownDescription: "A list of policy set definition names to remove from the archetype.",
-				Optional:            true,
-				ElementType:         types.StringType,
-			},
-
-			"role_definitions_to_remove": schema.SetAttribute{
-				MarkdownDescription: "A list of role definition names to remove from the archetype.",
-				Optional:            true,
-				ElementType:         types.StringType,
-			},
-
-			"policy_assignments_to_add": schema.MapNestedAttribute{
-				MarkdownDescription: "A map of policy assignments names to add to the archetype. The map key is the policy assignment name." +
-					"You can also update existing policy assignments by using the same map key as an existing policy assignment name." +
+			"policy_assignments_to_modify": schema.MapNestedAttribute{
+				MarkdownDescription: "A map of policy assignments names to change in the archetype. The map key is the policy assignment name." +
+					"The policy assignment **must** exist in the archetype." +
 					"The nested attributes will be merged with the existing policy assignment so you do not need to re-declare everything.",
 				Optional: true,
 				NestedObject: schema.NestedAttributeObject{
 					Validators: []validator.Object{},
 					Attributes: map[string]schema.Attribute{
-						"display_name": schema.StringAttribute{
-							MarkdownDescription: "The policy assignment display name.",
-							Optional:            true,
-						},
-
-						"policy_definition_name": schema.StringAttribute{
-							MarkdownDescription: "The name of the policy definition to assign. Must be in the AlzLib, if not use `policy_definition_id` instead. Conflicts with `policy_definition_id` and `policy_set_definition_name`.",
-							Optional:            true,
-							Validators: []validator.String{
-								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("policy_definition_id")),
-								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("policy_set_definition_name")),
-							},
-						},
-
-						"policy_set_definition_name": schema.StringAttribute{
-							MarkdownDescription: "The name of the policy set definition to assign. Must be in the AlzLib, if not use `policy_definition_id` instead. Conflicts with `policy_definition_id` and `policy_definition_name`.",
-							Optional:            true,
-							Validators: []validator.String{
-								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("policy_definition_id")),
-								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("policy_definition_name")),
-							},
-						},
-
-						"policy_definition_id": schema.StringAttribute{
-							MarkdownDescription: "The resource id of the policy definition. Conflicts with `policy_definition_name` and `policy_set_definition_name`.",
-							Optional:            true,
-							Validators: []validator.String{
-								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("policy_set_definition_name")),
-								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("policy_definition_name")),
-							},
-						},
-
 						"enforcement_mode": schema.StringAttribute{
 							MarkdownDescription: "The enforcement mode of the policy assignment. Must be one of `Default`, or `DoNotEnforce`.",
 							Optional:            true,
@@ -234,14 +186,15 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 						},
 
 						"identity_ids": schema.SetAttribute{
-							MarkdownDescription: "A list of identity ids to assign to the policy assignment. Required if `identity` is `UserAssigned`.",
+							MarkdownDescription: "A list of zero or one identity ids to assign to the policy assignment. Required if `identity` is `UserAssigned`.",
 							Optional:            true,
 							ElementType:         types.StringType,
 							Validators: []validator.Set{
 								setvalidator.ValueStringsAre(
 									alzvalidators.ArmTypeResourceId("Microsoft.ManagedIdentity", "userAssignedIdentities"),
-									stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("identity")),
 								),
+								setvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("identity")),
+								setvalidator.SizeBetween(0, 1),
 							},
 						},
 
@@ -263,35 +216,139 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 							},
 						},
 
+						"overrides": schema.ListNestedAttribute{
+							MarkdownDescription: "The overrides for this policy assignment. There are a maximum of 10 overrides allowed per assignment. " +
+								"If specified here the overrides will replace the existing overrides." +
+								"The overrides are processed in the order they are specified.",
+							Optional: true,
+							Validators: []validator.List{
+								listvalidator.SizeAtMost(10),
+								listvalidator.UniqueValues(),
+							},
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: map[string]schema.Attribute{
+									"kind": schema.StringAttribute{
+										MarkdownDescription: "The property the assignment will override. The supported kind is `policyEffect`.",
+										Required:            true,
+										Validators: []validator.String{
+											stringvalidator.OneOf("policyEffect"),
+										},
+									},
+
+									"value": schema.StringAttribute{
+										MarkdownDescription: "The new value which will override the existing value. The supported values are: `addToNetworkGroup`, `append`, `audit`, `auditIfNotExists`, `deny`, `denyAction`, `deployIfNotExists`, `disabled`, `manual`, `modify`, `mutate`.\n\n" +
+											"<https://learn.microsoft.com/azure/governance/policy/concepts/effects>",
+										Required: true,
+										Validators: []validator.String{
+											stringvalidator.OneOf("addToNetworkGroup", "append", "audit", "auditIfNotExists", "deny", "denyAction", "deployIfNotExists", "disabled", "manual", "modify", "mutate"),
+										},
+									},
+
+									"selectors": schema.ListNestedAttribute{
+										MarkdownDescription: "The selectors to use for the override.",
+										Optional:            true,
+										NestedObject: schema.NestedAttributeObject{
+											Attributes: map[string]schema.Attribute{
+												"kind": schema.StringAttribute{
+													MarkdownDescription: "The property of a selector that describes what characteristic will narrow down the scope of the override. Allowed value for kind: `policyEffect` is: `policyDefinitionReferenceId`.",
+													Required:            true,
+													Validators: []validator.String{
+														stringvalidator.OneOf("policyEffect"),
+													},
+												},
+												"in": schema.SetAttribute{
+													MarkdownDescription: "The list of values that the selector will match. The values are the policy definition reference ids. Conflicts with `not_in`.",
+													Optional:            true,
+													ElementType:         types.StringType,
+													Validators: []validator.Set{
+														setvalidator.SizeAtMost(50),
+														setvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("not_in")),
+													},
+												},
+												"not_in": schema.SetAttribute{
+													MarkdownDescription: "The list of values that the selector will not match. The values are the policy definition reference ids. Conflicts with `in`.",
+													Optional:            true,
+													ElementType:         types.StringType,
+													Validators: []validator.Set{
+														setvalidator.SizeAtMost(50),
+														setvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("in")),
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+
+						"resource_selectors": schema.ListNestedAttribute{
+							MarkdownDescription: "The resource selectors to use for the policy assignment. " +
+								"A maximum of 10 resource selectors are allowed per assignment. " +
+								"If specified here the resource selectors will replace the existing resource selectors.",
+							Optional: true,
+							Validators: []validator.List{
+								listvalidator.SizeAtMost(10),
+								listvalidator.UniqueValues(),
+							},
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: map[string]schema.Attribute{
+									"name": schema.StringAttribute{
+										MarkdownDescription: "The name of the resource selector. The name must be unique within the assignment.",
+										Required:            true,
+										Validators: []validator.String{
+											stringvalidator.LengthAtLeast(1),
+										},
+									},
+									"selectors": schema.ListNestedAttribute{
+										MarkdownDescription: "The selectors to use for the resource selector.",
+										Optional:            true,
+										NestedObject: schema.NestedAttributeObject{
+											Attributes: map[string]schema.Attribute{
+												"kind": schema.StringAttribute{
+													MarkdownDescription: "The property of a selector that describes what characteristic will narrow down the set of evaluated resources. " +
+														"Each kind can only be used once in a single resource selector. Allowed values are: `resourceLocation`, `resourceType`, `resourceWithoutLocation`. " +
+														"`resourceWithoutLocation` cannot be used in the same resource selector as `resourceLocation`.",
+													Required: true,
+													Validators: []validator.String{
+														stringvalidator.OneOf("resourceLocation", "resourceType", "resourceWithoutLocation"),
+													},
+												},
+												"in": schema.SetAttribute{
+													MarkdownDescription: "The list of values that the selector will match. The values are the policy definition reference ids. Conflicts with `in`.",
+													Optional:            true,
+													ElementType:         types.StringType,
+													Validators: []validator.Set{
+														setvalidator.SizeAtMost(50),
+														setvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("not_in")),
+													},
+												},
+												"not_in": schema.SetAttribute{
+													MarkdownDescription: "The list of values that the selector will not match. The values are the policy definition reference ids. Conflicts with `in`.",
+													Optional:            true,
+													ElementType:         types.StringType,
+													Validators: []validator.Set{
+														setvalidator.SizeAtMost(50),
+														setvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("in")),
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+
 						"parameters": schema.StringAttribute{
 							MarkdownDescription: "The parameters to use for the policy assignment. " +
 								"**Note:** This is a JSON string, and not a map. This is because the parameter values have different types, which confuses the type system used by the provider sdk. " +
 								"Use `jsonencode()` to construct the map. " +
-								"The map keys must be strings, the values are `any` type. " +
+								"The map keys must be strings, the values are `any` type.\n\n" +
 								"Example: `jsonencode({\"param1\": \"value1\", \"param2\": 2})`",
 							CustomType: alztypes.PolicyParameterType{},
 							Optional:   true,
 						},
 					},
 				},
-			},
-
-			"policy_definitions_to_add": schema.SetAttribute{
-				MarkdownDescription: "A list of policy definition names to add to the archetype.",
-				Optional:            true,
-				ElementType:         types.StringType,
-			},
-
-			"policy_set_definitions_to_add": schema.SetAttribute{
-				MarkdownDescription: "A list of policy set definition names to add to the archetype.",
-				Optional:            true,
-				ElementType:         types.StringType,
-			},
-
-			"role_definitions_to_add": schema.SetAttribute{
-				MarkdownDescription: "A list of role definition names to add to the archetype.",
-				Optional:            true,
-				ElementType:         types.StringType,
 			},
 
 			"defaults": schema.SingleNestedAttribute{
@@ -431,56 +488,6 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 		return
 	}
 
-	// Add/remove policy definiitons from archetype before adding the management group.
-	if err := addAttrStringElementsToSet(arch.PolicyDefinitions, data.PolicyDefinitionsToAdd.Elements()); err != nil {
-		resp.Diagnostics.AddError("Unable to add policy definitions", err.Error())
-		return
-	}
-	if err := deleteAttrStringElementsFromSet(arch.PolicyDefinitions, data.PolicyDefinitionsToRemove.Elements()); err != nil {
-		resp.Diagnostics.AddError("Unable to remove policy definitions", err.Error())
-		return
-	}
-
-	// Add/remove policy set definiitons from archetype before adding the management group.
-	if err := addAttrStringElementsToSet(arch.PolicySetDefinitions, data.PolicySetDefinitionsToAdd.Elements()); err != nil {
-		resp.Diagnostics.AddError("Unable to add policy set definitions", err.Error())
-		return
-	}
-	if err := deleteAttrStringElementsFromSet(arch.PolicySetDefinitions, data.PolicySetDefinitionsToRemove.Elements()); err != nil {
-		resp.Diagnostics.AddError("Unable to remove policy set definitions", err.Error())
-		return
-	}
-
-	// Add/remove role definiitons from archetype before adding the management group.
-	if err := addAttrStringElementsToSet(arch.RoleDefinitions, data.RoleDefinitionsToAdd.Elements()); err != nil {
-		resp.Diagnostics.AddError("Unable to add role definitions", err.Error())
-		return
-	}
-	if err := deleteAttrStringElementsFromSet(arch.RoleDefinitions, data.RoleDefinitionsToRemove.Elements()); err != nil {
-		resp.Diagnostics.AddError("Unable to remove role definitions", err.Error())
-		return
-	}
-
-	// remove policy assignments from archetype before adding the management group.
-	if err := deleteAttrStringElementsFromSet(arch.PolicyAssignments, data.PolicyAssignmentsToRemove.Elements()); err != nil {
-		resp.Diagnostics.AddError("Unable to remove policy assignments", err.Error())
-		return
-	}
-	// panames := mapset.NewSet[string]()
-	// panames.Append(arch.PolicyAssignments.ToSlice()...)
-
-	// par := make([]string, 0, len(data.PolicyAssignmentsToRemove.Elements()))
-	// if diags := data.PolicyAssignmentsToRemove.ElementsAs(ctx, &par, false); diags.HasError() {
-	// 	resp.Diagnostics.Append(diags...)
-	// 	return
-	// }
-	// panames.RemoveAll(par...)
-	// for k := range data.PolicyAssignmentsToAdd {
-	// 	panames.Add(k)
-	// }
-
-	// data.AlzPolicyAssignmentNames = panames.ToSlice()
-
 	checks := []checkExistsInAlzLib{
 		{arch.PolicyDefinitions, d.alz.PolicyDefinitionExists},
 		{arch.PolicySetDefinitions, d.alz.PolicySetDefinitionExists},
@@ -497,8 +504,6 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 		}
 	}
 
-	// TODO: change this to compare the config to the AlzManagementGroup in the alz struct.
-	// It should be identical. If it is not then error as the user has duplicate management group names.
 	if mg := d.alz.Deployment.GetManagementGroup(mgname); mg == nil {
 		tflog.Debug(ctx, "Add management group")
 		external := false
@@ -525,34 +530,18 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 		return
 	}
 
-	// check that the policy assignment referenced definition names are in alz
-	for _, pa := range data.PolicyAssignmentsToAdd {
-		if isKnown(pa.PolicyDefinitionName) && !d.alz.PolicyDefinitionExists(pa.PolicyDefinitionName.ValueString()) {
-			resp.Diagnostics.AddError("Policy definition not found", fmt.Sprintf("Unable to find policy definition %s", pa.PolicyDefinitionName.ValueString()))
+	for k, v := range data.PolicyAssignmentsToModify {
+		enf, ident, noncompl, params, resourceSel, overrides, err := policyAssignmentType2ArmPolicyValues(v)
+		if err != nil {
+			resp.Diagnostics.AddError(fmt.Sprintf("Unable to convert supplied policy assignment modifications to SDK values for policy assignment %s", k), err.Error())
 			return
 		}
-		if isKnown(pa.PolicySetDefinitionName) && !d.alz.PolicySetDefinitionExists(pa.PolicySetDefinitionName.ValueString()) {
-			resp.Diagnostics.AddError("Policy set definition not found", fmt.Sprintf("Unable to find policy set definition %s", pa.PolicySetDefinitionName.ValueString()))
+		if err := mg.ModifyPolicyAssignment(k, params, enf, noncompl, ident, resourceSel, overrides); err != nil {
+			resp.Diagnostics.AddError(fmt.Sprintf("Unable to modify policy assignment %s", k), err.Error())
 			return
+
 		}
 	}
-
-	// add new policy assignments to deployed management group and run Update to set the correct references, etc.
-	newPas, err := policyAssignmentType2ArmPolicyAssignment(data.PolicyAssignmentsToAdd, d.alz.AlzLib)
-	if err != nil {
-		resp.Diagnostics.AddError("Unable to create policy assignments", err.Error())
-		return
-	}
-
-	if err := mg.UpsertPolicyAssignments(ctx, newPas, d.alz.AlzLib); err != nil {
-		resp.Diagnostics.AddError("Unable to add policy assignments", err.Error())
-		return
-	}
-
-	// if err := d.alz.Deployment.MGs[mgname].Update(d.alz, wkpv); err != nil {
-	// 	resp.Diagnostics.AddError("Unable to update management group", err.Error())
-	// 	return
-	// }
 
 	if err := mg.GeneratePolicyAssignmentAdditionalRoleAssignments(d.alz.AlzLib); err != nil {
 		resp.Diagnostics.AddError("Unable to generate additional role assignments", err.Error())
@@ -587,14 +576,6 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 	}
 	data.AlzPolicySetDefinitions = m
 
-	// tflog.Debug(ctx, "Converting role assignments")
-	// m, diags = convertMapOfStringToMapValue(mg.GetRoleAssignmentsMap())
-	// resp.Diagnostics.Append(diags...)
-	// if resp.Diagnostics.HasError() {
-	// 	return
-	// }
-	// data.AlzRoleAssignments = m
-
 	tflog.Debug(ctx, "Converting role definitions")
 	m, diags = convertMapOfStringToMapValue(mg.GetRoleDefinitionsMap())
 	resp.Diagnostics.Append(diags...)
@@ -606,7 +587,7 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 	tflog.Debug(ctx, "Converting additional role assignments")
 	data.AlzPolicyRoleAssignments = convertAlzPolicyRoleAssignments(mg.GetPolicyRoleAssignments())
 
-	//Save data into Terraform state
+	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -645,122 +626,189 @@ func convertMapOfStringToMapValue[T mapTypes](m map[string]T) (basetypes.MapValu
 	return resultMapType, nil
 }
 
-// addAttrStringElementsToSet adds the string values of the attr.Value elements to the set.
-// It is used to add elements to the archetype.
-func addAttrStringElementsToSet(set mapset.Set[string], vals []attr.Value) error {
-	for _, attr := range vals {
-		s, ok := attr.(types.String)
-		if !ok {
-			return fmt.Errorf("unable to convert %v to types.String", attr)
-		}
-		set.Add(s.ValueString())
+// policyAssignmentType2ArmPolicyValues returns a set of Azure Go SDK values from a PolicyAssignmentType.
+// This is used to modify existing policy assignments.
+func policyAssignmentType2ArmPolicyValues(pa PolicyAssignmentType) (
+	enforcementMode *armpolicy.EnforcementMode,
+	identity *armpolicy.Identity,
+	nonComplianceMessages []*armpolicy.NonComplianceMessage,
+	parameters map[string]*armpolicy.ParameterValuesValue,
+	resourceSelectors []*armpolicy.ResourceSelector,
+	overrides []*armpolicy.Override,
+	err error) {
+	// Set enforcement mode.
+	enforcementMode = convertPolicyAssignmentEnforcementModeToSdkType(pa.EnforcementMode)
+
+	// set identity
+	identity, err = convertPolicyAssignmentIdentityToSdkType(pa.Identity, pa.IdentityIds)
+	if err != nil {
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("unable to convert policy assignment to sdk type: %w", err)
 	}
-	return nil
+
+	// set non-compliance message
+	nonComplianceMessages = convertPolicyAssignmentNonComplianceMessagesToSdkType(pa.NonComplianceMessage)
+
+	// set parameters
+	parameters, err = convertPolicyAssignmentParametersToSdkType(pa.Parameters)
+	if err != nil {
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("unable to convert policy assignment parameters to sdk type: %w", err)
+	}
+
+	resourceSelectors, err = convertPolicyAssignmentResourceSelectorsToSdkType(pa.ResourceSelectors)
+	if err != nil {
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("unable to convert policy assignment resource selectors to sdk type: %w", err)
+	}
+
+	overrides, err = convertPolicyAssignmentOverridesToSdkType(pa.Overrides)
+	if err != nil {
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("unable to convert policy assignment overrides to sdk type: %w", err)
+	}
+
+	return enforcementMode, identity, nonComplianceMessages, parameters, resourceSelectors, overrides, nil
 }
 
-// deleteAttrStringElementsFromSet removed the string values of the attr.Value elements to the set.
-// It is used to remove elements from the archetype.
-func deleteAttrStringElementsFromSet(set mapset.Set[string], vals []attr.Value) error {
-	for _, attr := range vals {
-		s, ok := attr.(types.String)
-		if !ok {
-			return fmt.Errorf("unable to convert %v to types.String", attr)
-		}
-		if !set.Contains(s.ValueString()) {
-			continue
-		}
-		set.Remove(s.ValueString())
+func convertPolicyAssignmentOverridesToSdkType(src []PolicyAssignmentOverrideType) ([]*armpolicy.Override, error) {
+	if len(src) == 0 {
+		return nil, nil
 	}
-	return nil
-}
-
-func policyAssignmentType2ArmPolicyAssignment(pamap map[string]PolicyAssignmentType, az *alzlib.AlzLib) (map[string]*armpolicy.Assignment, error) {
-	const (
-		policyAssignmentIdFmt    = "/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyAssignments/%s"
-		policyDefinitionIdFmt    = "/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyDefinitions/%s"
-		policySetDefinitionIdFmt = "/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policySetDefinitions/%s"
-		policyAssignementType    = "Microsoft.Authorization/policyAssignments"
-	)
-	res := make(map[string]*armpolicy.Assignment, len(pamap))
-	for name, src := range pamap {
-		dst := new(armpolicy.Assignment)
-		dst.Properties = new(armpolicy.AssignmentProperties)
-		dst.ID = to.Ptr(fmt.Sprintf(policyAssignmentIdFmt, name))
-		dst.Name = to.Ptr(name)
-		dst.Type = to.Ptr(policyAssignementType)
-
-		// Set display name
-		if isKnown(src.DisplayName) {
-			dst.Properties.DisplayName = to.Ptr(src.DisplayName.ValueString())
-		}
-
-		// Set policy definition id.
-		if isKnown(src.PolicyDefinitionName) {
-			n := src.PolicyDefinitionName.ValueString()
-			if !az.PolicyDefinitionExists(n) {
-				return nil, fmt.Errorf("policy definition %s not found in AlzLib", n)
+	res := make([]*armpolicy.Override, len(src))
+	for i, o := range src {
+		selectors := make([]*armpolicy.Selector, len(o.Selectors))
+		for j, s := range o.Selectors {
+			in, err := typehelper.AttrSlice2StringSlice(s.In.Elements())
+			if err != nil {
+				return nil, fmt.Errorf("unable to convert override selector `in` in value to string %w", err)
 			}
-			dst.Properties.PolicyDefinitionID = to.Ptr(fmt.Sprintf(policyDefinitionIdFmt, n))
-		}
-		if isKnown(src.PolicySetDefinitionName) {
-			n := src.PolicySetDefinitionName.ValueString()
-			if !az.PolicySetDefinitionExists(n) {
-				return nil, fmt.Errorf("policy set definition %s not found in AlzLib", n)
+			notIn, err := typehelper.AttrSlice2StringSlice(s.NotIn.Elements())
+			if err != nil {
+				return nil, fmt.Errorf("unable to convert override selector `not_in` in value to string %w", err)
 			}
-			dst.Properties.PolicyDefinitionID = to.Ptr(fmt.Sprintf(policySetDefinitionIdFmt, n))
-		}
-		if isKnown(src.PolicyDefinitionId) {
-			dst.Properties.PolicyDefinitionID = to.Ptr(src.PolicyDefinitionId.ValueString())
-		}
-
-		// Set enforcement mode.
-		if isKnown(src.EnforcementMode) {
-			switch src.EnforcementMode.ValueString() {
-			case "DoNotEnforce":
-				dst.Properties.EnforcementMode = to.Ptr(armpolicy.EnforcementModeDoNotEnforce)
-			case "Default":
-				dst.Properties.EnforcementMode = to.Ptr(armpolicy.EnforcementModeDefault)
+			selectors[j] = &armpolicy.Selector{
+				Kind:  to.Ptr(armpolicy.SelectorKind(s.Kind.ValueString())),
+				In:    to.SliceOfPtrs(in...),
+				NotIn: to.SliceOfPtrs(notIn...),
 			}
 		}
-
-		// set non-compliance message
-		if len(src.NonComplianceMessage) > 0 {
-			dst.Properties.NonComplianceMessages = make([]*armpolicy.NonComplianceMessage, len(src.NonComplianceMessage))
-			for i, msg := range src.NonComplianceMessage {
-				dst.Properties.NonComplianceMessages[i] = &armpolicy.NonComplianceMessage{
-					Message: to.Ptr(msg.Message.ValueString()),
-				}
-				if isKnown(msg.PolicyDefinitionReferenceId) {
-					dst.Properties.NonComplianceMessages[i].PolicyDefinitionReferenceID = to.Ptr(msg.PolicyDefinitionReferenceId.ValueString())
-				}
-			}
+		res[i] = &armpolicy.Override{
+			Kind:      to.Ptr(armpolicy.OverrideKind(o.Kind.ValueString())),
+			Value:     to.Ptr(o.Value.ValueString()),
+			Selectors: selectors,
 		}
-
-		// set parameters
-		if isKnown(src.Parameters) {
-			params := make(map[string]any)
-			if err := json.Unmarshal([]byte(src.Parameters.ValueString()), &params); err != nil {
-				return nil, fmt.Errorf("unable to unmarshal policy parameters for policy %s: %w", name, err)
-			}
-			dst.Properties.Parameters = convertPolicyAssignmentParametersToSdkType(params)
-		}
-		res[name] = dst
 	}
 	return res, nil
 }
 
-// convertPolicyAssignmentParametersToSdkType converts a map[string]any to a map[string]*armpolicy.ParameterValuesValue.
-func convertPolicyAssignmentParametersToSdkType(src map[string]interface{}) map[string]*armpolicy.ParameterValuesValue {
-	if src == nil {
+func convertPolicyAssignmentResourceSelectorsToSdkType(src []ResourceSelectorType) ([]*armpolicy.ResourceSelector, error) {
+	if len(src) == 0 {
+		return nil, nil
+	}
+	res := make([]*armpolicy.ResourceSelector, len(src))
+	for i, rs := range src {
+		selectors := make([]*armpolicy.Selector, len(rs.Selectors))
+		for j, s := range rs.Selectors {
+			in, err := typehelper.AttrSlice2StringSlice(s.In.Elements())
+			if err != nil {
+				return nil, fmt.Errorf("unable to convert resource selector selector `in` in value to string %w", err)
+			}
+			notIn, err := typehelper.AttrSlice2StringSlice(s.NotIn.Elements())
+			if err != nil {
+				return nil, fmt.Errorf("unable to convert resource selector selector `not_in` in value to string %w", err)
+			}
+			selectors[j] = &armpolicy.Selector{
+				Kind:  to.Ptr(armpolicy.SelectorKind(s.Kind.ValueString())),
+				In:    to.SliceOfPtrs(in...),
+				NotIn: to.SliceOfPtrs(notIn...),
+			}
+		}
+		res[i] = &armpolicy.ResourceSelector{
+			Name:      to.Ptr(rs.Name.ValueString()),
+			Selectors: selectors,
+		}
+	}
+	return res, nil
+}
+
+func convertPolicyAssignmentEnforcementModeToSdkType(src types.String) *armpolicy.EnforcementMode {
+	if !isKnown(src) {
 		return nil
 	}
-	res := make(map[string]*armpolicy.ParameterValuesValue, len(src))
-	for k, v := range src {
+	switch src.ValueString() {
+	case "DoNotEnforce":
+		return to.Ptr(armpolicy.EnforcementModeDoNotEnforce)
+	case "Default":
+		return to.Ptr(armpolicy.EnforcementModeDefault)
+	}
+	return nil
+}
+
+func convertPolicyAssignmentNonComplianceMessagesToSdkType(src []PolicyAssignmentNonComplianceMessage) []*armpolicy.NonComplianceMessage {
+	res := make([]*armpolicy.NonComplianceMessage, len(src))
+	if len(src) > 0 {
+		for i, msg := range src {
+			res[i] = &armpolicy.NonComplianceMessage{
+				Message: to.Ptr(msg.Message.ValueString()),
+			}
+			if isKnown(msg.PolicyDefinitionReferenceId) {
+				res[i].PolicyDefinitionReferenceID = to.Ptr(msg.PolicyDefinitionReferenceId.ValueString())
+			}
+		}
+	}
+	return res
+}
+
+func convertPolicyAssignmentIdentityToSdkType(typ types.String, ids types.Set) (*armpolicy.Identity, error) {
+	if !isKnown(typ) {
+		return nil, nil
+	}
+	var identity *armpolicy.Identity
+	switch typ.ValueString() {
+	case "SystemAssigned":
+		identity = to.Ptr(armpolicy.Identity{
+			Type: to.Ptr(armpolicy.ResourceIdentityTypeSystemAssigned),
+		})
+	case "UserAssigned":
+		if ids.IsUnknown() {
+			return nil, nil
+		}
+		var id string
+		if len(ids.Elements()) != 1 {
+			return nil, fmt.Errorf("one (and only one) identity id is required for user assigned identity")
+		}
+		idStr, ok := ids.Elements()[0].(types.String)
+		if !ok {
+			return nil, fmt.Errorf("unable to convert identity id to string")
+		}
+		id = idStr.ValueString()
+
+		identity = to.Ptr(armpolicy.Identity{
+			Type:                   to.Ptr(armpolicy.ResourceIdentityTypeUserAssigned),
+			UserAssignedIdentities: map[string]*armpolicy.UserAssignedIdentitiesValue{id: {}},
+		})
+	default:
+		return nil, fmt.Errorf("unknown identity type: %s", typ.ValueString())
+	}
+	return identity, nil
+}
+
+// convertPolicyAssignmentParametersToSdkType converts a map[string]any to a map[string]*armpolicy.ParameterValuesValue.
+func convertPolicyAssignmentParametersToSdkType(src alztypes.PolicyParameterValue) (map[string]*armpolicy.ParameterValuesValue, error) {
+	if !isKnown(src) {
+		return nil, nil
+	}
+	params := make(map[string]any)
+	if err := json.Unmarshal([]byte(src.ValueString()), &params); err != nil {
+		return nil, fmt.Errorf("unable to unmarshal policy parameters: %w", err)
+	}
+	if len(params) == 0 {
+		return nil, nil
+	}
+	res := make(map[string]*armpolicy.ParameterValuesValue, len(params))
+	for k, v := range params {
 		val := new(armpolicy.ParameterValuesValue)
 		val.Value = v
 		res[k] = val
 	}
-	return res
+	return res, nil
 }
 
 func isKnown(val attr.Value) bool {

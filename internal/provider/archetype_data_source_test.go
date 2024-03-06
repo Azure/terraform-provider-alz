@@ -14,13 +14,11 @@ import (
 	"github.com/Azure/alzlib/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy"
 	"github.com/Azure/terraform-provider-alz/internal/alztypes"
-	mapset "github.com/deckarep/golang-set/v2"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
+
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // TestAccAlzArchetypeDataSource tests the data source for alz_archetype.
@@ -91,7 +89,7 @@ data "alz_archetype" "test" {
     log_analytics_workspace_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg/providers/Microsoft.OperationalInsights/workspaces/la"
   }
 
-  policy_assignments_to_add = {
+  policy_assignments_to_modify = {
     BlobServicesDiagnosticsLogsToWorkspace = {
       parameters = jsonencode({
         logAnalytics = "test"
@@ -222,54 +220,30 @@ output "test" {
 `
 }
 
-// TestAddAttrStringElementsToSet tests that addAttrStringElementsToSet adds a value to a set.
-func TestAddAttrStringElementsToSet(t *testing.T) {
-	arch := &alzlib.Archetype{
-		PolicyDefinitions: mapset.NewThreadUnsafeSet[string]("a", "b", "c"),
-	}
-	vals := []attr.Value{
-		basetypes.NewStringValue("d"),
-	}
-	assert.NoError(t, addAttrStringElementsToSet(arch.PolicyDefinitions, vals))
-	assert.True(t, arch.PolicyDefinitions.Contains("d"))
-}
+// func TestConvertPolicyAssignmentParametersToSdkType(t *testing.T) {
+// 	// Test with nil input
+// 	res := convertPolicyAssignmentParametersToSdkType(nil)
+// 	assert.Nil(t, res)
 
-// TestDeleteAttrStringElementsToSet tests that deleteAttrStringElementsToSet removes a value from a set.
-func TestDeleteAttrStringElementsToSet(t *testing.T) {
-	arch := &alzlib.Archetype{
-		PolicyDefinitions: mapset.NewThreadUnsafeSet[string]("a", "b", "c"),
-	}
-	vals := []attr.Value{
-		basetypes.NewStringValue("c"),
-	}
-	assert.NoError(t, deleteAttrStringElementsFromSet(arch.PolicyDefinitions, vals))
-	assert.True(t, !arch.PolicyDefinitions.Contains("c"))
-}
+// 	// Test with empty input
+// 	res = convertPolicyAssignmentParametersToSdkType(make(map[string]interface{}))
+// 	assert.NotNil(t, res)
+// 	assert.Empty(t, res)
 
-func TestConvertPolicyAssignmentParametersToSdkType(t *testing.T) {
-	// Test with nil input
-	res := convertPolicyAssignmentParametersToSdkType(nil)
-	assert.Nil(t, res)
-
-	// Test with empty input
-	res = convertPolicyAssignmentParametersToSdkType(make(map[string]interface{}))
-	assert.NotNil(t, res)
-	assert.Empty(t, res)
-
-	// Test with non-empty input
-	src := map[string]interface{}{
-		"param1": "value1",
-		"param2": 123,
-		"param3": true,
-	}
-	res = convertPolicyAssignmentParametersToSdkType(src)
-	assert.NotNil(t, res)
-	assert.Len(t, res, len(src))
-	for k, v := range src {
-		assert.Contains(t, res, k)
-		assert.Equal(t, v, res[k].Value)
-	}
-}
+// 	// Test with non-empty input
+// 	src := map[string]interface{}{
+// 		"param1": "value1",
+// 		"param2": 123,
+// 		"param3": true,
+// 	}
+// 	res = convertPolicyAssignmentParametersToSdkType(src)
+// 	assert.NotNil(t, res)
+// 	assert.Len(t, res, len(src))
+// 	for k, v := range src {
+// 		assert.Contains(t, res, k)
+// 		assert.Equal(t, v, res[k].Value)
+// 	}
+// }
 
 func TestConvertAlzPolicyRoleAssignments(t *testing.T) {
 	// Test with nil input
@@ -301,223 +275,258 @@ func TestConvertAlzPolicyRoleAssignments(t *testing.T) {
 	}
 }
 
-func TestPolicyAssignmentType2ArmPolicyAssignment(t *testing.T) {
-	t.Parallel()
+// TestPolicyAssignmentType2ArmPolicyValues tests the policyAssignmentType2ArmPolicyValues function.
+func TestPolicyAssignmentType2ArmPolicyValues(t *testing.T) {
+	paramsIn, _ := alztypes.PolicyParameterType{}.ValueFromString(context.Background(), types.StringValue(`{
+		"param1": "value1",
+		"param2": 123,
+		"param3": true
+	}`))
+	pa := PolicyAssignmentType{ //nolint:forcetypeassert
+		EnforcementMode: types.StringValue("DoNotEnforce"),
+		NonComplianceMessage: []PolicyAssignmentNonComplianceMessage{
+			{
+				Message:                     types.StringValue("Non-compliance message 1"),
+				PolicyDefinitionReferenceId: types.StringValue("PolicyDefinition1"),
+			},
+			{
+				Message:                     types.StringValue("Non-compliance message 2"),
+				PolicyDefinitionReferenceId: types.StringValue("PolicyDefinition2"),
+			},
+		},
+		Parameters: paramsIn.(alztypes.PolicyParameterValue),
+	}
 
-	az := alzlib.NewAlzLib()
+	enforcementMode, identity, nonComplianceMessages, parameters, _, _, err := policyAssignmentType2ArmPolicyValues(pa)
 
-	require.NoError(t, az.Init(context.Background(), os.DirFS("testdata/testacc_lib")))
+	assert.NoError(t, err)
+	assert.Equal(t, armpolicy.EnforcementModeDoNotEnforce, *enforcementMode)
+	assert.Nil(t, identity)
+	assert.Len(t, nonComplianceMessages, 2)
+	assert.Equal(t, "Non-compliance message 1", *nonComplianceMessages[0].Message)
+	assert.Equal(t, "PolicyDefinition1", *nonComplianceMessages[0].PolicyDefinitionReferenceID)
+	assert.Equal(t, "Non-compliance message 2", *nonComplianceMessages[1].Message)
+	assert.Equal(t, "PolicyDefinition2", *nonComplianceMessages[1].PolicyDefinitionReferenceID)
+	assert.Len(t, parameters, 3)
+	assert.Equal(t, "value1", parameters["param1"].Value)
+	assert.Equal(t, float64(123), parameters["param2"].Value)
+	assert.Equal(t, true, parameters["param3"].Value)
+}
 
-	testCases := []struct {
-		name     string
-		input    map[string]PolicyAssignmentType
-		expected map[string]*armpolicy.Assignment
-		err      error
-	}{
+// TestConvertPolicyAssignmentParametersToSdkType tests the convertPolicyAssignmentParametersToSdkType function.
+func TestConvertPolicyAssignmentParametersToSdkType(t *testing.T) {
+	// Test with nil input
+	var src alztypes.PolicyParameterValue
+	var res map[string]*armpolicy.ParameterValuesValue
+	res, err := convertPolicyAssignmentParametersToSdkType(src)
+	assert.NoError(t, err)
+	assert.Nil(t, res)
+
+	// Test with empty input
+	src = alztypes.PolicyParameterValue{}
+	res, err = convertPolicyAssignmentParametersToSdkType(src)
+	assert.NoError(t, err)
+	assert.Nil(t, res)
+
+	// Test with non-empty input
+	params, _ := alztypes.PolicyParameterType{}.ValueFromString(context.Background(), types.StringValue(`{
+		"param1": "value1",
+		"param2": 123,
+		"param3": true
+	}`))
+	src = params.(alztypes.PolicyParameterValue) //nolint:forcetypeassert
+
+	res, err = convertPolicyAssignmentParametersToSdkType(src)
+	assert.NoError(t, err)
+	assert.NotNil(t, res)
+	assert.Len(t, res, 3)
+	assert.Equal(t, "value1", res["param1"].Value)
+	assert.Equal(t, float64(123), res["param2"].Value)
+	assert.Equal(t, true, res["param3"].Value)
+}
+
+func TestConvertPolicyAssignmentEnforcementModeToSdkType(t *testing.T) {
+	// Test with unknown enforcement mode
+	src := types.StringValue("Unknown")
+	res := convertPolicyAssignmentEnforcementModeToSdkType(src)
+	assert.Nil(t, res)
+
+	// Test with DoNotEnforce enforcement mode
+	src = types.StringValue("DoNotEnforce")
+	res = convertPolicyAssignmentEnforcementModeToSdkType(src)
+	assert.NotNil(t, res)
+	assert.Equal(t, armpolicy.EnforcementModeDoNotEnforce, *res)
+
+	// Test with Default enforcement mode
+	src = types.StringValue("Default")
+	res = convertPolicyAssignmentEnforcementModeToSdkType(src)
+	assert.NotNil(t, res)
+	assert.Equal(t, armpolicy.EnforcementModeDefault, *res)
+}
+
+func TestConvertPolicyAssignmentNonComplianceMessagesToSdkType(t *testing.T) {
+	src := []PolicyAssignmentNonComplianceMessage{
 		{
-			name:     "empty input",
-			input:    map[string]PolicyAssignmentType{},
-			expected: map[string]*armpolicy.Assignment{},
-			err:      nil,
+			Message:                     types.StringValue("message1"),
+			PolicyDefinitionReferenceId: types.StringValue("policy1"),
 		},
 		{
-			name: "policy definition id and display name",
-			input: map[string]PolicyAssignmentType{
-				"test1": {
-					PolicyDefinitionName: types.StringValue("BlobServicesDiagnosticsLogsToWorkspace"),
-					DisplayName:          types.StringValue("BlobServicesDiagnosticsLogsToWorkspace"),
-				},
-			},
-			expected: map[string]*armpolicy.Assignment{
-				"test1": {
-					ID:   to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyAssignments/test1"),
-					Name: to.Ptr("test1"),
-					Type: to.Ptr("Microsoft.Authorization/policyAssignments"),
-					Properties: &armpolicy.AssignmentProperties{
-						DisplayName:           to.Ptr("BlobServicesDiagnosticsLogsToWorkspace"),
-						PolicyDefinitionID:    to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyDefinitions/BlobServicesDiagnosticsLogsToWorkspace"),
-						EnforcementMode:       nil,
-						NonComplianceMessages: []*armpolicy.NonComplianceMessage(nil),
-						Parameters:            map[string]*armpolicy.ParameterValuesValue(nil),
-					},
-				},
-			},
-			err: nil,
-		},
-		{
-			name: "policy definition id",
-			input: map[string]PolicyAssignmentType{
-				"test1": {
-					PolicyDefinitionName: types.StringValue("BlobServicesDiagnosticsLogsToWorkspace"),
-				},
-			},
-			expected: map[string]*armpolicy.Assignment{
-				"test1": {
-					ID:   to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyAssignments/test1"),
-					Name: to.Ptr("test1"),
-					Type: to.Ptr("Microsoft.Authorization/policyAssignments"),
-					Properties: &armpolicy.AssignmentProperties{
-						DisplayName:           nil,
-						PolicyDefinitionID:    to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyDefinitions/BlobServicesDiagnosticsLogsToWorkspace"),
-						EnforcementMode:       nil,
-						NonComplianceMessages: []*armpolicy.NonComplianceMessage(nil),
-						Parameters:            map[string]*armpolicy.ParameterValuesValue(nil),
-					},
-				},
-			},
-			err: nil,
-		},
-		{
-			name: "policy set definition id",
-			input: map[string]PolicyAssignmentType{
-				"test2": {
-					PolicySetDefinitionName: types.StringValue("test"),
-				},
-			},
-			expected: map[string]*armpolicy.Assignment{
-				"test2": {
-					ID:   to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyAssignments/test2"),
-					Name: to.Ptr("test2"),
-					Type: to.Ptr("Microsoft.Authorization/policyAssignments"),
-					Properties: &armpolicy.AssignmentProperties{
-						DisplayName:           nil,
-						PolicyDefinitionID:    to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policySetDefinitions/test"),
-						EnforcementMode:       nil,
-						NonComplianceMessages: []*armpolicy.NonComplianceMessage(nil),
-						Parameters:            map[string]*armpolicy.ParameterValuesValue(nil),
-					},
-				},
-			},
-			err: nil,
-		},
-		{
-			name: "policy definition id and enforcement mode",
-			input: map[string]PolicyAssignmentType{
-				"test3": {
-					PolicyDefinitionName: types.StringValue("BlobServicesDiagnosticsLogsToWorkspace"),
-					EnforcementMode:      types.StringValue("DoNotEnforce"),
-				},
-			},
-			expected: map[string]*armpolicy.Assignment{
-				"test3": {
-					ID:   to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyAssignments/test3"),
-					Name: to.Ptr("test3"),
-					Type: to.Ptr("Microsoft.Authorization/policyAssignments"),
-					Properties: &armpolicy.AssignmentProperties{
-						DisplayName:           nil,
-						PolicyDefinitionID:    to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyDefinitions/BlobServicesDiagnosticsLogsToWorkspace"),
-						EnforcementMode:       to.Ptr(armpolicy.EnforcementModeDoNotEnforce),
-						NonComplianceMessages: []*armpolicy.NonComplianceMessage(nil),
-						Parameters:            map[string]*armpolicy.ParameterValuesValue(nil),
-					},
-				},
-			},
-			err: nil,
-		},
-		{
-			name: "policy definition id and non-compliance message",
-			input: map[string]PolicyAssignmentType{
-				"test4": {
-					PolicyDefinitionName: types.StringValue("BlobServicesDiagnosticsLogsToWorkspace"),
-					NonComplianceMessage: []PolicyAssignmentNonComplianceMessage{
-						{
-							Message: types.StringValue("test message"),
-						},
-					},
-				},
-			},
-			expected: map[string]*armpolicy.Assignment{
-				"test4": {
-					ID:   to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyAssignments/test4"),
-					Name: to.Ptr("test4"),
-					Type: to.Ptr("Microsoft.Authorization/policyAssignments"),
-					Properties: &armpolicy.AssignmentProperties{
-						DisplayName:        nil,
-						PolicyDefinitionID: to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyDefinitions/BlobServicesDiagnosticsLogsToWorkspace"),
-						EnforcementMode:    nil,
-						NonComplianceMessages: []*armpolicy.NonComplianceMessage{
-							{
-								Message:                     to.Ptr("test message"),
-								PolicyDefinitionReferenceID: nil,
-							},
-						},
-						Parameters: map[string]*armpolicy.ParameterValuesValue(nil),
-					},
-				},
-			},
-			err: nil,
-		},
-		{
-			name: "policy definition id and parameters",
-			input: map[string]PolicyAssignmentType{
-				"test5": {
-					PolicyDefinitionName: types.StringValue("BlobServicesDiagnosticsLogsToWorkspace"),
-					Parameters: alztypes.PolicyParameterValue{
-						StringValue: types.StringValue(`{"param1": "value1", "param2": 2}`),
-					},
-				},
-			},
-			expected: map[string]*armpolicy.Assignment{
-				"test5": {
-					ID:   to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyAssignments/test5"),
-					Name: to.Ptr("test5"),
-					Type: to.Ptr("Microsoft.Authorization/policyAssignments"),
-					Properties: &armpolicy.AssignmentProperties{
-						DisplayName:           nil,
-						PolicyDefinitionID:    to.Ptr("/providers/Microsoft.Management/managementGroups/placeholder/providers/Microsoft.Authorization/policyDefinitions/BlobServicesDiagnosticsLogsToWorkspace"),
-						EnforcementMode:       nil,
-						NonComplianceMessages: []*armpolicy.NonComplianceMessage(nil),
-						Parameters: map[string]*armpolicy.ParameterValuesValue{
-							"param1": {Value: "value1"},
-							"param2": {Value: float64(2)},
-						},
-					},
-				},
-			},
-			err: nil,
-		},
-		{
-			name: "unknown policy definition name",
-			input: map[string]PolicyAssignmentType{
-				"test6": {
-					PolicyDefinitionName: types.StringValue("unknown"),
-				},
-			},
-			expected: nil,
-			err:      fmt.Errorf("policy definition unknown not found in AlzLib"),
-		},
-		{
-			name: "unknown policy set definition name",
-			input: map[string]PolicyAssignmentType{
-				"test7": {
-					PolicySetDefinitionName: types.StringValue("unknown"),
-				},
-			},
-			expected: nil,
-			err:      fmt.Errorf("policy set definition unknown not found in AlzLib"),
+			Message: types.StringValue("message2"),
 		},
 	}
 
-	for _, tc := range testCases {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			actual, err := policyAssignmentType2ArmPolicyAssignment(tc.input, az)
-			require.Equal(t, tc.err, err)
-			if tc.err != nil {
-				return
-			}
-			for ek, ev := range tc.expected {
-				assert.Equal(t, *ev.ID, *actual[ek].ID)
-				assert.Equal(t, *ev.Name, *actual[ek].Name)
-				assert.Equal(t, *ev.Type, *actual[ek].Type)
-				assert.Equal(t, ev.Properties.DisplayName, actual[ek].Properties.DisplayName)
-				assert.Equal(t, *ev.Properties.PolicyDefinitionID, *actual[ek].Properties.PolicyDefinitionID)
-				assert.Equal(t, ev.Properties.EnforcementMode, actual[ek].Properties.EnforcementMode)
-				assert.Equal(t, ev.Properties.NonComplianceMessages, actual[ek].Properties.NonComplianceMessages)
-				assert.Equal(t, ev.Properties.Parameters, actual[ek].Properties.Parameters)
-			}
-			//assert.Equal(t, tc.expected, actual)
-		})
+	expected := []*armpolicy.NonComplianceMessage{
+		{
+			Message:                     to.Ptr("message1"),
+			PolicyDefinitionReferenceID: to.Ptr("policy1"),
+		},
+		{
+			Message: to.Ptr("message2"),
+		},
 	}
+
+	result := convertPolicyAssignmentNonComplianceMessagesToSdkType(src)
+	assert.Equal(t, expected, result)
+}
+
+// TestConvertPolicyAssignmentIdentityToSdkType tests the convertPolicyAssignmentIdentityToSdkType function.
+func TestConvertPolicyAssignmentIdentityToSdkType(t *testing.T) {
+	// Test with unknown identity type
+	typ := types.StringValue("UnknownType")
+	ids := basetypes.NewSetUnknown(types.StringType)
+	identity, err := convertPolicyAssignmentIdentityToSdkType(typ, ids)
+	assert.Nil(t, identity)
+	assert.EqualError(t, err, "unknown identity type: UnknownType")
+
+	// Test with SystemAssigned identity type
+	typ = types.StringValue("SystemAssigned")
+	ids = basetypes.NewSetNull(types.StringType)
+	identity, err = convertPolicyAssignmentIdentityToSdkType(typ, ids)
+	assert.NotNil(t, identity)
+	assert.NoError(t, err)
+	assert.Equal(t, armpolicy.ResourceIdentityTypeSystemAssigned, *identity.Type)
+
+	// Test with UserAssigned identity type and empty ids
+	typ = types.StringValue("UserAssigned")
+	ids = basetypes.NewSetNull(types.StringType)
+	identity, err = convertPolicyAssignmentIdentityToSdkType(typ, ids)
+	assert.Nil(t, identity)
+	assert.EqualError(t, err, "one (and only one) identity id is required for user assigned identity")
+
+	// Test with UserAssigned identity type and multiple ids
+	typ = types.StringValue("UserAssigned")
+	ids, _ = types.SetValueFrom(context.Background(), types.StringType, []string{"id1", "id2"})
+	identity, err = convertPolicyAssignmentIdentityToSdkType(typ, ids)
+	assert.Nil(t, identity)
+	assert.EqualError(t, err, "one (and only one) identity id is required for user assigned identity")
+
+	// Test with UserAssigned identity type and valid id
+	typ = types.StringValue("UserAssigned")
+	ids, _ = types.SetValueFrom(context.Background(), types.StringType, []string{"id1"})
+	identity, err = convertPolicyAssignmentIdentityToSdkType(typ, ids)
+	assert.NotNil(t, identity)
+	assert.NoError(t, err)
+	assert.Equal(t, armpolicy.ResourceIdentityTypeUserAssigned, *identity.Type)
+	assert.Len(t, identity.UserAssignedIdentities, 1)
+	assert.Contains(t, identity.UserAssignedIdentities, "id1")
+}
+
+func TestConvertPolicyAssignmentResourceSelectorsToSdkType(t *testing.T) {
+	ctx := context.Background()
+
+	rs1s1in, _ := basetypes.NewSetValueFrom(ctx, types.StringType, []string{"in1", "in2"})
+	rs1s1notIn, _ := basetypes.NewSetValueFrom(ctx, types.StringType, []string{"notin1", "notin2"})
+	rs1s2in, _ := basetypes.NewSetValueFrom(ctx, types.StringType, []string{"in3", "in4"})
+	rs1s2notIn, _ := basetypes.NewSetValueFrom(ctx, types.StringType, []string{"notin3", "notin4"})
+	rs2s1in, _ := basetypes.NewSetValueFrom(ctx, types.StringType, []string{"in5", "in6"})
+	rs2s1notIn, _ := basetypes.NewSetValueFrom(ctx, types.StringType, []string{"notin5", "notin6"})
+
+	notSetStringType, _ := basetypes.NewSetValueFrom(ctx, types.BoolType, []bool{true})
+	t.Run("EmptyInput", func(t *testing.T) {
+		src := []ResourceSelectorType{}
+		res, err := convertPolicyAssignmentResourceSelectorsToSdkType(src)
+		assert.NoError(t, err)
+		assert.Nil(t, res)
+	})
+
+	t.Run("NonEmptyInput", func(t *testing.T) {
+		src := []ResourceSelectorType{
+			{
+				Name: types.StringValue("selector1"),
+				Selectors: []ResourceSelectorSelectorType{
+					{
+						Kind:  types.StringValue("kind1"),
+						In:    rs1s1in,
+						NotIn: rs1s1notIn,
+					},
+					{
+						Kind:  types.StringValue("kind2"),
+						In:    rs1s2in,
+						NotIn: rs1s2notIn,
+					},
+				},
+			},
+			{
+				Name: types.StringValue("selector2"),
+				Selectors: []ResourceSelectorSelectorType{
+					{
+						Kind:  types.StringValue("kind3"),
+						In:    rs2s1in,
+						NotIn: rs2s1notIn,
+					},
+				},
+			},
+		}
+
+		expected := []*armpolicy.ResourceSelector{
+			{
+				Name: to.Ptr("selector1"),
+				Selectors: []*armpolicy.Selector{
+					{
+						Kind:  to.Ptr(armpolicy.SelectorKind("kind1")),
+						In:    to.SliceOfPtrs("in1", "in2"),
+						NotIn: to.SliceOfPtrs("notin1", "notin2"),
+					},
+					{
+						Kind:  to.Ptr(armpolicy.SelectorKind("kind2")),
+						In:    to.SliceOfPtrs("in3", "in4"),
+						NotIn: to.SliceOfPtrs("notin3", "notin4"),
+					},
+				},
+			},
+			{
+				Name: to.Ptr("selector2"),
+				Selectors: []*armpolicy.Selector{
+					{
+						Kind:  to.Ptr(armpolicy.SelectorKind("kind3")),
+						In:    to.SliceOfPtrs("in5", "in6"),
+						NotIn: to.SliceOfPtrs("notin5", "notin6"),
+					},
+				},
+			},
+		}
+
+		res, err := convertPolicyAssignmentResourceSelectorsToSdkType(src)
+		assert.NoError(t, err)
+		assert.Equal(t, expected, res)
+	})
+
+	t.Run("ConversionError", func(t *testing.T) {
+		src := []ResourceSelectorType{
+			{
+				Name: types.StringValue("selector1"),
+				Selectors: []ResourceSelectorSelectorType{
+					{
+						Kind: types.StringValue("kind1"),
+						In:   notSetStringType,
+					},
+				},
+			},
+		}
+
+		// Simulate an error during conversion
+		res, err := convertPolicyAssignmentResourceSelectorsToSdkType(src)
+		assert.ErrorContains(t, err, "unable to convert resource selector selector `in` in value to string expected string, got basetypes.BoolValue")
+		assert.Nil(t, res)
+	})
 }

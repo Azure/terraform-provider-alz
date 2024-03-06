@@ -11,7 +11,7 @@ description: |-
 
 # {{ upper .ProviderShortName }}
 
-Use the Azure Landing Zones (ALZ) provider to generate data to allow you to easily provision your ALZ configuration.
+Use the Azure Landing Zones (ALZ) provider to generate data to allow you to simplify provisioning of your ALZ configuration.
 Its principal use is to generate data to deploy resources with the [AzureRM](https://github.com/Azure/terraform-provider-azurerm) provider.
 However, the provider does deploy some resources directly, in order to work around limitations in Terraform.
 
@@ -44,3 +44,21 @@ As this provider is still at version zero, you should constrain the acceptable
 provider versions on the minor version.
 
 {{ .SchemaMarkdown | trimspace }}
+
+
+## Azure Landing Zones Library
+
+The provider will download the Azure Landing Zones Library from the [Azure Landing Zones Library GitHub repository](https://github.com/Azure/Azure-Landing-Zones-Library).
+The asserts are in the `platform/alz` directory and are version tagged in order to provide a consistent experience.
+Within the library are the following types of asserts:
+
+- **policy definitions** - These are the policy definitions that are used to enforce the policies in the Azure Policy service.
+- **policy assignments** - These are the policy assignments that are used to assign the policy definitions to the appropriate scope.
+- **policy set definitions** - These are the policy set definitions that are used to group policy definitions together.
+- **role definitions** - These are the role definitions that are used to define the roles in the Azure Role-Based Access Control (RBAC) service.
+- **archetype definitions** - These group together the policy definitions, policy assignments, policy set definitions, and role definitions that and can be assigned to a management group.
+- **archetype overrides** - These create new archetypes based off an existing archetype.
+
+~> **Important** If the provider does not have access to download the library, please download and use the `lib_urls` to specify the local directory.
+
+For more information please visit the [GitHub repository](https://github.com/Azure/Azure-Landing-Zones-Library).

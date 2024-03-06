@@ -41,14 +41,7 @@ data "alz_archetype" "example" {
 ### Optional
 
 - `display_name` (String) The display name of the management group.
-- `policy_assignments_to_add` (Attributes Map) A map of policy assignments names to add to the archetype. The map key is the policy assignment name.You can also update existing policy assignments by using the same map key as an existing policy assignment name.The nested attributes will be merged with the existing policy assignment so you do not need to re-declare everything. (see [below for nested schema](#nestedatt--policy_assignments_to_add))
-- `policy_assignments_to_remove` (Set of String) A list of policy assignment names to remove from the archetype.
-- `policy_definitions_to_add` (Set of String) A list of policy definition names to add to the archetype.
-- `policy_definitions_to_remove` (Set of String) A list of policy definition names to remove from the archetype.
-- `policy_set_definitions_to_add` (Set of String) A list of policy set definition names to add to the archetype.
-- `policy_set_definitions_to_remove` (Set of String) A list of policy set definition names to remove from the archetype.
-- `role_definitions_to_add` (Set of String) A list of role definition names to add to the archetype.
-- `role_definitions_to_remove` (Set of String) A list of role definition names to remove from the archetype.
+- `policy_assignments_to_modify` (Attributes Map) A map of policy assignments names to change in the archetype. The map key is the policy assignment name.The policy assignment **must** exist in the archetype.The nested attributes will be merged with the existing policy assignment so you do not need to re-declare everything. (see [below for nested schema](#nestedatt--policy_assignments_to_modify))
 
 ### Read-Only
 
@@ -71,23 +64,23 @@ Optional:
 - `private_dns_zone_resource_group_id` (String) Resource group resource id containing private DNS zones. Used in the Deploy-Private-DNS-Zones assignment.
 
 
-<a id="nestedatt--policy_assignments_to_add"></a>
-### Nested Schema for `policy_assignments_to_add`
+<a id="nestedatt--policy_assignments_to_modify"></a>
+### Nested Schema for `policy_assignments_to_modify`
 
 Optional:
 
-- `display_name` (String) The policy assignment display name.
 - `enforcement_mode` (String) The enforcement mode of the policy assignment. Must be one of `Default`, or `DoNotEnforce`.
 - `identity` (String) The identity type. Must be one of `SystemAssigned` or `UserAssigned`.
-- `identity_ids` (Set of String) A list of identity ids to assign to the policy assignment. Required if `identity` is `UserAssigned`.
-- `non_compliance_message` (Attributes Set) The non-compliance messages to use for the policy assignment. (see [below for nested schema](#nestedatt--policy_assignments_to_add--non_compliance_message))
-- `parameters` (String) The parameters to use for the policy assignment. **Note:** This is a JSON string, and not a map. This is because the parameter values have different types, which confuses the type system used by the provider sdk. Use `jsonencode()` to construct the map. The map keys must be strings, the values are `any` type. Example: `jsonencode({"param1": "value1", "param2": 2})`
-- `policy_definition_id` (String) The resource id of the policy definition. Conflicts with `policy_definition_name` and `policy_set_definition_name`.
-- `policy_definition_name` (String) The name of the policy definition to assign. Must be in the AlzLib, if not use `policy_definition_id` instead. Conflicts with `policy_definition_id` and `policy_set_definition_name`.
-- `policy_set_definition_name` (String) The name of the policy set definition to assign. Must be in the AlzLib, if not use `policy_definition_id` instead. Conflicts with `policy_definition_id` and `policy_definition_name`.
+- `identity_ids` (Set of String) A list of zero or one identity ids to assign to the policy assignment. Required if `identity` is `UserAssigned`.
+- `non_compliance_message` (Attributes Set) The non-compliance messages to use for the policy assignment. (see [below for nested schema](#nestedatt--policy_assignments_to_modify--non_compliance_message))
+- `overrides` (Attributes List) The overrides for this policy assignment. There are a maximum of 10 overrides allowed per assignment. If specified here the overrides will replace the existing overrides.The overrides are processed in the order they are specified. (see [below for nested schema](#nestedatt--policy_assignments_to_modify--overrides))
+- `parameters` (String) The parameters to use for the policy assignment. **Note:** This is a JSON string, and not a map. This is because the parameter values have different types, which confuses the type system used by the provider sdk. Use `jsonencode()` to construct the map. The map keys must be strings, the values are `any` type.
 
-<a id="nestedatt--policy_assignments_to_add--non_compliance_message"></a>
-### Nested Schema for `policy_assignments_to_add.non_compliance_message`
+Example: `jsonencode({"param1": "value1", "param2": 2})`
+- `resource_selectors` (Attributes List) The resource selectors to use for the policy assignment. A maximum of 10 resource selectors are allowed per assignment. If specified here the resource selectors will replace the existing resource selectors. (see [below for nested schema](#nestedatt--policy_assignments_to_modify--resource_selectors))
+
+<a id="nestedatt--policy_assignments_to_modify--non_compliance_message"></a>
+### Nested Schema for `policy_assignments_to_modify.non_compliance_message`
 
 Required:
 
@@ -96,6 +89,59 @@ Required:
 Optional:
 
 - `policy_definition_reference_id` (String) The policy definition reference id (not the resource id) to use for the non compliance message. This references the definition within the policy set.
+
+
+<a id="nestedatt--policy_assignments_to_modify--overrides"></a>
+### Nested Schema for `policy_assignments_to_modify.overrides`
+
+Required:
+
+- `kind` (String) The property the assignment will override. The supported kind is `policyEffect`.
+- `value` (String) The new value which will override the existing value. The supported values are: `addToNetworkGroup`, `append`, `audit`, `auditIfNotExists`, `deny`, `denyAction`, `deployIfNotExists`, `disabled`, `manual`, `modify`, `mutate`.
+
+<https://learn.microsoft.com/azure/governance/policy/concepts/effects>
+
+Optional:
+
+- `selectors` (Attributes List) The selectors to use for the override. (see [below for nested schema](#nestedatt--policy_assignments_to_modify--overrides--selectors))
+
+<a id="nestedatt--policy_assignments_to_modify--overrides--selectors"></a>
+### Nested Schema for `policy_assignments_to_modify.overrides.selectors`
+
+Required:
+
+- `kind` (String) The property of a selector that describes what characteristic will narrow down the scope of the override. Allowed value for kind: `policyEffect` is: `policyDefinitionReferenceId`.
+
+Optional:
+
+- `in` (Set of String) The list of values that the selector will match. The values are the policy definition reference ids. Conflicts with `not_in`.
+- `not_in` (Set of String) The list of values that the selector will not match. The values are the policy definition reference ids. Conflicts with `in`.
+
+
+
+<a id="nestedatt--policy_assignments_to_modify--resource_selectors"></a>
+### Nested Schema for `policy_assignments_to_modify.resource_selectors`
+
+Required:
+
+- `name` (String) The name of the resource selector. The name must be unique within the assignment.
+
+Optional:
+
+- `selectors` (Attributes List) The selectors to use for the resource selector. (see [below for nested schema](#nestedatt--policy_assignments_to_modify--resource_selectors--selectors))
+
+<a id="nestedatt--policy_assignments_to_modify--resource_selectors--selectors"></a>
+### Nested Schema for `policy_assignments_to_modify.resource_selectors.selectors`
+
+Required:
+
+- `kind` (String) The property of a selector that describes what characteristic will narrow down the set of evaluated resources. Each kind can only be used once in a single resource selector. Allowed values are: `resourceLocation`, `resourceType`, `resourceWithoutLocation`. `resourceWithoutLocation` cannot be used in the same resource selector as `resourceLocation`.
+
+Optional:
+
+- `in` (Set of String) The list of values that the selector will match. The values are the policy definition reference ids. Conflicts with `in`.
+- `not_in` (Set of String) The list of values that the selector will not match. The values are the policy definition reference ids. Conflicts with `in`.
+
 
 
 
