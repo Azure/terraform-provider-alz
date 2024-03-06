@@ -282,7 +282,7 @@ func TestPolicyAssignmentType2ArmPolicyValues(t *testing.T) {
 		"param2": 123,
 		"param3": true
 	}`))
-	pa := PolicyAssignmentType{
+	pa := PolicyAssignmentType{ //nolint:forcetypeassert
 		EnforcementMode: types.StringValue("DoNotEnforce"),
 		NonComplianceMessage: []PolicyAssignmentNonComplianceMessage{
 			{
@@ -334,7 +334,7 @@ func TestConvertPolicyAssignmentParametersToSdkType(t *testing.T) {
 		"param2": 123,
 		"param3": true
 	}`))
-	src = params.(alztypes.PolicyParameterValue)
+	src = params.(alztypes.PolicyParameterValue) //nolint:forcetypeassert
 
 	res, err = convertPolicyAssignmentParametersToSdkType(src)
 	assert.NoError(t, err)
