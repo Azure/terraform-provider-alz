@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"time"
 
 	"github.com/Azure/alzlib"
 	"github.com/Azure/alzlib/to"
@@ -18,6 +19,7 @@ import (
 	"github.com/Azure/terraform-provider-alz/internal/typehelper"
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -34,6 +36,10 @@ import (
 
 // Ensure provider defined types fully satisfy framework interfaces.
 var _ datasource.DataSource = &ArchetypeDataSource{}
+
+const (
+	archetypeDataSourceReadTimeoutInMins = 5
+)
 
 func NewArchetypeDataSource() datasource.DataSource {
 	return &ArchetypeDataSource{}
@@ -72,6 +78,7 @@ type ArchetypeDataSourceModel struct {
 	Id                        types.String                           `tfsdk:"id"`
 	ParentId                  types.String                           `tfsdk:"parent_id"`
 	PolicyAssignmentsToModify map[string]PolicyAssignmentType        `tfsdk:"policy_assignments_to_modify"`
+	Timeouts                  timeouts.Value                         `tfsdk:"timeouts"`
 }
 
 // AlzPolicyRoleAssignmentType is a representation of the policy assignments
@@ -423,6 +430,11 @@ func (d *ArchetypeDataSource) Schema(ctx context.Context, req datasource.SchemaR
 				},
 			},
 		},
+		Blocks: map[string]schema.Block{
+			"timeouts": timeouts.Block(ctx, timeouts.Opts{
+				Read: true,
+			}),
+		},
 	}
 }
 
@@ -462,6 +474,12 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	readTimeout, diags := data.Timeouts.Create(ctx, archetypeDataSourceReadTimeoutInMins*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	ctx, cancel := context.WithTimeout(ctx, readTimeout)
+	defer cancel()
+
 	d.alz.mu.Lock()
 	defer d.alz.mu.Unlock()
 
@@ -550,7 +568,6 @@ func (d *ArchetypeDataSource) Read(ctx context.Context, req datasource.ReadReque
 
 	tflog.Debug(ctx, "Converting maps from Go types to Framework types")
 	var m basetypes.MapValue
-	var diags diag.Diagnostics
 
 	tflog.Debug(ctx, "Converting policy assignments")
 	m, diags = convertMapOfStringToMapValue(mg.GetPolicyAssignmentMap())
@@ -742,15 +759,17 @@ func convertPolicyAssignmentEnforcementModeToSdkType(src types.String) *armpolic
 }
 
 func convertPolicyAssignmentNonComplianceMessagesToSdkType(src []PolicyAssignmentNonComplianceMessage) []*armpolicy.NonComplianceMessage {
+	if len(src) == 0 {
+		return nil
+	}
 	res := make([]*armpolicy.NonComplianceMessage, len(src))
-	if len(src) > 0 {
-		for i, msg := range src {
-			res[i] = &armpolicy.NonComplianceMessage{
-				Message: to.Ptr(msg.Message.ValueString()),
-			}
-			if isKnown(msg.PolicyDefinitionReferenceId) {
-				res[i].PolicyDefinitionReferenceID = to.Ptr(msg.PolicyDefinitionReferenceId.ValueString())
-			}
+
+	for i, msg := range src {
+		res[i] = &armpolicy.NonComplianceMessage{
+			Message: to.Ptr(msg.Message.ValueString()),
+		}
+		if isKnown(msg.PolicyDefinitionReferenceId) {
+			res[i].PolicyDefinitionReferenceID = to.Ptr(msg.PolicyDefinitionReferenceId.ValueString())
 		}
 	}
 	return res
