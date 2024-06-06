@@ -126,8 +126,8 @@ github.com/hashicorp/go-cty v1.4.1-0.20200414143053-d3edf31b6320 h1:1/D3zfFHttUK
 github.com/hashicorp/go-cty v1.4.1-0.20200414143053-d3edf31b6320/go.mod h1:EiZBMaudVLy8fmjf9Npq1dq9RalhveqZG5w/yz3mHWs=
 github.com/hashicorp/go-getter v1.7.3 h1:bN2+Fw9XPFvOCjB0UOevFIMICZ7G2XSQHzfvLUyOM5E=
 github.com/hashicorp/go-getter v1.7.3/go.mod h1:W7TalhMmbPmsSMdNjD0ZskARur/9GJ17cfHTRtXV744=
-github.com/hashicorp/go-getter/v2 v2.2.1 h1:2JXqPZs1Jej67RtdTi0YZaEB2hEFB3fkBA4cPYKQwFQ=
-github.com/hashicorp/go-getter/v2 v2.2.1/go.mod h1:EcJx6oZE8hmGuRR1l38QrfnyiujQbwsEAn11eHv6l2M=
+github.com/hashicorp/go-getter/v2 v2.2.2 h1:Al5bzCNW5DrlZMK6TumGrSue7Xz8beyLcen+4N4erwo=
+github.com/hashicorp/go-getter/v2 v2.2.2/go.mod h1:hp5Yy0GMQvwWVUmwLs3ygivz1JSLI323hdIE9J9m7TY=
 github.com/hashicorp/go-hclog v1.6.3 h1:Qr2kF+eVWjTiYmU7Y31tYlP1h0q/X3Nl3tPGdaB11/k=
 github.com/hashicorp/go-hclog v1.6.3/go.mod h1:W4Qnvbt70Wk/zYJryRzDRU/4r0kIg0PVHBcfoyhpF5M=
 github.com/hashicorp/go-multierror v1.0.0/go.mod h1:dHtQlpGsu+cZNNAkkCN/P3hoUDHhCYQXV3UM06sGGrk=
