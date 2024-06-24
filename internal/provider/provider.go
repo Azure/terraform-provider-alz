@@ -29,6 +29,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -39,14 +40,16 @@ import (
 )
 
 const (
-	userAgentBase   = "AzureTerraformAlzProvider"
-	alzLibDirBase   = ".alzlib"
-	alzLibUrlFmtStr = "github.com/Azure/Azure-Landing-Zones-Library//platform/alz?"
-	alzLibRef       = "platform/alz/2024.03.00"
+	userAgentBase = "AzureTerraformAlzProvider"
+	alzLibDirBase = ".alzlib"
+	alzLibRef     = "2024.03.03"
 )
 
 // Ensure ScaffoldingProvider satisfies various provider interfaces.
-var _ provider.Provider = &AlzProvider{}
+var (
+	_ provider.Provider              = &AlzProvider{}
+	_ provider.ProviderWithFunctions = &AlzProvider{}
+)
 
 // AlzProvider defines the provider implementation.
 type AlzProvider struct {
@@ -69,7 +72,7 @@ type alzProviderData struct {
 
 // AlzProviderModel describes the provider data model.
 type AlzProviderModel struct {
-	AlzLibRef                 types.String `tfsdk:"alz_lib_ref"`
+	AlzLibraryReferences      types.List   `tfsdk:"alz_library_references"`
 	AuxiliaryTenantIds        types.List   `tfsdk:"auxiliary_tenant_ids"`
 	ClientCertificatePassword types.String `tfsdk:"client_certificate_password"`
 	ClientCertificatePath     types.String `tfsdk:"client_certificate_path"`
@@ -77,17 +80,20 @@ type AlzProviderModel struct {
 	ClientSecret              types.String `tfsdk:"client_secret"`
 	Environment               types.String `tfsdk:"environment"`
 	LibOverwriteEnabled       types.Bool   `tfsdk:"lib_overwrite_enabled"`
-	LibUrls                   types.List   `tfsdk:"lib_urls"`
 	OidcRequestToken          types.String `tfsdk:"oidc_request_token"`
 	OidcRequestUrl            types.String `tfsdk:"oidc_request_url"`
 	OidcToken                 types.String `tfsdk:"oidc_token"`
 	OidcTokenFilePath         types.String `tfsdk:"oidc_token_file_path"`
 	SkipProviderRegistration  types.Bool   `tfsdk:"skip_provider_registration"`
 	TenantId                  types.String `tfsdk:"tenant_id"`
-	UseAlzLib                 types.Bool   `tfsdk:"use_alz_lib"`
 	UseCli                    types.Bool   `tfsdk:"use_cli"`
 	UseMsi                    types.Bool   `tfsdk:"use_msi"`
 	UseOidc                   types.Bool   `tfsdk:"use_oidc"`
+}
+
+type AlzProviderModelLibraryReferences struct {
+	Path types.String `tfsdk:"path"`
+	Tag  types.String `tfsdk:"tag"`
 }
 
 func (p *AlzProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -149,15 +155,6 @@ func (p *AlzProvider) Schema(ctx context.Context, req provider.SchemaRequest, re
 				},
 			},
 
-			"lib_urls": schema.ListAttribute{
-				MarkdownDescription: "A list of directories or URLs to use for ALZ libraries. The URLs will be processed in order. See <https://pkg.go.dev/github.com/hashicorp/go-getter#readme-url-format> for URL syntax. Note that if use_alz_lib is set to true then it will always be the first library used.",
-				ElementType:         types.StringType,
-				Optional:            true,
-				Validators: []validator.List{
-					listvalidator.UniqueValues(),
-				},
-			},
-
 			"oidc_request_token": schema.StringAttribute{
 				MarkdownDescription: "The bearer token for the request to the OIDC provider. For use when authenticating using OpenID Connect. If not specified, value will be attempted to be read from the first non-empty value of the `ARM_OIDC_REQUEST_TOKEN` and `ACTIONS_ID_TOKEN_REQUEST_TOKEN` environment variables.",
 				Optional:            true,
@@ -193,15 +190,24 @@ func (p *AlzProvider) Schema(ctx context.Context, req provider.SchemaRequest, re
 				},
 			},
 
-			"use_alz_lib": schema.BoolAttribute{
-				MarkdownDescription: "Use the default ALZ library to resolve archetypes. Default is `true`. " +
-					"The ALZ library is always used first, and then the directories or URLs specified in `lib_urls` are used in order.",
-				Optional: true,
-			},
-
-			"alz_lib_ref": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf("The reference (tag) in the ALZ library to use. Default is `%s`.", alzLibRef),
-				Optional:            true,
+			"alz_library_references": schema.ListNestedAttribute{
+				MarkdownDescription: fmt.Sprintf("A list of references to the [ALZ library](https://aka.ms/alz/library) to use. Each reference should either contain the path (e.g. `platform/alz`) and the tag (e.g. `%s`), or a custom_url to be supplied to go-getter.\n", alzLibRef) +
+					"If this value is not specified, the default value will be used, which is:\n\n" +
+					"```terraform\n" +
+					"alz_library_references = [\n" +
+					"  { path = \"platform/alz\", tag = \"%s\" },\n" +
+					"]\n" +
+					"```\n\n",
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"path":       schema.StringAttribute{},
+						"tag":        schema.StringAttribute{},
+						"custom_url": schema.StringAttribute{},
+					},
+				},
+				Validators: []validator.List{
+					listvalidator.UniqueValues(),
+				},
 			},
 
 			"use_cli": schema.BoolAttribute{
@@ -325,15 +331,19 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 
 func (p *AlzProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		NewPolicyRoleAssignmentResource,
+		// NewPolicyRoleAssignmentResource,
 	}
 }
 
 func (p *AlzProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
-		NewArchetypeDataSource,
-		NewArchetypeKeysDataSource,
+		// NewArchetypeDataSource,
+		// NewArchetypeKeysDataSource,
 	}
+}
+
+func (p *AlzProvider) Functions(ctx context.Context) []func() function.Function {
+	return []func() function.Function{}
 }
 
 func New(version string) func() provider.Provider {
@@ -489,7 +499,10 @@ func configureAlzLib(token *azidentity.ChainedTokenCredential, data AlzProviderM
 	popts.DisableRPRegistration = data.SkipProviderRegistration.ValueBool()
 	popts.PerRetryPolicies = append(popts.PerRetryPolicies, withUserAgent(userAgent))
 
-	alz := alzlib.NewAlzLib()
+	opts := &alzlib.AlzLibOptions{
+		AllowOverwrite: data.LibOverwriteEnabled.ValueBool(),
+	}
+	alz := alzlib.NewAlzLib(opts)
 	cf, err := armpolicy.NewClientFactory("", token, popts)
 	if err != nil {
 		diags.AddError("failed to create Azure Policy client factory: %v", err.Error())
@@ -497,8 +510,6 @@ func configureAlzLib(token *azidentity.ChainedTokenCredential, data AlzProviderM
 	}
 
 	alz.AddPolicyClient(cf)
-
-	alz.Options.AllowOverwrite = data.LibOverwriteEnabled.ValueBool()
 
 	return alz, diags
 }
@@ -592,9 +603,22 @@ func configureDefaults(data *AlzProviderModel) {
 		data.LibOverwriteEnabled = types.BoolValue(false)
 	}
 
-	// Set alzLibRef
-	if data.AlzLibRef.IsNull() {
-		data.AlzLibRef = types.StringValue(alzLibRef)
+	// Set alz library references to the default value if not already set.
+	if data.AlzLibraryReferences.IsNull() {
+		elementType := types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"path": types.StringType,
+				"tag":  types.StringType,
+			},
+		}
+		element := types.ObjectValueMust(elementType.AttrTypes, map[string]attr.Value{
+			"path": types.StringValue("platform/alz"),
+			"tag":  types.StringValue(alzLibRef),
+		})
+		data.AlzLibraryReferences = types.ListValueMust(
+			elementType,
+			[]attr.Value{element},
+		)
 	}
 }
 

@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Azure/alzlib"
+	"github.com/Azure/alzlib/deployment"
 	"github.com/Azure/alzlib/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy"
 	"github.com/Azure/terraform-provider-alz/internal/alztypes"
@@ -252,12 +252,12 @@ func TestConvertAlzPolicyRoleAssignments(t *testing.T) {
 	assert.Empty(t, res)
 
 	// Test with empty input
-	res = convertAlzPolicyRoleAssignments(make([]alzlib.PolicyRoleAssignment, 0))
+	res = convertAlzPolicyRoleAssignments(make([]deployment.PolicyRoleAssignment, 0))
 	assert.Nil(t, res)
 	assert.Empty(t, res)
 
 	// Test with non-empty input
-	src := []alzlib.PolicyRoleAssignment{
+	src := []deployment.PolicyRoleAssignment{
 		{
 			RoleDefinitionId: "test1",
 			Scope:            "test1",
