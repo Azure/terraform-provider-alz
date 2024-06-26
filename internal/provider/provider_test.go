@@ -9,6 +9,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/Azure/terraform-provider-alz/internal/provider/gen"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -99,7 +100,7 @@ func TestConfigureFromEnvironment(t *testing.T) {
 	os.Unsetenv("ACTIONS_ID_TOKEN_REQUEST_URL")
 
 	// Test when no environment variable is set
-	data := &AlzProviderModel{}
+	data := &gen.AlzModel{}
 	configureFromEnvironment(data)
 	assert.True(t, data.ClientCertificatePassword.IsNull())
 	assert.True(t, data.ClientCertificatePath.IsNull())
@@ -120,7 +121,7 @@ func TestConfigureFromEnvironment(t *testing.T) {
 	t.Setenv("ARM_CLIENT_ID", "client_id")
 	t.Setenv("ARM_CLIENT_SECRET", "client_secret")
 	t.Setenv("ARM_TENANT_ID", "tenant_id")
-	data = &AlzProviderModel{}
+	data = &gen.AlzModel{}
 	configureFromEnvironment(data)
 	assert.Equal(t, "", data.ClientCertificatePassword.ValueString())
 	assert.Equal(t, "", data.ClientCertificatePath.ValueString())
@@ -155,7 +156,7 @@ func TestConfigureFromEnvironment(t *testing.T) {
 	t.Setenv("ARM_USE_MSI", "true")
 	t.Setenv("ARM_USE_OIDC", "true")
 	t.Setenv("ARM_SKIP_PROVIDER_REGISTRATION", "true")
-	data = &AlzProviderModel{}
+	data = &gen.AlzModel{}
 	configureFromEnvironment(data)
 	assert.Equal(t, "password", data.ClientCertificatePassword.ValueString())
 	assert.Equal(t, "path", data.ClientCertificatePath.ValueString())
@@ -190,7 +191,7 @@ func TestConfigureFromEnvironment(t *testing.T) {
 func TestConfigureAuxTenants(t *testing.T) {
 	// Test when no environment variable is set and data.AuxiliaryTenantIds is null
 	ctx := context.Background()
-	data := &AlzProviderModel{}
+	data := &gen.AlzModel{}
 	diags := configureAuxTenants(ctx, data)
 	assert.True(t, data.AuxiliaryTenantIds.IsNull())
 	assert.Empty(t, diags)
@@ -198,14 +199,14 @@ func TestConfigureAuxTenants(t *testing.T) {
 	// Test when no environment variable is set and data.AuxiliaryTenantIds is not null
 	auxTenants := []string{"tenant1", "tenant2"}
 	lv, _ := types.ListValueFrom(ctx, types.StringType, auxTenants)
-	data = &AlzProviderModel{AuxiliaryTenantIds: lv}
+	data = &gen.AlzModel{AuxiliaryTenantIds: lv}
 	diags = configureAuxTenants(context.Background(), data)
 	assert.Truef(t, data.AuxiliaryTenantIds.Equal(lv), "Expected %v, got %v", lv, data.AuxiliaryTenantIds)
 	assert.Empty(t, diags)
 
 	// Test when ARM_AUXILIARY_TENANT_IDS environment variable is set and data.AuxiliaryTenantIds is null
 	t.Setenv("ARM_AUXILIARY_TENANT_IDS", "tenant1;tenant2")
-	data = &AlzProviderModel{}
+	data = &gen.AlzModel{}
 	diags = configureAuxTenants(context.Background(), data)
 	assert.True(t, data.AuxiliaryTenantIds.Equal(lv))
 	assert.Empty(t, diags)
@@ -213,7 +214,7 @@ func TestConfigureAuxTenants(t *testing.T) {
 
 	// Test when ARM_AUXILIARY_TENANT_IDS environment variable is set and data.AuxiliaryTenantIds is not null
 	t.Setenv("ARM_AUXILIARY_TENANT_IDS", "tenant3;tenant4")
-	data = &AlzProviderModel{AuxiliaryTenantIds: lv}
+	data = &gen.AlzModel{AuxiliaryTenantIds: lv}
 	diags = configureAuxTenants(context.Background(), data)
 	assert.True(t, data.AuxiliaryTenantIds.Equal(lv))
 	assert.Empty(t, diags)
@@ -222,7 +223,7 @@ func TestConfigureAuxTenants(t *testing.T) {
 
 func TestConfigureAzIdentityEnvironment(t *testing.T) {
 	// Test when no data fields are set
-	data := &AlzProviderModel{}
+	data := &gen.AlzModel{}
 	configureAzIdentityEnvironment(data)
 	t.Setenv("AZURE_TENANT_ID", "")
 	t.Setenv("AZURE_CLIENT_ID", "")
@@ -242,7 +243,7 @@ func TestConfigureAzIdentityEnvironment(t *testing.T) {
 		types.StringValue("tenant3"),
 	})
 	// Test when all data fields are set
-	data = &AlzProviderModel{
+	data = &gen.AlzModel{
 		TenantId:                  types.StringValue("tenant1"),
 		ClientId:                  types.StringValue("client1"),
 		ClientSecret:              types.StringValue("secret1"),
@@ -304,40 +305,4 @@ func TestListElementsToStrings(t *testing.T) {
 	list = []attr.Value{basetypes.NewStringValue("value1"), types.NumberValue(big.NewFloat(1.0))}
 	result = listElementsToStrings(list)
 	assert.Nil(t, result)
-}
-
-func TestNewAlzProviderModelLibraryReferencesFromListType(t *testing.T) {
-	ctx := context.Background()
-
-	t.Run("EmptyList", func(t *testing.T) {
-		i := AlzProviderModelLibraryReferences{}
-		input := types.ListNull(i.FrameworkType())
-		expected := []*AlzProviderModelLibraryReferences{}
-		actual := NewAlzProviderModelLibraryReferencesFromListType(ctx, input)
-		assert.Equal(t, expected, actual)
-	})
-
-	t.Run("NonEmptyList", func(t *testing.T) {
-		i1 := AlzProviderModelLibraryReferences{
-			Path: types.StringValue("path1"),
-			Tag:  types.StringValue("tag1"),
-		}
-		i2 := AlzProviderModelLibraryReferences{
-			Path: types.StringValue("path1"),
-			Tag:  types.StringValue("tag1"),
-		}
-		input := types.ListValueMust(i1.FrameworkType(), []attr.Value{i1.FrameworkValue(), i2.FrameworkValue()})
-		expected := []*AlzProviderModelLibraryReferences{
-			{
-				Path: types.StringValue("path1"),
-				Tag:  types.StringValue("tag1"),
-			},
-			{
-				Path: types.StringValue("path2"),
-				Tag:  types.StringValue("tag2"),
-			},
-		}
-		actual := NewAlzProviderModelLibraryReferencesFromListType(ctx, input)
-		assert.Equal(t, expected, actual)
-	})
 }

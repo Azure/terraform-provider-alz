@@ -13,7 +13,7 @@ type ToGoPrimitive interface {
 	int64 | float64 | string | bool
 }
 
-func ToGo[T ToGoPrimitive](ctx context.Context, input attr.Value) *T {
+func PrimitiveToGo[T ToGoPrimitive](ctx context.Context, input attr.Value) *T {
 	ty := input.Type(ctx)
 	switch {
 	case ty == types.BoolType:

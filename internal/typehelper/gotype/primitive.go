@@ -14,7 +14,7 @@ type ToFrameworkPrimitive interface {
 	int64 | float64 | string | bool
 }
 
-func ToFramework[T ToFrameworkPrimitive](ctx context.Context, input *T) attr.Value {
+func PrimitiveToFramework[T ToFrameworkPrimitive](ctx context.Context, input *T) attr.Value {
 	switch {
 	case reflect.TypeOf(input) == reflect.TypeOf(to.Ptr(int64(0))):
 		if input == nil {

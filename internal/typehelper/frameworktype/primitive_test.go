@@ -5,9 +5,9 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/Azure/alzlib/to"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/matt-FFFFFF/frameworktypes/to"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -53,7 +53,7 @@ func TestToGo(t *testing.T) {
 		}
 		for _, tc := range testCases {
 			t.Run(tc.desc, func(t *testing.T) {
-				got := ToGo[float64](ctx, tc.in)
+				got := PrimitiveToGo[float64](ctx, tc.in)
 				assert.Equal(t, tc.want, got)
 			})
 		}
@@ -98,7 +98,7 @@ func TestToGo(t *testing.T) {
 		}
 		for _, tc := range testCases {
 			t.Run(tc.desc, func(t *testing.T) {
-				got := ToGo[int64](ctx, tc.in)
+				got := PrimitiveToGo[int64](ctx, tc.in)
 				assert.Equal(t, tc.want, got)
 			})
 		}
@@ -133,7 +133,7 @@ func TestToGo(t *testing.T) {
 		}
 		for _, tc := range testCases {
 			t.Run(tc.desc, func(t *testing.T) {
-				got := ToGo[string](ctx, tc.in)
+				got := PrimitiveToGo[string](ctx, tc.in)
 				assert.Equal(t, tc.want, got)
 			})
 		}
@@ -168,7 +168,7 @@ func TestToGo(t *testing.T) {
 		}
 		for _, tc := range testCases {
 			t.Run(tc.desc, func(t *testing.T) {
-				got := ToGo[bool](ctx, tc.in)
+				got := PrimitiveToGo[bool](ctx, tc.in)
 				assert.Equal(t, tc.want, got)
 			})
 		}
