@@ -305,3 +305,39 @@ func TestListElementsToStrings(t *testing.T) {
 	result = listElementsToStrings(list)
 	assert.Nil(t, result)
 }
+
+func TestNewAlzProviderModelLibraryReferencesFromListType(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("EmptyList", func(t *testing.T) {
+		i := AlzProviderModelLibraryReferences{}
+		input := types.ListNull(i.FrameworkType())
+		expected := []*AlzProviderModelLibraryReferences{}
+		actual := NewAlzProviderModelLibraryReferencesFromListType(ctx, input)
+		assert.Equal(t, expected, actual)
+	})
+
+	t.Run("NonEmptyList", func(t *testing.T) {
+		i1 := AlzProviderModelLibraryReferences{
+			Path: types.StringValue("path1"),
+			Tag:  types.StringValue("tag1"),
+		}
+		i2 := AlzProviderModelLibraryReferences{
+			Path: types.StringValue("path1"),
+			Tag:  types.StringValue("tag1"),
+		}
+		input := types.ListValueMust(i1.FrameworkType(), []attr.Value{i1.FrameworkValue(), i2.FrameworkValue()})
+		expected := []*AlzProviderModelLibraryReferences{
+			{
+				Path: types.StringValue("path1"),
+				Tag:  types.StringValue("tag1"),
+			},
+			{
+				Path: types.StringValue("path2"),
+				Tag:  types.StringValue("tag2"),
+			},
+		}
+		actual := NewAlzProviderModelLibraryReferencesFromListType(ctx, input)
+		assert.Equal(t, expected, actual)
+	})
+}

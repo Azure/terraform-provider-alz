@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
-	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -30,6 +29,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/function"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -70,30 +70,26 @@ type alzProviderData struct {
 	clients *AlzProviderClients
 }
 
-// AlzProviderModel describes the provider data model.
-type AlzProviderModel struct {
-	AlzLibraryReferences      types.List   `tfsdk:"alz_library_references"`
-	AuxiliaryTenantIds        types.List   `tfsdk:"auxiliary_tenant_ids"`
-	ClientCertificatePassword types.String `tfsdk:"client_certificate_password"`
-	ClientCertificatePath     types.String `tfsdk:"client_certificate_path"`
-	ClientId                  types.String `tfsdk:"client_id"`
-	ClientSecret              types.String `tfsdk:"client_secret"`
-	Environment               types.String `tfsdk:"environment"`
-	LibOverwriteEnabled       types.Bool   `tfsdk:"lib_overwrite_enabled"`
-	OidcRequestToken          types.String `tfsdk:"oidc_request_token"`
-	OidcRequestUrl            types.String `tfsdk:"oidc_request_url"`
-	OidcToken                 types.String `tfsdk:"oidc_token"`
-	OidcTokenFilePath         types.String `tfsdk:"oidc_token_file_path"`
-	SkipProviderRegistration  types.Bool   `tfsdk:"skip_provider_registration"`
-	TenantId                  types.String `tfsdk:"tenant_id"`
-	UseCli                    types.Bool   `tfsdk:"use_cli"`
-	UseMsi                    types.Bool   `tfsdk:"use_msi"`
-	UseOidc                   types.Bool   `tfsdk:"use_oidc"`
+func (a AlzProviderModelLibraryReferences) FrameworkType() types.ObjectType {
+	return types.ObjectType{
+		AttrTypes: map[string]attr.Type{
+			"path": types.StringType,
+			"tag":  types.StringType,
+		},
+	}
 }
 
-type AlzProviderModelLibraryReferences struct {
-	Path types.String `tfsdk:"path"`
-	Tag  types.String `tfsdk:"tag"`
+func (a AlzProviderModelLibraryReferences) FrameworkValue() types.Object {
+	return types.ObjectValueMust(a.FrameworkType().AttrTypes, map[string]attr.Value{
+		"path": a.Path,
+		"tag":  a.Tag,
+	})
+}
+
+func NewAlzProviderModelLibraryReferencesFromListType(ctx context.Context, input types.List) []*AlzProviderModelLibraryReferences {
+	refs := make([]*AlzProviderModelLibraryReferences, 0, len(input.Elements()))
+	input.ElementsAs(ctx, &refs, false)
+	return refs
 }
 
 func (p *AlzProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -200,9 +196,29 @@ func (p *AlzProvider) Schema(ctx context.Context, req provider.SchemaRequest, re
 					"```\n\n",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"path":       schema.StringAttribute{},
-						"tag":        schema.StringAttribute{},
-						"custom_url": schema.StringAttribute{},
+						"path": schema.StringAttribute{
+							MarkdownDescription: "The path in the ALZ Library, e.g. `platform/alz`. Conflicts with `custom_url`.",
+							Optional:            true,
+							Validators: []validator.String{
+								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtMapKey("custom_url")),
+							},
+						},
+						"tag": schema.StringAttribute{
+							MarkdownDescription: "This is the version of the library to use, e.g. `2024.03.03`. Conflicts with `custom_url`.",
+							Optional:            true,
+							Validators: []validator.String{
+								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtMapKey("custom_url")),
+							},
+						},
+						"custom_url": schema.StringAttribute{
+							MarkdownDescription: "A custom path/URL to the library to use. Conflicts with `path` and `tag`. For supported protocols, see [go-getter](https://pkg.go.dev/github.com/hashicorp/go-getter/v2). Value is marked sensitive as may contain secrets.",
+							Optional:            true,
+							Sensitive:           true,
+							Validators: []validator.String{
+								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtMapKey("path")),
+								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtMapKey("tag")),
+							},
+						},
 					},
 				},
 				Validators: []validator.List{
@@ -286,28 +302,28 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 	// Configure clients
 
 	// Create the fs.FS library file systems based on the configuration.
-	urls := make([]string, 0)
-	if data.UseAlzLib.ValueBool() {
-		q := url.Values{}
-		q.Add("ref", data.AlzLibRef.ValueString())
-		q.Add("depth", "1")
-		urls = append(urls, alzLibUrlFmtStr+q.Encode())
-	}
-	if len(data.LibUrls.Elements()) != 0 {
-		// We turn the list of elements into a list of strings,
-		// if we use the Elements() method, we get a list of *attr.Value and the .String() method
-		// results in a string wrapped in double quotes.
-		dirs := make([]string, 0, len(data.LibUrls.Elements()))
-		if diags := data.LibUrls.ElementsAs(ctx, &dirs, false); diags.HasError() {
-			resp.Diagnostics = append(resp.Diagnostics, diags...)
-			return
-		}
-		urls = append(urls, dirs...)
-	}
+	// urls := make([]string, 0)
+	// if data.UseAlzLib.ValueBool() {
+	// 	q := url.Values{}
+	// 	q.Add("ref", data.AlzLibRef.ValueString())
+	// 	q.Add("depth", "1")
+	// 	urls = append(urls, alzLibUrlFmtStr+q.Encode())
+	// }
+	// if len(data.LibUrls.Elements()) != 0 {
+	// 	// We turn the list of elements into a list of strings,
+	// 	// if we use the Elements() method, we get a list of *attr.Value and the .String() method
+	// 	// results in a string wrapped in double quotes.
+	// 	dirs := make([]string, 0, len(data.LibUrls.Elements()))
+	// 	if diags := data.LibUrls.ElementsAs(ctx, &dirs, false); diags.HasError() {
+	// 		resp.Diagnostics = append(resp.Diagnostics, diags...)
+	// 		return
+	// 	}
+	// 	urls = append(urls, dirs...)
+	// }
 
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
-	libdirfs, err := getLibs(ctx, urls)
+	libdirfs, err := getLibs(ctx, nil)
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to download libraries", err.Error())
 		return
@@ -593,11 +609,6 @@ func configureDefaults(data *AlzProviderModel) {
 		data.UseCli = types.BoolValue(true)
 	}
 
-	// Use internal AlzLib reference library by default.
-	if data.UseAlzLib.IsNull() {
-		data.UseAlzLib = types.BoolValue(true)
-	}
-
 	// Do not allow library overwrite by default.
 	if data.LibOverwriteEnabled.IsNull() {
 		data.LibOverwriteEnabled = types.BoolValue(false)
@@ -605,19 +616,13 @@ func configureDefaults(data *AlzProviderModel) {
 
 	// Set alz library references to the default value if not already set.
 	if data.AlzLibraryReferences.IsNull() {
-		elementType := types.ObjectType{
-			AttrTypes: map[string]attr.Type{
-				"path": types.StringType,
-				"tag":  types.StringType,
-			},
+		alzDefaultRef := &AlzProviderModelLibraryReferences{
+			Path: types.StringValue("platform/alz"),
+			Tag:  types.StringValue(alzLibRef),
 		}
-		element := types.ObjectValueMust(elementType.AttrTypes, map[string]attr.Value{
-			"path": types.StringValue("platform/alz"),
-			"tag":  types.StringValue(alzLibRef),
-		})
 		data.AlzLibraryReferences = types.ListValueMust(
-			elementType,
-			[]attr.Value{element},
+			alzDefaultRef.FrameworkType(),
+			[]attr.Value{alzDefaultRef.FrameworkValue()},
 		)
 	}
 }
