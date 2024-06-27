@@ -336,6 +336,36 @@ func ArchitectureDataSourceSchema(ctx context.Context) schema.Schema {
 				Description:         "A mested map of policy assignments to modify. The key is the management group id, and the value is an object with a single attribute, `policy_assignments`. This is another map.",
 				MarkdownDescription: "A mested map of policy assignments to modify. The key is the management group id, and the value is an object with a single attribute, `policy_assignments`. This is another map.",
 			},
+			"policy_role_assignments": schema.SetNestedAttribute{
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"policy_assignment_name": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The name of the policy assignment to enable retrieval of the identity id.",
+							MarkdownDescription: "The name of the policy assignment to enable retrieval of the identity id.",
+						},
+						"role_definition_id": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The role definition id to assign.",
+							MarkdownDescription: "The role definition id to assign.",
+						},
+						"scope": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The scope of the assignment.",
+							MarkdownDescription: "The scope of the assignment.",
+						},
+					},
+					CustomType: PolicyRoleAssignmentsType{
+						ObjectType: types.ObjectType{
+							AttrTypes: PolicyRoleAssignmentsValue{}.AttributeTypes(ctx),
+						},
+					},
+				},
+				Optional:            true,
+				Computed:            true,
+				Description:         "A set of role assignments that need to be created for the policies that have been assigned in the hierarchy. Since we will likely be using system assigned identities, we don't know the principal ID until after the deployment. Therefore this data can be used to create the role assignments after the deployment.",
+				MarkdownDescription: "A set of role assignments that need to be created for the policies that have been assigned in the hierarchy. Since we will likely be using system assigned identities, we don't know the principal ID until after the deployment. Therefore this data can be used to create the role assignments after the deployment.",
+			},
 			"root_management_group_id": schema.StringAttribute{
 				Required:            true,
 				Description:         "The root management group id under which to deploy the architecture.",
@@ -356,6 +386,7 @@ type ArchitectureModel struct {
 	ManagementGroups          types.List   `tfsdk:"management_groups"`
 	Name                      types.String `tfsdk:"name"`
 	PolicyAssignmentsToModify types.Map    `tfsdk:"policy_assignments_to_modify"`
+	PolicyRoleAssignments     types.Set    `tfsdk:"policy_role_assignments"`
 	RootManagementGroupId     types.String `tfsdk:"root_management_group_id"`
 }
 
@@ -4547,5 +4578,439 @@ func (v ResourceSelectorSelectorsValue) AttributeTypes(ctx context.Context) map[
 		"not_in": basetypes.SetType{
 			ElemType: types.StringType,
 		},
+	}
+}
+
+var _ basetypes.ObjectTypable = PolicyRoleAssignmentsType{}
+
+type PolicyRoleAssignmentsType struct {
+	basetypes.ObjectType
+}
+
+func (t PolicyRoleAssignmentsType) Equal(o attr.Type) bool {
+	other, ok := o.(PolicyRoleAssignmentsType)
+
+	if !ok {
+		return false
+	}
+
+	return t.ObjectType.Equal(other.ObjectType)
+}
+
+func (t PolicyRoleAssignmentsType) String() string {
+	return "PolicyRoleAssignmentsType"
+}
+
+func (t PolicyRoleAssignmentsType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributes := in.Attributes()
+
+	policyAssignmentNameAttribute, ok := attributes["policy_assignment_name"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`policy_assignment_name is missing from object`)
+
+		return nil, diags
+	}
+
+	policyAssignmentNameVal, ok := policyAssignmentNameAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`policy_assignment_name expected to be basetypes.StringValue, was: %T`, policyAssignmentNameAttribute))
+	}
+
+	roleDefinitionIdAttribute, ok := attributes["role_definition_id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`role_definition_id is missing from object`)
+
+		return nil, diags
+	}
+
+	roleDefinitionIdVal, ok := roleDefinitionIdAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`role_definition_id expected to be basetypes.StringValue, was: %T`, roleDefinitionIdAttribute))
+	}
+
+	scopeAttribute, ok := attributes["scope"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`scope is missing from object`)
+
+		return nil, diags
+	}
+
+	scopeVal, ok := scopeAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`scope expected to be basetypes.StringValue, was: %T`, scopeAttribute))
+	}
+
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	return PolicyRoleAssignmentsValue{
+		PolicyAssignmentName: policyAssignmentNameVal,
+		RoleDefinitionId:     roleDefinitionIdVal,
+		Scope:                scopeVal,
+		state:                attr.ValueStateKnown,
+	}, diags
+}
+
+func NewPolicyRoleAssignmentsValueNull() PolicyRoleAssignmentsValue {
+	return PolicyRoleAssignmentsValue{
+		state: attr.ValueStateNull,
+	}
+}
+
+func NewPolicyRoleAssignmentsValueUnknown() PolicyRoleAssignmentsValue {
+	return PolicyRoleAssignmentsValue{
+		state: attr.ValueStateUnknown,
+	}
+}
+
+func NewPolicyRoleAssignmentsValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (PolicyRoleAssignmentsValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	// Reference: https://github.com/hashicorp/terraform-plugin-framework/issues/521
+	ctx := context.Background()
+
+	for name, attributeType := range attributeTypes {
+		attribute, ok := attributes[name]
+
+		if !ok {
+			diags.AddError(
+				"Missing PolicyRoleAssignmentsValue Attribute Value",
+				"While creating a PolicyRoleAssignmentsValue value, a missing attribute value was detected. "+
+					"A PolicyRoleAssignmentsValue must contain values for all attributes, even if null or unknown. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("PolicyRoleAssignmentsValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
+			)
+
+			continue
+		}
+
+		if !attributeType.Equal(attribute.Type(ctx)) {
+			diags.AddError(
+				"Invalid PolicyRoleAssignmentsValue Attribute Type",
+				"While creating a PolicyRoleAssignmentsValue value, an invalid attribute value was detected. "+
+					"A PolicyRoleAssignmentsValue must use a matching attribute type for the value. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("PolicyRoleAssignmentsValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
+					fmt.Sprintf("PolicyRoleAssignmentsValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
+			)
+		}
+	}
+
+	for name := range attributes {
+		_, ok := attributeTypes[name]
+
+		if !ok {
+			diags.AddError(
+				"Extra PolicyRoleAssignmentsValue Attribute Value",
+				"While creating a PolicyRoleAssignmentsValue value, an extra attribute value was detected. "+
+					"A PolicyRoleAssignmentsValue must not contain values beyond the expected attribute types. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("Extra PolicyRoleAssignmentsValue Attribute Name: %s", name),
+			)
+		}
+	}
+
+	if diags.HasError() {
+		return NewPolicyRoleAssignmentsValueUnknown(), diags
+	}
+
+	policyAssignmentNameAttribute, ok := attributes["policy_assignment_name"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`policy_assignment_name is missing from object`)
+
+		return NewPolicyRoleAssignmentsValueUnknown(), diags
+	}
+
+	policyAssignmentNameVal, ok := policyAssignmentNameAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`policy_assignment_name expected to be basetypes.StringValue, was: %T`, policyAssignmentNameAttribute))
+	}
+
+	roleDefinitionIdAttribute, ok := attributes["role_definition_id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`role_definition_id is missing from object`)
+
+		return NewPolicyRoleAssignmentsValueUnknown(), diags
+	}
+
+	roleDefinitionIdVal, ok := roleDefinitionIdAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`role_definition_id expected to be basetypes.StringValue, was: %T`, roleDefinitionIdAttribute))
+	}
+
+	scopeAttribute, ok := attributes["scope"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`scope is missing from object`)
+
+		return NewPolicyRoleAssignmentsValueUnknown(), diags
+	}
+
+	scopeVal, ok := scopeAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`scope expected to be basetypes.StringValue, was: %T`, scopeAttribute))
+	}
+
+	if diags.HasError() {
+		return NewPolicyRoleAssignmentsValueUnknown(), diags
+	}
+
+	return PolicyRoleAssignmentsValue{
+		PolicyAssignmentName: policyAssignmentNameVal,
+		RoleDefinitionId:     roleDefinitionIdVal,
+		Scope:                scopeVal,
+		state:                attr.ValueStateKnown,
+	}, diags
+}
+
+func NewPolicyRoleAssignmentsValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) PolicyRoleAssignmentsValue {
+	object, diags := NewPolicyRoleAssignmentsValue(attributeTypes, attributes)
+
+	if diags.HasError() {
+		// This could potentially be added to the diag package.
+		diagsStrings := make([]string, 0, len(diags))
+
+		for _, diagnostic := range diags {
+			diagsStrings = append(diagsStrings, fmt.Sprintf(
+				"%s | %s | %s",
+				diagnostic.Severity(),
+				diagnostic.Summary(),
+				diagnostic.Detail()))
+		}
+
+		panic("NewPolicyRoleAssignmentsValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
+	}
+
+	return object
+}
+
+func (t PolicyRoleAssignmentsType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
+	if in.Type() == nil {
+		return NewPolicyRoleAssignmentsValueNull(), nil
+	}
+
+	if !in.Type().Equal(t.TerraformType(ctx)) {
+		return nil, fmt.Errorf("expected %s, got %s", t.TerraformType(ctx), in.Type())
+	}
+
+	if !in.IsKnown() {
+		return NewPolicyRoleAssignmentsValueUnknown(), nil
+	}
+
+	if in.IsNull() {
+		return NewPolicyRoleAssignmentsValueNull(), nil
+	}
+
+	attributes := map[string]attr.Value{}
+
+	val := map[string]tftypes.Value{}
+
+	err := in.As(&val)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range val {
+		a, err := t.AttrTypes[k].ValueFromTerraform(ctx, v)
+
+		if err != nil {
+			return nil, err
+		}
+
+		attributes[k] = a
+	}
+
+	return NewPolicyRoleAssignmentsValueMust(PolicyRoleAssignmentsValue{}.AttributeTypes(ctx), attributes), nil
+}
+
+func (t PolicyRoleAssignmentsType) ValueType(ctx context.Context) attr.Value {
+	return PolicyRoleAssignmentsValue{}
+}
+
+var _ basetypes.ObjectValuable = PolicyRoleAssignmentsValue{}
+
+type PolicyRoleAssignmentsValue struct {
+	PolicyAssignmentName basetypes.StringValue `tfsdk:"policy_assignment_name"`
+	RoleDefinitionId     basetypes.StringValue `tfsdk:"role_definition_id"`
+	Scope                basetypes.StringValue `tfsdk:"scope"`
+	state                attr.ValueState
+}
+
+func (v PolicyRoleAssignmentsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
+	attrTypes := make(map[string]tftypes.Type, 3)
+
+	var val tftypes.Value
+	var err error
+
+	attrTypes["policy_assignment_name"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["role_definition_id"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["scope"] = basetypes.StringType{}.TerraformType(ctx)
+
+	objectType := tftypes.Object{AttributeTypes: attrTypes}
+
+	switch v.state {
+	case attr.ValueStateKnown:
+		vals := make(map[string]tftypes.Value, 3)
+
+		val, err = v.PolicyAssignmentName.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["policy_assignment_name"] = val
+
+		val, err = v.RoleDefinitionId.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["role_definition_id"] = val
+
+		val, err = v.Scope.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["scope"] = val
+
+		if err := tftypes.ValidateValue(objectType, vals); err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		return tftypes.NewValue(objectType, vals), nil
+	case attr.ValueStateNull:
+		return tftypes.NewValue(objectType, nil), nil
+	case attr.ValueStateUnknown:
+		return tftypes.NewValue(objectType, tftypes.UnknownValue), nil
+	default:
+		panic(fmt.Sprintf("unhandled Object state in ToTerraformValue: %s", v.state))
+	}
+}
+
+func (v PolicyRoleAssignmentsValue) IsNull() bool {
+	return v.state == attr.ValueStateNull
+}
+
+func (v PolicyRoleAssignmentsValue) IsUnknown() bool {
+	return v.state == attr.ValueStateUnknown
+}
+
+func (v PolicyRoleAssignmentsValue) String() string {
+	return "PolicyRoleAssignmentsValue"
+}
+
+func (v PolicyRoleAssignmentsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributeTypes := map[string]attr.Type{
+		"policy_assignment_name": basetypes.StringType{},
+		"role_definition_id":     basetypes.StringType{},
+		"scope":                  basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
+		map[string]attr.Value{
+			"policy_assignment_name": v.PolicyAssignmentName,
+			"role_definition_id":     v.RoleDefinitionId,
+			"scope":                  v.Scope,
+		})
+
+	return objVal, diags
+}
+
+func (v PolicyRoleAssignmentsValue) Equal(o attr.Value) bool {
+	other, ok := o.(PolicyRoleAssignmentsValue)
+
+	if !ok {
+		return false
+	}
+
+	if v.state != other.state {
+		return false
+	}
+
+	if v.state != attr.ValueStateKnown {
+		return true
+	}
+
+	if !v.PolicyAssignmentName.Equal(other.PolicyAssignmentName) {
+		return false
+	}
+
+	if !v.RoleDefinitionId.Equal(other.RoleDefinitionId) {
+		return false
+	}
+
+	if !v.Scope.Equal(other.Scope) {
+		return false
+	}
+
+	return true
+}
+
+func (v PolicyRoleAssignmentsValue) Type(ctx context.Context) attr.Type {
+	return PolicyRoleAssignmentsType{
+		basetypes.ObjectType{
+			AttrTypes: v.AttributeTypes(ctx),
+		},
+	}
+}
+
+func (v PolicyRoleAssignmentsValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
+	return map[string]attr.Type{
+		"policy_assignment_name": basetypes.StringType{},
+		"role_definition_id":     basetypes.StringType{},
+		"scope":                  basetypes.StringType{},
 	}
 }

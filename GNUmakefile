@@ -26,6 +26,7 @@ docs:
 	go generate
 
 .PHONY: genprovider
-docs:
+genprovider:
 	cd internal/provider
 	go generate
+	cd ../..

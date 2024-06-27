@@ -32,7 +32,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-//go:generate tfplugingen-framework generate all --package gen --output ./gen
+// Run go generate to automatically generate provider, data source and resource types
+// from the intermediate representation JSON file `ir.json`.
+//go:generate tfplugingen-framework generate provider --package gen --output ./gen
+//go:generate tfplugingen-framework generate data-sources --package gen --output ./gen
+//go:generate tfplugingen-framework generate resources --package gen --output ./gen
 
 const (
 	userAgentBase = "AzureTerraformAlzProvider"
@@ -163,8 +167,7 @@ func (p *AlzProvider) Resources(ctx context.Context) []func() resource.Resource 
 
 func (p *AlzProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
-		// NewArchetypeDataSource,
-		// NewArchetypeKeysDataSource,
+		NewArchitectureDataSource,
 	}
 }
 
@@ -187,7 +190,7 @@ func downloadLibs(ctx context.Context, data *gen.AlzModel) ([]fs.FS, diag.Diagno
 	var diags diag.Diagnostics
 
 	alzLibRefs := make([]gen.AlzLibraryReferencesValue, len(data.AlzLibraryReferences.Elements()))
-	diags = data.AlzLibraryReferences.ElementsAs(ctx, alzLibRefs, false)
+	diags = data.AlzLibraryReferences.ElementsAs(ctx, &alzLibRefs, false)
 	if diags.HasError() {
 		return nil, diags
 	}
@@ -359,6 +362,7 @@ func configureAlzLib(token *azidentity.ChainedTokenCredential, data gen.AlzModel
 
 	opts := &alzlib.AlzLibOptions{
 		AllowOverwrite: data.LibOverwriteEnabled.ValueBool(),
+		Parallelism:    10,
 	}
 	alz := alzlib.NewAlzLib(opts)
 	cf, err := armpolicy.NewClientFactory("", token, popts)

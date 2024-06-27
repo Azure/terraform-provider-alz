@@ -41,6 +41,7 @@ func AlzProviderSchema(ctx context.Context) schema.Schema {
 							MarkdownDescription: "The path in the ALZ Library, e.g. `platform/alz`. Conflicts with `custom_url`.",
 							Validators: []validator.String{
 								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtMapKey("custom_url")),
+								stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtMapKey("ref")),
 							},
 						},
 						"ref": schema.StringAttribute{
@@ -49,6 +50,7 @@ func AlzProviderSchema(ctx context.Context) schema.Schema {
 							MarkdownDescription: "This is the version of the library to use, e.g. `2024.03.03`. Conflicts with `custom_url`.",
 							Validators: []validator.String{
 								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtMapKey("custom_url")),
+								stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtMapKey("path")),
 							},
 						},
 					},
