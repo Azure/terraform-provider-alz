@@ -429,26 +429,28 @@
                             }
                           },
                           {
-                            "name": "non_compliance_message",
-                            "single_nested": {
+                            "name": "non_compliance_messages",
+                            "set_nested": {
                               "description": "The non-compliance messages to use for the policy assignment.",
                               "computed_optional_required": "optional",
-                              "attributes": [
-                                {
-                                  "name": "message",
-                                  "string": {
-                                    "description": "The non-compliance message to use for the policy assignment.",
-                                    "computed_optional_required": "required"
+                              "nested_object": {
+                                "attributes": [
+                                  {
+                                    "name": "message",
+                                    "string": {
+                                      "description": "The non-compliance message to use for the policy assignment.",
+                                      "computed_optional_required": "required"
+                                    }
+                                  },
+                                  {
+                                    "name": "policy_definition_reference_id",
+                                    "string": {
+                                      "description": "The policy definition reference id (not the resource id) to use for the non compliance message. This references the definition within the policy set.",
+                                      "computed_optional_required": "optional"
+                                    }
                                   }
-                                },
-                                {
-                                  "name": "policy_definition_reference_id",
-                                  "string": {
-                                    "description": "The policy definition reference id (not the resource id) to use for the non compliance message. This references the definition within the policy set.",
-                                    "computed_optional_required": "optional"
-                                  }
-                                }
-                              ]
+                                ]
+                              }
                             }
                           },
                           {

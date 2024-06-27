@@ -142,22 +142,24 @@ func ArchitectureDataSourceSchema(ctx context.Context) schema.Schema {
 											setvalidator.SizeBetween(0, 1),
 										},
 									},
-									"non_compliance_message": schema.SingleNestedAttribute{
-										Attributes: map[string]schema.Attribute{
-											"message": schema.StringAttribute{
-												Required:            true,
-												Description:         "The non-compliance message to use for the policy assignment.",
-												MarkdownDescription: "The non-compliance message to use for the policy assignment.",
+									"non_compliance_messages": schema.SetNestedAttribute{
+										NestedObject: schema.NestedAttributeObject{
+											Attributes: map[string]schema.Attribute{
+												"message": schema.StringAttribute{
+													Required:            true,
+													Description:         "The non-compliance message to use for the policy assignment.",
+													MarkdownDescription: "The non-compliance message to use for the policy assignment.",
+												},
+												"policy_definition_reference_id": schema.StringAttribute{
+													Optional:            true,
+													Description:         "The policy definition reference id (not the resource id) to use for the non compliance message. This references the definition within the policy set.",
+													MarkdownDescription: "The policy definition reference id (not the resource id) to use for the non compliance message. This references the definition within the policy set.",
+												},
 											},
-											"policy_definition_reference_id": schema.StringAttribute{
-												Optional:            true,
-												Description:         "The policy definition reference id (not the resource id) to use for the non compliance message. This references the definition within the policy set.",
-												MarkdownDescription: "The policy definition reference id (not the resource id) to use for the non compliance message. This references the definition within the policy set.",
-											},
-										},
-										CustomType: NonComplianceMessageType{
-											ObjectType: types.ObjectType{
-												AttrTypes: NonComplianceMessageValue{}.AttributeTypes(ctx),
+											CustomType: NonComplianceMessagesType{
+												ObjectType: types.ObjectType{
+													AttrTypes: NonComplianceMessagesValue{}.AttributeTypes(ctx),
+												},
 											},
 										},
 										Optional:            true,
@@ -1661,22 +1663,22 @@ func (t PolicyAssignmentsType) ValueFromObject(ctx context.Context, in basetypes
 			fmt.Sprintf(`identity_ids expected to be basetypes.SetValue, was: %T`, identityIdsAttribute))
 	}
 
-	nonComplianceMessageAttribute, ok := attributes["non_compliance_message"]
+	nonComplianceMessagesAttribute, ok := attributes["non_compliance_messages"]
 
 	if !ok {
 		diags.AddError(
 			"Attribute Missing",
-			`non_compliance_message is missing from object`)
+			`non_compliance_messages is missing from object`)
 
 		return nil, diags
 	}
 
-	nonComplianceMessageVal, ok := nonComplianceMessageAttribute.(basetypes.ObjectValue)
+	nonComplianceMessagesVal, ok := nonComplianceMessagesAttribute.(basetypes.SetValue)
 
 	if !ok {
 		diags.AddError(
 			"Attribute Wrong Type",
-			fmt.Sprintf(`non_compliance_message expected to be basetypes.ObjectValue, was: %T`, nonComplianceMessageAttribute))
+			fmt.Sprintf(`non_compliance_messages expected to be basetypes.SetValue, was: %T`, nonComplianceMessagesAttribute))
 	}
 
 	overridesAttribute, ok := attributes["overrides"]
@@ -1738,14 +1740,14 @@ func (t PolicyAssignmentsType) ValueFromObject(ctx context.Context, in basetypes
 	}
 
 	return PolicyAssignmentsValue{
-		EnforcementMode:      enforcementModeVal,
-		Identity:             identityVal,
-		IdentityIds:          identityIdsVal,
-		NonComplianceMessage: nonComplianceMessageVal,
-		Overrides:            overridesVal,
-		Parameters:           parametersVal,
-		ResourceSelectors:    resourceSelectorsVal,
-		state:                attr.ValueStateKnown,
+		EnforcementMode:       enforcementModeVal,
+		Identity:              identityVal,
+		IdentityIds:           identityIdsVal,
+		NonComplianceMessages: nonComplianceMessagesVal,
+		Overrides:             overridesVal,
+		Parameters:            parametersVal,
+		ResourceSelectors:     resourceSelectorsVal,
+		state:                 attr.ValueStateKnown,
 	}, diags
 }
 
@@ -1866,22 +1868,22 @@ func NewPolicyAssignmentsValue(attributeTypes map[string]attr.Type, attributes m
 			fmt.Sprintf(`identity_ids expected to be basetypes.SetValue, was: %T`, identityIdsAttribute))
 	}
 
-	nonComplianceMessageAttribute, ok := attributes["non_compliance_message"]
+	nonComplianceMessagesAttribute, ok := attributes["non_compliance_messages"]
 
 	if !ok {
 		diags.AddError(
 			"Attribute Missing",
-			`non_compliance_message is missing from object`)
+			`non_compliance_messages is missing from object`)
 
 		return NewPolicyAssignmentsValueUnknown(), diags
 	}
 
-	nonComplianceMessageVal, ok := nonComplianceMessageAttribute.(basetypes.ObjectValue)
+	nonComplianceMessagesVal, ok := nonComplianceMessagesAttribute.(basetypes.SetValue)
 
 	if !ok {
 		diags.AddError(
 			"Attribute Wrong Type",
-			fmt.Sprintf(`non_compliance_message expected to be basetypes.ObjectValue, was: %T`, nonComplianceMessageAttribute))
+			fmt.Sprintf(`non_compliance_messages expected to be basetypes.SetValue, was: %T`, nonComplianceMessagesAttribute))
 	}
 
 	overridesAttribute, ok := attributes["overrides"]
@@ -1943,14 +1945,14 @@ func NewPolicyAssignmentsValue(attributeTypes map[string]attr.Type, attributes m
 	}
 
 	return PolicyAssignmentsValue{
-		EnforcementMode:      enforcementModeVal,
-		Identity:             identityVal,
-		IdentityIds:          identityIdsVal,
-		NonComplianceMessage: nonComplianceMessageVal,
-		Overrides:            overridesVal,
-		Parameters:           parametersVal,
-		ResourceSelectors:    resourceSelectorsVal,
-		state:                attr.ValueStateKnown,
+		EnforcementMode:       enforcementModeVal,
+		Identity:              identityVal,
+		IdentityIds:           identityIdsVal,
+		NonComplianceMessages: nonComplianceMessagesVal,
+		Overrides:             overridesVal,
+		Parameters:            parametersVal,
+		ResourceSelectors:     resourceSelectorsVal,
+		state:                 attr.ValueStateKnown,
 	}, diags
 }
 
@@ -2022,14 +2024,14 @@ func (t PolicyAssignmentsType) ValueType(ctx context.Context) attr.Value {
 var _ basetypes.ObjectValuable = PolicyAssignmentsValue{}
 
 type PolicyAssignmentsValue struct {
-	EnforcementMode      basetypes.StringValue `tfsdk:"enforcement_mode"`
-	Identity             basetypes.StringValue `tfsdk:"identity"`
-	IdentityIds          basetypes.SetValue    `tfsdk:"identity_ids"`
-	NonComplianceMessage basetypes.ObjectValue `tfsdk:"non_compliance_message"`
-	Overrides            basetypes.ListValue   `tfsdk:"overrides"`
-	Parameters           basetypes.StringValue `tfsdk:"parameters"`
-	ResourceSelectors    basetypes.ListValue   `tfsdk:"resource_selectors"`
-	state                attr.ValueState
+	EnforcementMode       basetypes.StringValue `tfsdk:"enforcement_mode"`
+	Identity              basetypes.StringValue `tfsdk:"identity"`
+	IdentityIds           basetypes.SetValue    `tfsdk:"identity_ids"`
+	NonComplianceMessages basetypes.SetValue    `tfsdk:"non_compliance_messages"`
+	Overrides             basetypes.ListValue   `tfsdk:"overrides"`
+	Parameters            basetypes.StringValue `tfsdk:"parameters"`
+	ResourceSelectors     basetypes.ListValue   `tfsdk:"resource_selectors"`
+	state                 attr.ValueState
 }
 
 func (v PolicyAssignmentsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
@@ -2043,8 +2045,8 @@ func (v PolicyAssignmentsValue) ToTerraformValue(ctx context.Context) (tftypes.V
 	attrTypes["identity_ids"] = basetypes.SetType{
 		ElemType: types.StringType,
 	}.TerraformType(ctx)
-	attrTypes["non_compliance_message"] = basetypes.ObjectType{
-		AttrTypes: NonComplianceMessageValue{}.AttributeTypes(ctx),
+	attrTypes["non_compliance_messages"] = basetypes.SetType{
+		ElemType: NonComplianceMessagesValue{}.Type(ctx),
 	}.TerraformType(ctx)
 	attrTypes["overrides"] = basetypes.ListType{
 		ElemType: OverridesValue{}.Type(ctx),
@@ -2084,13 +2086,13 @@ func (v PolicyAssignmentsValue) ToTerraformValue(ctx context.Context) (tftypes.V
 
 		vals["identity_ids"] = val
 
-		val, err = v.NonComplianceMessage.ToTerraformValue(ctx)
+		val, err = v.NonComplianceMessages.ToTerraformValue(ctx)
 
 		if err != nil {
 			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
 		}
 
-		vals["non_compliance_message"] = val
+		vals["non_compliance_messages"] = val
 
 		val, err = v.Overrides.ToTerraformValue(ctx)
 
@@ -2145,24 +2147,32 @@ func (v PolicyAssignmentsValue) String() string {
 func (v PolicyAssignmentsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	var nonComplianceMessage basetypes.ObjectValue
+	nonComplianceMessages := types.SetValueMust(
+		NonComplianceMessagesType{
+			basetypes.ObjectType{
+				AttrTypes: NonComplianceMessagesValue{}.AttributeTypes(ctx),
+			},
+		},
+		v.NonComplianceMessages.Elements(),
+	)
 
-	if v.NonComplianceMessage.IsNull() {
-		nonComplianceMessage = types.ObjectNull(
-			NonComplianceMessageValue{}.AttributeTypes(ctx),
+	if v.NonComplianceMessages.IsNull() {
+		nonComplianceMessages = types.SetNull(
+			NonComplianceMessagesType{
+				basetypes.ObjectType{
+					AttrTypes: NonComplianceMessagesValue{}.AttributeTypes(ctx),
+				},
+			},
 		)
 	}
 
-	if v.NonComplianceMessage.IsUnknown() {
-		nonComplianceMessage = types.ObjectUnknown(
-			NonComplianceMessageValue{}.AttributeTypes(ctx),
-		)
-	}
-
-	if !v.NonComplianceMessage.IsNull() && !v.NonComplianceMessage.IsUnknown() {
-		nonComplianceMessage = types.ObjectValueMust(
-			NonComplianceMessageValue{}.AttributeTypes(ctx),
-			v.NonComplianceMessage.Attributes(),
+	if v.NonComplianceMessages.IsUnknown() {
+		nonComplianceMessages = types.SetUnknown(
+			NonComplianceMessagesType{
+				basetypes.ObjectType{
+					AttrTypes: NonComplianceMessagesValue{}.AttributeTypes(ctx),
+				},
+			},
 		)
 	}
 
@@ -2235,8 +2245,8 @@ func (v PolicyAssignmentsValue) ToObjectValue(ctx context.Context) (basetypes.Ob
 			"identity_ids": basetypes.SetType{
 				ElemType: types.StringType,
 			},
-			"non_compliance_message": basetypes.ObjectType{
-				AttrTypes: NonComplianceMessageValue{}.AttributeTypes(ctx),
+			"non_compliance_messages": basetypes.SetType{
+				ElemType: NonComplianceMessagesValue{}.Type(ctx),
 			},
 			"overrides": basetypes.ListType{
 				ElemType: OverridesValue{}.Type(ctx),
@@ -2254,8 +2264,8 @@ func (v PolicyAssignmentsValue) ToObjectValue(ctx context.Context) (basetypes.Ob
 		"identity_ids": basetypes.SetType{
 			ElemType: types.StringType,
 		},
-		"non_compliance_message": basetypes.ObjectType{
-			AttrTypes: NonComplianceMessageValue{}.AttributeTypes(ctx),
+		"non_compliance_messages": basetypes.SetType{
+			ElemType: NonComplianceMessagesValue{}.Type(ctx),
 		},
 		"overrides": basetypes.ListType{
 			ElemType: OverridesValue{}.Type(ctx),
@@ -2277,13 +2287,13 @@ func (v PolicyAssignmentsValue) ToObjectValue(ctx context.Context) (basetypes.Ob
 	objVal, diags := types.ObjectValue(
 		attributeTypes,
 		map[string]attr.Value{
-			"enforcement_mode":       v.EnforcementMode,
-			"identity":               v.Identity,
-			"identity_ids":           identityIdsVal,
-			"non_compliance_message": nonComplianceMessage,
-			"overrides":              overrides,
-			"parameters":             v.Parameters,
-			"resource_selectors":     resourceSelectors,
+			"enforcement_mode":        v.EnforcementMode,
+			"identity":                v.Identity,
+			"identity_ids":            identityIdsVal,
+			"non_compliance_messages": nonComplianceMessages,
+			"overrides":               overrides,
+			"parameters":              v.Parameters,
+			"resource_selectors":      resourceSelectors,
 		})
 
 	return objVal, diags
@@ -2316,7 +2326,7 @@ func (v PolicyAssignmentsValue) Equal(o attr.Value) bool {
 		return false
 	}
 
-	if !v.NonComplianceMessage.Equal(other.NonComplianceMessage) {
+	if !v.NonComplianceMessages.Equal(other.NonComplianceMessages) {
 		return false
 	}
 
@@ -2350,8 +2360,8 @@ func (v PolicyAssignmentsValue) AttributeTypes(ctx context.Context) map[string]a
 		"identity_ids": basetypes.SetType{
 			ElemType: types.StringType,
 		},
-		"non_compliance_message": basetypes.ObjectType{
-			AttrTypes: NonComplianceMessageValue{}.AttributeTypes(ctx),
+		"non_compliance_messages": basetypes.SetType{
+			ElemType: NonComplianceMessagesValue{}.Type(ctx),
 		},
 		"overrides": basetypes.ListType{
 			ElemType: OverridesValue{}.Type(ctx),
@@ -2363,14 +2373,14 @@ func (v PolicyAssignmentsValue) AttributeTypes(ctx context.Context) map[string]a
 	}
 }
 
-var _ basetypes.ObjectTypable = NonComplianceMessageType{}
+var _ basetypes.ObjectTypable = NonComplianceMessagesType{}
 
-type NonComplianceMessageType struct {
+type NonComplianceMessagesType struct {
 	basetypes.ObjectType
 }
 
-func (t NonComplianceMessageType) Equal(o attr.Type) bool {
-	other, ok := o.(NonComplianceMessageType)
+func (t NonComplianceMessagesType) Equal(o attr.Type) bool {
+	other, ok := o.(NonComplianceMessagesType)
 
 	if !ok {
 		return false
@@ -2379,11 +2389,11 @@ func (t NonComplianceMessageType) Equal(o attr.Type) bool {
 	return t.ObjectType.Equal(other.ObjectType)
 }
 
-func (t NonComplianceMessageType) String() string {
-	return "NonComplianceMessageType"
+func (t NonComplianceMessagesType) String() string {
+	return "NonComplianceMessagesType"
 }
 
-func (t NonComplianceMessageType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
+func (t NonComplianceMessagesType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	attributes := in.Attributes()
@@ -2428,26 +2438,26 @@ func (t NonComplianceMessageType) ValueFromObject(ctx context.Context, in basety
 		return nil, diags
 	}
 
-	return NonComplianceMessageValue{
+	return NonComplianceMessagesValue{
 		Message:                     messageVal,
 		PolicyDefinitionReferenceId: policyDefinitionReferenceIdVal,
 		state:                       attr.ValueStateKnown,
 	}, diags
 }
 
-func NewNonComplianceMessageValueNull() NonComplianceMessageValue {
-	return NonComplianceMessageValue{
+func NewNonComplianceMessagesValueNull() NonComplianceMessagesValue {
+	return NonComplianceMessagesValue{
 		state: attr.ValueStateNull,
 	}
 }
 
-func NewNonComplianceMessageValueUnknown() NonComplianceMessageValue {
-	return NonComplianceMessageValue{
+func NewNonComplianceMessagesValueUnknown() NonComplianceMessagesValue {
+	return NonComplianceMessagesValue{
 		state: attr.ValueStateUnknown,
 	}
 }
 
-func NewNonComplianceMessageValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (NonComplianceMessageValue, diag.Diagnostics) {
+func NewNonComplianceMessagesValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (NonComplianceMessagesValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	// Reference: https://github.com/hashicorp/terraform-plugin-framework/issues/521
@@ -2458,11 +2468,11 @@ func NewNonComplianceMessageValue(attributeTypes map[string]attr.Type, attribute
 
 		if !ok {
 			diags.AddError(
-				"Missing NonComplianceMessageValue Attribute Value",
-				"While creating a NonComplianceMessageValue value, a missing attribute value was detected. "+
-					"A NonComplianceMessageValue must contain values for all attributes, even if null or unknown. "+
+				"Missing NonComplianceMessagesValue Attribute Value",
+				"While creating a NonComplianceMessagesValue value, a missing attribute value was detected. "+
+					"A NonComplianceMessagesValue must contain values for all attributes, even if null or unknown. "+
 					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
-					fmt.Sprintf("NonComplianceMessageValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
+					fmt.Sprintf("NonComplianceMessagesValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
 			)
 
 			continue
@@ -2470,12 +2480,12 @@ func NewNonComplianceMessageValue(attributeTypes map[string]attr.Type, attribute
 
 		if !attributeType.Equal(attribute.Type(ctx)) {
 			diags.AddError(
-				"Invalid NonComplianceMessageValue Attribute Type",
-				"While creating a NonComplianceMessageValue value, an invalid attribute value was detected. "+
-					"A NonComplianceMessageValue must use a matching attribute type for the value. "+
+				"Invalid NonComplianceMessagesValue Attribute Type",
+				"While creating a NonComplianceMessagesValue value, an invalid attribute value was detected. "+
+					"A NonComplianceMessagesValue must use a matching attribute type for the value. "+
 					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
-					fmt.Sprintf("NonComplianceMessageValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
-					fmt.Sprintf("NonComplianceMessageValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
+					fmt.Sprintf("NonComplianceMessagesValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
+					fmt.Sprintf("NonComplianceMessagesValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
 			)
 		}
 	}
@@ -2485,17 +2495,17 @@ func NewNonComplianceMessageValue(attributeTypes map[string]attr.Type, attribute
 
 		if !ok {
 			diags.AddError(
-				"Extra NonComplianceMessageValue Attribute Value",
-				"While creating a NonComplianceMessageValue value, an extra attribute value was detected. "+
-					"A NonComplianceMessageValue must not contain values beyond the expected attribute types. "+
+				"Extra NonComplianceMessagesValue Attribute Value",
+				"While creating a NonComplianceMessagesValue value, an extra attribute value was detected. "+
+					"A NonComplianceMessagesValue must not contain values beyond the expected attribute types. "+
 					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
-					fmt.Sprintf("Extra NonComplianceMessageValue Attribute Name: %s", name),
+					fmt.Sprintf("Extra NonComplianceMessagesValue Attribute Name: %s", name),
 			)
 		}
 	}
 
 	if diags.HasError() {
-		return NewNonComplianceMessageValueUnknown(), diags
+		return NewNonComplianceMessagesValueUnknown(), diags
 	}
 
 	messageAttribute, ok := attributes["message"]
@@ -2505,7 +2515,7 @@ func NewNonComplianceMessageValue(attributeTypes map[string]attr.Type, attribute
 			"Attribute Missing",
 			`message is missing from object`)
 
-		return NewNonComplianceMessageValueUnknown(), diags
+		return NewNonComplianceMessagesValueUnknown(), diags
 	}
 
 	messageVal, ok := messageAttribute.(basetypes.StringValue)
@@ -2523,7 +2533,7 @@ func NewNonComplianceMessageValue(attributeTypes map[string]attr.Type, attribute
 			"Attribute Missing",
 			`policy_definition_reference_id is missing from object`)
 
-		return NewNonComplianceMessageValueUnknown(), diags
+		return NewNonComplianceMessagesValueUnknown(), diags
 	}
 
 	policyDefinitionReferenceIdVal, ok := policyDefinitionReferenceIdAttribute.(basetypes.StringValue)
@@ -2535,18 +2545,18 @@ func NewNonComplianceMessageValue(attributeTypes map[string]attr.Type, attribute
 	}
 
 	if diags.HasError() {
-		return NewNonComplianceMessageValueUnknown(), diags
+		return NewNonComplianceMessagesValueUnknown(), diags
 	}
 
-	return NonComplianceMessageValue{
+	return NonComplianceMessagesValue{
 		Message:                     messageVal,
 		PolicyDefinitionReferenceId: policyDefinitionReferenceIdVal,
 		state:                       attr.ValueStateKnown,
 	}, diags
 }
 
-func NewNonComplianceMessageValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) NonComplianceMessageValue {
-	object, diags := NewNonComplianceMessageValue(attributeTypes, attributes)
+func NewNonComplianceMessagesValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) NonComplianceMessagesValue {
+	object, diags := NewNonComplianceMessagesValue(attributeTypes, attributes)
 
 	if diags.HasError() {
 		// This could potentially be added to the diag package.
@@ -2560,15 +2570,15 @@ func NewNonComplianceMessageValueMust(attributeTypes map[string]attr.Type, attri
 				diagnostic.Detail()))
 		}
 
-		panic("NewNonComplianceMessageValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
+		panic("NewNonComplianceMessagesValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
 	}
 
 	return object
 }
 
-func (t NonComplianceMessageType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
+func (t NonComplianceMessagesType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
 	if in.Type() == nil {
-		return NewNonComplianceMessageValueNull(), nil
+		return NewNonComplianceMessagesValueNull(), nil
 	}
 
 	if !in.Type().Equal(t.TerraformType(ctx)) {
@@ -2576,11 +2586,11 @@ func (t NonComplianceMessageType) ValueFromTerraform(ctx context.Context, in tft
 	}
 
 	if !in.IsKnown() {
-		return NewNonComplianceMessageValueUnknown(), nil
+		return NewNonComplianceMessagesValueUnknown(), nil
 	}
 
 	if in.IsNull() {
-		return NewNonComplianceMessageValueNull(), nil
+		return NewNonComplianceMessagesValueNull(), nil
 	}
 
 	attributes := map[string]attr.Value{}
@@ -2603,22 +2613,22 @@ func (t NonComplianceMessageType) ValueFromTerraform(ctx context.Context, in tft
 		attributes[k] = a
 	}
 
-	return NewNonComplianceMessageValueMust(NonComplianceMessageValue{}.AttributeTypes(ctx), attributes), nil
+	return NewNonComplianceMessagesValueMust(NonComplianceMessagesValue{}.AttributeTypes(ctx), attributes), nil
 }
 
-func (t NonComplianceMessageType) ValueType(ctx context.Context) attr.Value {
-	return NonComplianceMessageValue{}
+func (t NonComplianceMessagesType) ValueType(ctx context.Context) attr.Value {
+	return NonComplianceMessagesValue{}
 }
 
-var _ basetypes.ObjectValuable = NonComplianceMessageValue{}
+var _ basetypes.ObjectValuable = NonComplianceMessagesValue{}
 
-type NonComplianceMessageValue struct {
+type NonComplianceMessagesValue struct {
 	Message                     basetypes.StringValue `tfsdk:"message"`
 	PolicyDefinitionReferenceId basetypes.StringValue `tfsdk:"policy_definition_reference_id"`
 	state                       attr.ValueState
 }
 
-func (v NonComplianceMessageValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
+func (v NonComplianceMessagesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
 	attrTypes := make(map[string]tftypes.Type, 2)
 
 	var val tftypes.Value
@@ -2663,19 +2673,19 @@ func (v NonComplianceMessageValue) ToTerraformValue(ctx context.Context) (tftype
 	}
 }
 
-func (v NonComplianceMessageValue) IsNull() bool {
+func (v NonComplianceMessagesValue) IsNull() bool {
 	return v.state == attr.ValueStateNull
 }
 
-func (v NonComplianceMessageValue) IsUnknown() bool {
+func (v NonComplianceMessagesValue) IsUnknown() bool {
 	return v.state == attr.ValueStateUnknown
 }
 
-func (v NonComplianceMessageValue) String() string {
-	return "NonComplianceMessageValue"
+func (v NonComplianceMessagesValue) String() string {
+	return "NonComplianceMessagesValue"
 }
 
-func (v NonComplianceMessageValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
+func (v NonComplianceMessagesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	attributeTypes := map[string]attr.Type{
@@ -2701,8 +2711,8 @@ func (v NonComplianceMessageValue) ToObjectValue(ctx context.Context) (basetypes
 	return objVal, diags
 }
 
-func (v NonComplianceMessageValue) Equal(o attr.Value) bool {
-	other, ok := o.(NonComplianceMessageValue)
+func (v NonComplianceMessagesValue) Equal(o attr.Value) bool {
+	other, ok := o.(NonComplianceMessagesValue)
 
 	if !ok {
 		return false
@@ -2727,15 +2737,15 @@ func (v NonComplianceMessageValue) Equal(o attr.Value) bool {
 	return true
 }
 
-func (v NonComplianceMessageValue) Type(ctx context.Context) attr.Type {
-	return NonComplianceMessageType{
+func (v NonComplianceMessagesValue) Type(ctx context.Context) attr.Type {
+	return NonComplianceMessagesType{
 		basetypes.ObjectType{
 			AttrTypes: v.AttributeTypes(ctx),
 		},
 	}
 }
 
-func (v NonComplianceMessageValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
+func (v NonComplianceMessagesValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 	return map[string]attr.Type{
 		"message":                        basetypes.StringType{},
 		"policy_definition_reference_id": basetypes.StringType{},
