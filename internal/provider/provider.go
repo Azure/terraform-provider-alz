@@ -32,7 +32,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-//go:generate tfplugingen-framework generate provider --package gen --output ./gen
+//go:generate tfplugingen-framework generate all --package gen --output ./gen
 
 const (
 	userAgentBase = "AzureTerraformAlzProvider"

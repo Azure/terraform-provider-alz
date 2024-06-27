@@ -432,11 +432,201 @@
                             }
                           },
                           {
-                            "name": "overrides"
+                            "name": "overrides",
+                            "list_nested": {
+                              "validators": [
+                                {
+                                  "custom": {
+                                    "imports": [
+                                      {
+                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+                                      }
+                                    ],
+                                    "schema_definition": "listvalidator.SizeAtMost(10)"
+                                  }
+                                },
+                                {
+                                  "custom": {
+                                    "imports": [
+                                      {
+                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+                                      }
+                                    ],
+                                    "schema_definition": "listvalidator.UniqueValues()"
+                                  }
+                                }
+                              ],
+                              "description": "The overrides for this policy assignment. There are a maximum of 10 overrides allowed per assignment. If specified here the overrides will replace the existing overrides.",
+                              "computed_optional_required": "optional",
+                              "nested_object": {
+                                "attributes": [
+                                  {
+                                    "name": "kind",
+                                    "string": {
+                                      "description": "The property the assignment will override. The supported kind is `policyEffect`.",
+                                      "computed_optional_required": "required",
+                                      "validators": [
+                                        {
+                                          "custom": {
+                                            "imports": [
+                                              {
+                                                "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                                              }
+                                            ],
+                                            "schema_definition": "stringvalidator.OneOf(\"policyEffect\")"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "name": "value",
+                                    "string": {
+                                      "description": "The new value which will override the existing value. The supported values are: `addToNetworkGroup`, `append`, `audit`, `auditIfNotExists`, `deny`, `denyAction`, `deployIfNotExists`, `disabled`, `manual`, `modify`, `mutate`. <https://learn.microsoft.com/azure/governance/policy/concepts/effects>",
+                                      "computed_optional_required": "required",
+                                      "validators": [
+                                        {
+                                          "custom": {
+                                            "imports": [
+                                              {
+                                                "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                                              }
+                                            ],
+                                            "schema_definition": "stringvalidator.OneOf(\"addToNetworkGroup\", \"append\", \"audit\", \"auditIfNotExists\", \"deny\", \"denyAction\", \"deployIfNotExists\", \"disabled\", \"manual\", \"modify\", \"mutate\")"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "name": "override_selectors",
+                                    "list_nested": {
+                                      "description": "The selectors to use for the override.",
+                                      "computed_optional_required": "optional",
+                                      "nested_object": {
+                                        "attributes": [
+                                          {
+                                            "name": "kind",
+                                            "string": {
+                                              "computed_optional_required": "required",
+                                              "description": "The property of a selector that describes what characteristic will narrow down the scope of the override. Allowed value for kind: `policyEffect` is: `policyDefinitionReferenceId`.",
+                                              "validators": [
+                                                {
+                                                  "custom": {
+                                                    "imports": [
+                                                      {
+                                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                                                      }
+                                                    ],
+                                                    "schema_definition": "stringvalidator.OneOf(\"policyDefinitionReferenceId\")"
+                                                  }
+                                                }
+                                              ]
+                                            }
+                                          },
+                                          {
+                                            "name": "in",
+                                            "set": {
+                                              "description": "The list of values that the selector will match. Conflicts with `not_in`.",
+                                              "computed_optional_required": "optional",
+                                              "element_type": {
+                                                "string": {}
+                                              },
+                                              "validators": [
+                                                {
+                                                  "custom": {
+                                                    "imports": [
+                                                      {
+                                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+                                                      }
+                                                    ],
+                                                    "schema_definition": "setvalidator.SizeAtMost(50)"
+                                                  }
+                                                },
+                                                {
+                                                  "custom": {
+                                                    "imports": [
+                                                      {
+                                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+                                                      },
+                                                      {
+                                                        "path": "github.com/hashicorp/terraform-plugin-framework/path"
+                                                      }
+                                                    ],
+                                                    "schema_definition": "setvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName(\"not_in\"))"
+                                                  }
+                                                }
+                                              ]
+                                            }
+                                          },
+                                          {
+                                            "name": "not_in",
+                                            "set": {
+                                              "description": "The list of values that the selector will not match. Conflicts with `in`.",
+                                              "computed_optional_required": "optional",
+                                              "element_type": {
+                                                "string": {}
+                                              },
+                                              "validators": [
+                                                {
+                                                  "custom": {
+                                                    "imports": [
+                                                      {
+                                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+                                                      }
+                                                    ],
+                                                    "schema_definition": "setvalidator.SizeAtMost(50)"
+                                                  }
+                                                },
+                                                {
+                                                  "custom": {
+                                                    "imports": [
+                                                      {
+                                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+                                                      },
+                                                      {
+                                                        "path": "github.com/hashicorp/terraform-plugin-framework/path"
+                                                      }
+                                                    ],
+                                                    "schema_definition": "setvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName(\"not_in\"))"
+                                                  }
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            }
                           },
                           {
                             "name": "resource_selectors",
                             "list_nested": {
+                              "validators": [
+                                {
+                                  "custom": {
+                                    "imports": [
+                                      {
+                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+                                      }
+                                    ],
+                                    "schema_definition": "listvalidator.SizeAtMost(10)"
+                                  }
+                                },
+                                {
+                                  "custom": {
+                                    "imports": [
+                                      {
+                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+                                      }
+                                    ],
+                                    "schema_definition": "listvalidator.UniqueValues()"
+                                  }
+                                }
+                              ],
                               "description": "The resource selectors to use for the policy assignment. A maximum of 10 resource selectors are allowed per assignment. If specified here the resource selectors will replace any existing resource selectors.",
                               "computed_optional_required": "optional",
                               "nested_object": {
@@ -461,32 +651,107 @@
                                     }
                                   },
                                   {
-                                    "name": "kind"
+                                    "name": "resource_selector_selectors",
+                                    "list_nested": {
+                                      "description": "The selectors to use for the resource selector.",
+                                      "computed_optional_required": "optional",
+                                      "nested_object": {
+                                        "attributes": [
+                                          {
+                                            "name": "kind",
+                                            "string": {
+                                              "description": "The property of a selector that describes what characteristic will narrow down the set of evaluated resources. Each kind can only be used once in a single resource selector. Allowed values are: `resourceLocation`, `resourceType`, `resourceWithoutLocation`. `resourceWithoutLocation` cannot be used in the same resource selector as `resourceLocation`.",
+                                              "computed_optional_required": "required",
+                                              "validators": [
+                                                {
+                                                  "custom": {
+                                                    "imports": [
+                                                      {
+                                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                                                      }
+                                                    ],
+                                                    "schema_definition": "stringvalidator.OneOf(\"resourceLocation\", \"resourceType\", \"resourceWithoutLocation\")"
+                                                  }
+                                                }
+                                              ]
+                                            }
+                                          },
+                                          {
+                                            "name": "in",
+                                            "set": {
+                                              "description": "The list of values that the selector will match. Conflicts with `not_in`.",
+                                              "computed_optional_required": "optional",
+                                              "element_type": {
+                                                "string": {}
+                                              },
+                                              "validators": [
+                                                {
+                                                  "custom": {
+                                                    "imports": [
+                                                      {
+                                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+                                                      }
+                                                    ],
+                                                    "schema_definition": "setvalidator.SizeAtMost(50)"
+                                                  }
+                                                },
+                                                {
+                                                  "custom": {
+                                                    "imports": [
+                                                      {
+                                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+                                                      },
+                                                      {
+                                                        "path": "github.com/hashicorp/terraform-plugin-framework/path"
+                                                      }
+                                                    ],
+                                                    "schema_definition": "setvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName(\"not_in\"))"
+                                                  }
+                                                }
+                                              ]
+                                            }
+                                          },
+                                          {
+                                            "name": "not_in",
+                                            "set": {
+                                              "description": "The list of values that the selector will not match. Conflicts with `in`.",
+                                              "computed_optional_required": "optional",
+                                              "element_type": {
+                                                "string": {}
+                                              },
+                                              "validators": [
+                                                {
+                                                  "custom": {
+                                                    "imports": [
+                                                      {
+                                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+                                                      }
+                                                    ],
+                                                    "schema_definition": "setvalidator.SizeAtMost(50)"
+                                                  }
+                                                },
+                                                {
+                                                  "custom": {
+                                                    "imports": [
+                                                      {
+                                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+                                                      },
+                                                      {
+                                                        "path": "github.com/hashicorp/terraform-plugin-framework/path"
+                                                      }
+                                                    ],
+                                                    "schema_definition": "setvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName(\"not_in\"))"
+                                                  }
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    }
                                   }
                                 ]
-                              },
-                              "validators": [
-                                {
-                                  "custom": {
-                                    "imports": [
-                                      {
-                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
-                                      }
-                                    ],
-                                    "schema_definition": "listvalidator.SizeAtMost(10)"
-                                  }
-                                },
-                                {
-                                  "custom": {
-                                    "imports": [
-                                      {
-                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
-                                      }
-                                    ],
-                                    "schema_definition": "listvalidator.UniqueValues()"
-                                  }
-                                }
-                              ]
+                              }
                             }
                           },
                           {
@@ -498,7 +763,7 @@
                                 "import": {
                                   "path": "github.com/Azure/terraform-provider-alz/internal/alztypes"
                                 },
-                                "type": "alztypes.PolicyParameterType",
+                                "type": "alztypes.PolicyParameterType{}",
                                 "value_type": "alztypes.PolicyParameterValue"
                               }
                             }
@@ -593,5 +858,6 @@
         ]
       }
     }
-  ]
+  ],
+  "resources": []
 }
