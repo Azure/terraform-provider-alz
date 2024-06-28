@@ -909,9 +909,85 @@
               }
             }
           }
+        ],
+        "blocks": [
+          {
+            "name": "timeouts",
+            "single_nested": {
+              "attributes": [
+                {
+                  "name": "read",
+                  "string": {
+                    "description": "The maximum time to wait for a read operation to complete.",
+                    "computed_optional_required": "optional"
+                  }
+                }
+              ],
+              "custom_type": {
+                "import": {
+                  "path": "github.com/hashicorp/terraform-plugin-framework-timeouts/datasource/timeouts"
+                },
+                "type": "timeouts.Type{}",
+                "value_type": "timeouts.Value"
+              }
+            }
+          }
         ]
       }
     }
   ],
-  "resources": []
+  "resources": [
+    {
+      "name": "policy_role_assignments",
+      "schema": {
+        "attributes": [
+          {
+            "name": "id",
+            "string": {
+              "description": "The id architecture.",
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "assignments",
+            "set_nested": {
+              "computed_optional_required": "required",
+              "nested_object": {
+                "attributes": [
+                  {
+                    "name": "principal_id",
+                    "string": {
+                      "description": "The principal id to assign the role to.",
+                      "computed_optional_required": "required"
+                    }
+                  },
+                  {
+                    "name": "role_definition_id",
+                    "string": {
+                      "description": "The role definition id to assign.",
+                      "computed_optional_required": "required"
+                    }
+                  },
+                  {
+                    "name": "scope",
+                    "string": {
+                      "description": "The scope of the assignment.",
+                      "computed_optional_required": "required"
+                    }
+                  },
+                  {
+                    "name": "resource_id",
+                    "string": {
+                      "description": "The resource id of the role assignment.",
+                      "computed_optional_required": "computed"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
 }

@@ -12,9 +12,9 @@ import (
 	"github.com/Azure/alzlib/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization"
+	"github.com/Azure/terraform-provider-alz/internal/provider/gen"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -22,6 +22,7 @@ import (
 // Ensure provider defined types fully satisfy framework interfaces.
 var _ resource.Resource = &PolicyRoleAssignmentsResource{}
 var _ resource.ResourceWithImportState = &PolicyRoleAssignmentsResource{}
+var _ resource.ResourceWithConfigure = &PolicyRoleAssignmentsResource{}
 
 var respErr *azcore.ResponseError
 
@@ -34,59 +35,12 @@ type PolicyRoleAssignmentsResource struct {
 	alz *alzProviderData
 }
 
-// PolicyRoleAssignmentsResourceModel describes the resource data model.
-type PolicyRoleAssignmentsResourceModel struct {
-	Id          types.String                                            `tfsdk:"id"`
-	Assignments map[string]PolicyRoleAssignmentsAssignmentResourceModel `tfsdk:"assignments"`
-}
-
-// PolicyRoleAssignmentsAssignmentResourceModel describes the resource data model.
-type PolicyRoleAssignmentsAssignmentResourceModel struct {
-	PrincipalId      types.String `tfsdk:"principal_id"`
-	Scope            types.String `tfsdk:"scope"`
-	RoleDefinitionID types.String `tfsdk:"role_definition_id"`
-	ResourceID       types.String `tfsdk:"resource_id"`
-}
-
 func (r PolicyRoleAssignmentsResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_policy_role_assignments"
 }
 
 func (r *PolicyRoleAssignmentsResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = schema.Schema{
-		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: "Policy role assignment resource. This should receive data from Terraform once the policy assignments have been created and the identity principal IDs are known.",
-
-		Attributes: map[string]schema.Attribute{
-			"assignments": schema.MapNestedAttribute{
-				Required: true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"principal_id": schema.StringAttribute{
-							Optional:            true,
-							MarkdownDescription: "The name of the policy assignment.",
-						},
-						"scope": schema.StringAttribute{
-							Required:            true,
-							MarkdownDescription: "The scope of the policy assignment.",
-						},
-						"role_definition_id": schema.StringAttribute{
-							Required:            true,
-							MarkdownDescription: "The role definition ID of the policy assignment.",
-						},
-						"resource_id": schema.StringAttribute{
-							Computed:            true,
-							MarkdownDescription: "The resource ID of the role assignment.",
-						},
-					},
-				},
-			},
-			"id": schema.StringAttribute{
-				Required:            true,
-				MarkdownDescription: "The id of the management group, forming the last part of the resource ID.",
-			},
-		},
-	}
+	resp.Schema = gen.PolicyRoleAssignmentsResourceSchema(ctx)
 }
 
 func (r *PolicyRoleAssignmentsResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -109,7 +63,7 @@ func (r *PolicyRoleAssignmentsResource) Configure(ctx context.Context, req resou
 }
 
 func (r *PolicyRoleAssignmentsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data PolicyRoleAssignmentsResourceModel
+	var data gen.PolicyRoleAssignmentsModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -118,7 +72,7 @@ func (r *PolicyRoleAssignmentsResource) Create(ctx context.Context, req resource
 		return
 	}
 
-	for k, v := range data.Assignments {
+	for k, v := range data.Assignments.Elements() {
 		assignment, err := createPolicyRoleAssignment(ctx, r.alz.clients.RoleAssignmentsClient, k, v)
 		if err != nil {
 			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create role assignment, got error: %s", err))
@@ -280,25 +234,24 @@ func readPolicyRoleAssignment(ctx context.Context, client *armauthorization.Role
 	return &assignment, nil
 }
 
-func createPolicyRoleAssignment(ctx context.Context, client *armauthorization.RoleAssignmentsClient, id string, data PolicyRoleAssignmentsAssignmentResourceModel) (*PolicyRoleAssignmentsAssignmentResourceModel, error) {
+func createPolicyRoleAssignment(ctx context.Context, client *armauthorization.RoleAssignmentsClient, id string, data *gen.AssignmentsValue) error {
 	params := armauthorization.RoleAssignmentCreateParameters{
 		Properties: &armauthorization.RoleAssignmentProperties{
 			PrincipalID:      to.Ptr(data.PrincipalId.ValueString()),
-			RoleDefinitionID: to.Ptr(data.RoleDefinitionID.ValueString()),
+			RoleDefinitionID: to.Ptr(data.RoleDefinitionId.ValueString()),
 		},
 	}
 	ra, err := client.Create(ctx, data.Scope.ValueString(), id, params, nil)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("createPolicyRoleAssignment: unable to create role assignment, got error: %w", err)
 	}
 
-	av := PolicyRoleAssignmentsAssignmentResourceModel{
-		PrincipalId:      types.StringValue(*ra.Properties.PrincipalID),
-		RoleDefinitionID: types.StringValue(standardizeRoleAssignmentRoleDefinititionId(*ra.Properties.RoleDefinitionID)),
-		Scope:            types.StringValue(*ra.Properties.Scope),
-		ResourceID:       types.StringValue(*ra.ID),
-	}
-	return &av, nil
+	data.PrincipalId = types.StringValue(*ra.Properties.PrincipalID)
+	data.RoleDefinitionId = types.StringValue(standardizeRoleAssignmentRoleDefinititionId(*ra.Properties.RoleDefinitionID))
+	data.Scope = types.StringValue(*ra.Properties.Scope)
+	data.ResourceId = types.StringValue(*ra.ID)
+
+	return nil
 }
 
 func deletePolicyRoleAssignment(ctx context.Context, client *armauthorization.RoleAssignmentsClient, resourceId string) error {

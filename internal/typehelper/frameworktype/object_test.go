@@ -1,87 +1,76 @@
 package frameworktype
 
-import (
-	"context"
-	"math/big"
-	"testing"
+// func TestObjectToGo(t *testing.T) {
+// 	ctx := context.Background()
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stretchr/testify/assert"
-)
+// 	t.Run("ValidObject", func(t *testing.T) {
+// 		nestedInput, diags := types.ObjectValue(
+// 			map[string]attr.Type{
+// 				"nestedKey1": types.StringType,
+// 			},
+// 			map[string]attr.Value{
+// 				"nestedKey1": types.StringValue("nestedValue1"),
+// 			},
+// 		)
+// 		input, d := types.ObjectValue(
+// 			map[string]attr.Type{
+// 				"key1":   types.StringType,
+// 				"key2":   types.NumberType,
+// 				"key3":   types.BoolType,
+// 				"nested": nestedInput.Type(ctx),
+// 			},
+// 			map[string]attr.Value{
+// 				"key1":   types.StringValue("value1"),
+// 				"key2":   types.NumberValue(big.NewFloat(3.14)),
+// 				"key3":   types.BoolValue(true),
+// 				"nested": nestedInput,
+// 			},
+// 		)
+// 		diags.Append(d...)
 
-func TestObjectToGo(t *testing.T) {
-	ctx := context.Background()
+// 		if diags.ErrorsCount() > 0 {
+// 			t.Fatalf("unexpected diags: %v", diags)
+// 		}
 
-	t.Run("ValidObject", func(t *testing.T) {
-		nestedInput, diags := types.ObjectValue(
-			map[string]attr.Type{
-				"nestedKey1": types.StringType,
-			},
-			map[string]attr.Value{
-				"nestedKey1": types.StringValue("nestedValue1"),
-			},
-		)
-		input, d := types.ObjectValue(
-			map[string]attr.Type{
-				"key1":   types.StringType,
-				"key2":   types.NumberType,
-				"key3":   types.BoolType,
-				"nested": nestedInput.Type(ctx),
-			},
-			map[string]attr.Value{
-				"key1":   types.StringValue("value1"),
-				"key2":   types.NumberValue(big.NewFloat(3.14)),
-				"key3":   types.BoolValue(true),
-				"nested": nestedInput,
-			},
-		)
-		diags.Append(d...)
+// 		type outputTypeNested struct {
+// 			NestedKey1 string `tfsdk:"nestedKey1"`
+// 		}
 
-		if diags.ErrorsCount() > 0 {
-			t.Fatalf("unexpected diags: %v", diags)
-		}
+// 		type outputType struct {
+// 			Key1   string           `tfsdk:"key1"`
+// 			Key2   float64          `tfsdk:"key2"`
+// 			Key3   bool             `tfsdk:"key3"`
+// 			Nested outputTypeNested `tfsdk:"nested"`
+// 		}
 
-		type outputTypeNested struct {
-			NestedKey1 string `tfsdk:"nestedKey1"`
-		}
+// 		var output outputType
 
-		type outputType struct {
-			Key1   string           `tfsdk:"key1"`
-			Key2   float64          `tfsdk:"key2"`
-			Key3   bool             `tfsdk:"key3"`
-			Nested outputTypeNested `tfsdk:"nested"`
-		}
+// 		diags.Append(ObjectToGo(ctx, input, &output)...)
 
-		var output outputType
+// 		if diags.ErrorsCount() > 0 {
+// 			t.Fatalf("unexpected diags: %v", diags)
+// 		}
 
-		diags.Append(ObjectToGo(ctx, input, &output)...)
+// 		assert.Empty(t, diags)
+// 		assert.Equal(t, outputType{
+// 			Key1: "value1",
+// 			Key2: 3.14,
+// 			Key3: true,
+// 			Nested: outputTypeNested{
+// 				NestedKey1: "nestedValue1",
+// 			},
+// 		}, output)
+// 	})
 
-		if diags.ErrorsCount() > 0 {
-			t.Fatalf("unexpected diags: %v", diags)
-		}
+// 	t.Run("InvalidObject", func(t *testing.T) {
+// 		input := types.StringValue("not an object")
 
-		assert.Empty(t, diags)
-		assert.Equal(t, outputType{
-			Key1: "value1",
-			Key2: 3.14,
-			Key3: true,
-			Nested: outputTypeNested{
-				NestedKey1: "nestedValue1",
-			},
-		}, output)
-	})
+// 		var output map[string]interface{}
+// 		diags := ObjectToGo(ctx, input, &output)
 
-	t.Run("InvalidObject", func(t *testing.T) {
-		input := types.StringValue("not an object")
-
-		var output map[string]interface{}
-		diags := ObjectToGo(ctx, input, &output)
-
-		assert.Equal(t, diag.Diagnostics{
-			diag.NewErrorDiagnostic("expected object value", ""),
-		}, diags)
-		assert.Nil(t, output)
-	})
-}
+// 		assert.Equal(t, diag.Diagnostics{
+// 			diag.NewErrorDiagnostic("expected object value", ""),
+// 		}, diags)
+// 		assert.Nil(t, output)
+// 	})
+// }

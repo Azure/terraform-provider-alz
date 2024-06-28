@@ -16,7 +16,7 @@ func TestSliceOfPrimitiveToGo(t *testing.T) {
 	t.Run("EmptySlice", func(t *testing.T) {
 		input := []attr.Value{}
 		want := []*string{}
-		got := SliceOfPrimitiveToGo[string](ctx, input)
+		got, _ := SliceOfPrimitiveToGo[string](ctx, input)
 		assert.Equal(t, want, got)
 	})
 
@@ -31,7 +31,7 @@ func TestSliceOfPrimitiveToGo(t *testing.T) {
 			to.Ptr("bar"),
 			to.Ptr("baz"),
 		}
-		got := SliceOfPrimitiveToGo[string](ctx, input)
+		got, _ := SliceOfPrimitiveToGo[string](ctx, input)
 		assert.Equal(t, want, got)
 	})
 
@@ -46,7 +46,7 @@ func TestSliceOfPrimitiveToGo(t *testing.T) {
 			nil,
 			to.Ptr("baz"),
 		}
-		got := SliceOfPrimitiveToGo[string](ctx, input)
+		got, _ := SliceOfPrimitiveToGo[string](ctx, input)
 		assert.Equal(t, want, got)
 	})
 }

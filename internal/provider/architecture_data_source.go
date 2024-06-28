@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/Azure/alzlib/deployment"
 	"github.com/Azure/alzlib/to"
@@ -13,8 +14,6 @@ import (
 	"github.com/Azure/terraform-provider-alz/internal/provider/gen"
 	"github.com/Azure/terraform-provider-alz/internal/typehelper"
 	"github.com/Azure/terraform-provider-alz/internal/typehelper/frameworktype"
-	mapset "github.com/deckarep/golang-set/v2"
-	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -69,6 +68,14 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
+	readTimeout, diags := data.Timeouts.Read(ctx, 10*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, readTimeout)
+	defer cancel()
+
 	if d.alz == nil {
 		resp.Diagnostics.AddError(
 			"architectureDataSource.Read() Provider not configured",
@@ -89,25 +96,28 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	// Modify policy assignments
 	mg2paModMap := make(map[string]gen.PolicyAssignmentsToModifyValue)
-	diags := data.PolicyAssignmentsToModify.ElementsAs(ctx, &mg2paModMap, false)
+	diags = data.PolicyAssignmentsToModify.ElementsAs(ctx, &mg2paModMap, false)
 	resp.Diagnostics.Append(diags...)
 	for mgName, pa2mod := range mg2paModMap {
 		pa2modMap := make(map[string]gen.PolicyAssignmentsValue)
 		diags = pa2mod.PolicyAssignments.ElementsAs(ctx, &pa2modMap, false)
 		resp.Diagnostics.Append(diags...)
 		for paName, mod := range pa2modMap {
-			enf, ident, noncompl, params, resourceSel, overrides, err := policyAssignmentType2ArmPolicyValues(mod)
-			if err != nil {
+			enf, ident, noncompl, params, resourceSel, overrides, diags := policyAssignmentType2ArmPolicyValues(ctx, mod)
+			resp.Diagnostics.Append(diags...)
+			if diags.HasError() {
 				resp.Diagnostics.AddError(
-					"architectureDataSource.Read() Error converting policy assignment to ARM values",
-					err.Error(),
+					"architectureDataSource.Read() Error converting policy assignment values to Azure SDK types",
+					fmt.Sprintf("Error modifying policy assignment values for `%s` at mg `%s`", paName, mgName),
 				)
+				return
 			}
 			if err := depl.ManagementGroup(mgName).ModifyPolicyAssignment(paName, params, enf, noncompl, ident, resourceSel, overrides); err != nil {
 				resp.Diagnostics.AddError(
-					fmt.Sprintf("architectureDataSource.Read() Error modifying policy assignment `%s` at mg `%s`", paName, mgName),
-					err.Error(),
+					"architectureDataSource.Read() Error modifying policy assignment values in alzlib",
+					fmt.Sprintf("Error modifying policy assignment values for `%s` at mg `%s`: %s", paName, mgName, err.Error()),
 				)
+				return
 			}
 		}
 	}
@@ -121,7 +131,7 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 		)
 		return
 	}
-	policyRoleAssignmentsVal, diags := policyRoleAssignmentsSetToProviderType(ctx, policyRoleAssignments)
+	policyRoleAssignmentsVal, diags := policyRoleAssignmentsSetToProviderType(ctx, policyRoleAssignments.ToSlice())
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -150,11 +160,11 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func policyRoleAssignmentsSetToProviderType(ctx context.Context, input mapset.Set[deployment.PolicyRoleAssignment]) (basetypes.SetValue, diag.Diagnostics) {
+func policyRoleAssignmentsSetToProviderType(ctx context.Context, input []deployment.PolicyRoleAssignment) (basetypes.SetValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
-	praSlice := make([]gen.PolicyRoleAssignmentsValue, 0, input.Cardinality())
-	for i := range input.Iter() {
-		pra, diag := policyRoleAssignmentToProviderType(ctx, i)
+	praSlice := make([]gen.PolicyRoleAssignmentsValue, 0, len(input))
+	for _, v := range input {
+		pra, diag := policyRoleAssignmentToProviderType(ctx, v)
 		diags.Append(diag...)
 		praSlice = append(praSlice, pra)
 	}
@@ -218,7 +228,6 @@ func policyAssignmentType2ArmPolicyValues(ctx context.Context, pa gen.PolicyAssi
 	enforcementMode = convertPolicyAssignmentEnforcementModeToSdkType(pa.EnforcementMode)
 
 	// set identity
-
 	identity, diag = convertPolicyAssignmentIdentityToSdkType(pa.Identity, pa.IdentityIds)
 	diags.Append(diag...)
 	if diags.HasError() {
@@ -226,13 +235,23 @@ func policyAssignmentType2ArmPolicyValues(ctx context.Context, pa gen.PolicyAssi
 	}
 
 	// set non-compliance message
-	nonCompl := make([]gen.NonComplianceMessagesValue, len(pa.NonComplianceMessages.Elements()))
-	diag = pa.NonComplianceMessages.ElementsAs(ctx, &nonCompl, false)
-	diags.Append(diag...)
-	if diags.HasError() {
-		return nil, nil, nil, nil, nil, nil, diags
+	if isKnown(pa.NonComplianceMessages) {
+		nonCompl := make([]gen.NonComplianceMessagesValue, len(pa.NonComplianceMessages.Elements()))
+		for i, msg := range pa.NonComplianceMessages.Elements() {
+			frameworkMsg, ok := msg.(gen.NonComplianceMessagesValue)
+			if !ok {
+				diags.AddError(
+					"policyAssignmentType2ArmPolicyValues: error",
+					"unable to convert non-compliance message attr.Value to concrete type",
+				)
+			}
+			nonCompl[i] = frameworkMsg
+		}
+		if diags.HasError() {
+			return nil, nil, nil, nil, nil, nil, diags
+		}
+		nonComplianceMessages = convertPolicyAssignmentNonComplianceMessagesToSdkType(nonCompl)
 	}
-	nonComplianceMessages = convertPolicyAssignmentNonComplianceMessagesToSdkType(nonCompl)
 
 	// set parameters
 	params := alztypes.PolicyParameterValue{
@@ -245,45 +264,68 @@ func policyAssignmentType2ArmPolicyValues(ctx context.Context, pa gen.PolicyAssi
 	}
 
 	// set resource selectors
-	rS := make([]gen.ResourceSelectorsValue, len(pa.ResourceSelectors.Elements()))
-	diag = pa.ResourceSelectors.ElementsAs(ctx, &rS, false)
-	diags.Append(diag...)
-	resourceSelectors, err = convertPolicyAssignmentResourceSelectorsToSdkType(rS)
-	if err != nil {
-		return nil, nil, nil, nil, nil, nil, diags
+	if isKnown(pa.ResourceSelectors) {
+		rS := make([]gen.ResourceSelectorsValue, len(pa.ResourceSelectors.Elements()))
+		diag = pa.ResourceSelectors.ElementsAs(ctx, &rS, false)
+		diags.Append(diag...)
+		resourceSelectors, diag = convertPolicyAssignmentResourceSelectorsToSdkType(ctx, rS)
+		diags.Append(diag...)
+		if diags.HasError() {
+			return nil, nil, nil, nil, nil, nil, diags
+		}
 	}
 
 	// set overrides
-	ovr := make([]gen.OverridesValue, len(pa.Overrides.Elements()))
-	diag = pa.Overrides.ElementsAs(ctx, &ovr, false)
-	overrides, err = convertPolicyAssignmentOverridesToSdkType(ovr)
-	if err != nil {
-		return nil, nil, nil, nil, nil, nil, diags
+	if isKnown(pa.Overrides) {
+		ovr := make([]gen.OverridesValue, len(pa.Overrides.Elements()))
+		diag = pa.Overrides.ElementsAs(ctx, &ovr, false)
+		diags.Append(diag...)
+		overrides, diag = convertPolicyAssignmentOverridesToSdkType(ctx, ovr)
+		diags.Append(diag...)
+		if diags.HasError() {
+			return nil, nil, nil, nil, nil, nil, diags
+		}
 	}
 
 	return enforcementMode, identity, nonComplianceMessages, parameters, resourceSelectors, overrides, nil
 }
 
-func convertPolicyAssignmentOverridesToSdkType(src []gen.OverridesValue) ([]*armpolicy.Override, error) {
-	if len(src) == 0 {
+func convertPolicyAssignmentOverridesToSdkType(ctx context.Context, input []gen.OverridesValue) ([]*armpolicy.Override, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	if len(input) == 0 {
 		return nil, nil
 	}
-	res := make([]*armpolicy.Override, len(src))
-	for i, o := range src {
-		selectors := make([]*armpolicy.Selector, len(o.Selectors))
-		for j, s := range o.Selectors {
-			in, err := typehelper.AttrSlice2StringSlice(s.In.Elements())
-			if err != nil {
-				return nil, fmt.Errorf("unable to convert override selector `in` in value to string %w", err)
+	res := make([]*armpolicy.Override, len(input))
+	for i, o := range input {
+		selectors := make([]*armpolicy.Selector, len(o.OverrideSelectors.Elements()))
+		for j, s := range o.OverrideSelectors.Elements() {
+			osv, ok := s.(gen.OverrideSelectorsValue)
+			if !ok {
+				diags.AddError(
+					"convertPolicyAssignmentOverridesToSdkType: error",
+					"unable to convert override selectors attr.Value to concrete type",
+				)
 			}
-			notIn, err := typehelper.AttrSlice2StringSlice(s.NotIn.Elements())
+			in, err := frameworktype.SliceOfPrimitiveToGo[string](ctx, osv.In.Elements())
 			if err != nil {
-				return nil, fmt.Errorf("unable to convert override selector `not_in` in value to string %w", err)
+				diags.AddError(
+					"convertPolicyAssignmentOverridesToSdkType: error",
+					fmt.Sprintf("unable to convert OverrideSelctorsValue.In elements to Go slice: %s", err.Error()),
+				)
+				return nil, diags
+			}
+			notIn, err := frameworktype.SliceOfPrimitiveToGo[string](ctx, osv.NotIn.Elements())
+			if err != nil {
+				diags.AddError(
+					"convertPolicyAssignmentOverridesToSdkType: error",
+					fmt.Sprintf("unable to convert OverrideSelctorsValue.NotIn elements to Go slice: %s", err.Error()),
+				)
+				return nil, diags
 			}
 			selectors[j] = &armpolicy.Selector{
-				Kind:  to.Ptr(armpolicy.SelectorKind(s.Kind.ValueString())),
-				In:    to.SliceOfPtrs(in...),
-				NotIn: to.SliceOfPtrs(notIn...),
+				Kind:  to.Ptr(armpolicy.SelectorKind(osv.Kind.ValueString())),
+				In:    in,
+				NotIn: notIn,
 			}
 		}
 		res[i] = &armpolicy.Override{
@@ -295,27 +337,42 @@ func convertPolicyAssignmentOverridesToSdkType(src []gen.OverridesValue) ([]*arm
 	return res, nil
 }
 
-func convertPolicyAssignmentResourceSelectorsToSdkType(ctx context.Context, src []gen.ResourceSelectorsValue) ([]*armpolicy.ResourceSelector, diag.Diagnostics) {
+func convertPolicyAssignmentResourceSelectorsToSdkType(ctx context.Context, input []gen.ResourceSelectorsValue) ([]*armpolicy.ResourceSelector, diag.Diagnostics) {
 	var diags diag.Diagnostics
-	if len(src) == 0 {
+	if len(input) == 0 {
 		return nil, nil
 	}
-	res := make([]*armpolicy.ResourceSelector, len(src))
-	for i, rs := range src {
-		selectors := make([]*armpolicy.Selector, len(rs.Selectors))
-		for j, s := range rs.Selectors {
-			in := frameworktype.SliceOfPrimitiveToGo[string](ctx, s.In.Elements())
-			if err != nil {
-				return nil, fmt.Errorf("unable to convert resource selector selector `in` in value to string %w", err)
+	res := make([]*armpolicy.ResourceSelector, len(input))
+	for i, rs := range input {
+		selectors := make([]*armpolicy.Selector, len(rs.ResourceSelectorSelectors.Elements()))
+		for j, s := range rs.ResourceSelectorSelectors.Elements() {
+			rssv, ok := s.(gen.ResourceSelectorSelectorsValue)
+			if !ok {
+				diags.AddError(
+					"convertPolicyAssignmentResourceSelectorsToSdkType: error",
+					"unable to convert resource selector selectors attr.Value to concrete type",
+				)
 			}
-			notIn, err := typehelper.AttrSlice2StringSlice(s.NotIn.Elements())
+			in, err := frameworktype.SliceOfPrimitiveToGo[string](ctx, rssv.In.Elements())
 			if err != nil {
-				return nil, fmt.Errorf("unable to convert resource selector selector `not_in` in value to string %w", err)
+				diags.AddError(
+					"convertPolicyAssignmentResourceSelectorsToSdkType: error",
+					fmt.Sprintf("unable to convert ResourceSelectorSelectorsValue.In elements to Go slice: %s", err.Error()),
+				)
+				return nil, diags
+			}
+			notIn, err := frameworktype.SliceOfPrimitiveToGo[string](ctx, rssv.NotIn.Elements())
+			if err != nil {
+				diags.AddError(
+					"convertPolicyAssignmentResourceSelectorsToSdkType: error",
+					fmt.Sprintf("unable to convert ResourceSelectorSelectorsValue.NotIn elements to Go slice: %s", err.Error()),
+				)
+				return nil, diags
 			}
 			selectors[j] = &armpolicy.Selector{
-				Kind:  to.Ptr(armpolicy.SelectorKind(s.Kind.ValueString())),
-				In:    to.SliceOfPtrs(in...),
-				NotIn: to.SliceOfPtrs(notIn...),
+				Kind:  to.Ptr(armpolicy.SelectorKind(rssv.Kind.ValueString())),
+				In:    in,
+				NotIn: notIn,
 			}
 		}
 		res[i] = &armpolicy.ResourceSelector{
@@ -374,15 +431,15 @@ func convertPolicyAssignmentIdentityToSdkType(typ types.String, ids types.Set) (
 		var id string
 		if len(ids.Elements()) != 1 {
 			diags.AddError(
-				"convertPolicyAssignmentIdentityToSdkType: one (and only one) identity id is required for user assigned identity",
-				"",
+				"convertPolicyAssignmentIdentityToSdkType: error",
+				"one (and only one) identity id is required for user assigned identity",
 			)
 			return nil, diags
 		}
 		idStr, ok := ids.Elements()[0].(types.String)
 		if !ok {
 			diags.AddError(
-				"convertPolicyAssignmentIdentityToSdkType: error converting identity to SDK type",
+				"convertPolicyAssignmentIdentityToSdkType: error",
 				"unable to convert identity id to string",
 			)
 			return nil, diags
@@ -395,7 +452,7 @@ func convertPolicyAssignmentIdentityToSdkType(typ types.String, ids types.Set) (
 		})
 	default:
 		diags.AddError(
-			"convertPolicyAssignmentIdentityToSdkType: error converting identity to SDK type",
+			"convertPolicyAssignmentIdentityToSdkType: error",
 			fmt.Sprintf("unknown identity type: %s", typ.ValueString()),
 		)
 		return nil, diags
@@ -413,7 +470,7 @@ func convertPolicyAssignmentParametersToSdkType(src alztypes.PolicyParameterValu
 	if err := json.Unmarshal([]byte(src.ValueString()), &params); err != nil {
 		diags.AddError(
 			"convertPolicyAssignmentParametersToSdkType: error",
-			fmt.Sprintf("convertPolicyAssignmentParametersToSdkType: unable to unmarshal policy parameters: %w", err),
+			fmt.Sprintf("convertPolicyAssignmentParametersToSdkType: unable to unmarshal policy parameters: %s", err.Error()),
 		)
 		return nil, diags
 	}
@@ -431,9 +488,4 @@ func convertPolicyAssignmentParametersToSdkType(src alztypes.PolicyParameterValu
 
 func isKnown(val attr.Value) bool {
 	return !val.IsNull() && !val.IsUnknown()
-}
-
-func genPolicyRoleAssignmentId(pra deployment.PolicyRoleAssignment) string {
-	u := uuid.NewSHA1(uuid.NameSpaceURL, []byte(pra.AssignmentName+pra.RoleDefinitionId+pra.Scope))
-	return u.String()
 }

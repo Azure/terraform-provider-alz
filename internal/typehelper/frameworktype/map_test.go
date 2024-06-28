@@ -16,7 +16,7 @@ func TestMapOfPrimitiveToGo(t *testing.T) {
 	t.Run("EmptyInput", func(t *testing.T) {
 		input := make(map[string]attr.Value)
 		want := make(map[string]*string)
-		got := MapOfPrimitiveToGo[string](ctx, input)
+		got, _ := MapOfPrimitiveToGo[string](ctx, input)
 		assert.Equal(t, want, got)
 	})
 
@@ -31,7 +31,7 @@ func TestMapOfPrimitiveToGo(t *testing.T) {
 			"key2": to.Ptr("value2"),
 			"key3": to.Ptr("value3"),
 		}
-		got := MapOfPrimitiveToGo[string](ctx, input)
+		got, _ := MapOfPrimitiveToGo[string](ctx, input)
 		assert.Equal(t, want, got)
 	})
 }

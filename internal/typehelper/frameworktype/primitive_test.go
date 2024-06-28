@@ -53,7 +53,7 @@ func TestToGo(t *testing.T) {
 		}
 		for _, tc := range testCases {
 			t.Run(tc.desc, func(t *testing.T) {
-				got := PrimitiveToGo[float64](ctx, tc.in)
+				got, _ := PrimitiveToGo[float64](ctx, tc.in)
 				assert.Equal(t, tc.want, got)
 			})
 		}
@@ -98,7 +98,7 @@ func TestToGo(t *testing.T) {
 		}
 		for _, tc := range testCases {
 			t.Run(tc.desc, func(t *testing.T) {
-				got := PrimitiveToGo[int64](ctx, tc.in)
+				got, _ := PrimitiveToGo[int64](ctx, tc.in)
 				assert.Equal(t, tc.want, got)
 			})
 		}
@@ -133,7 +133,7 @@ func TestToGo(t *testing.T) {
 		}
 		for _, tc := range testCases {
 			t.Run(tc.desc, func(t *testing.T) {
-				got := PrimitiveToGo[string](ctx, tc.in)
+				got, _ := PrimitiveToGo[string](ctx, tc.in)
 				assert.Equal(t, tc.want, got)
 			})
 		}
@@ -168,7 +168,7 @@ func TestToGo(t *testing.T) {
 		}
 		for _, tc := range testCases {
 			t.Run(tc.desc, func(t *testing.T) {
-				got := PrimitiveToGo[bool](ctx, tc.in)
+				got, _ := PrimitiveToGo[bool](ctx, tc.in)
 				assert.Equal(t, tc.want, got)
 			})
 		}
