@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func TestArmTypeResourceIds(t *testing.T) {
+func TestArmResourceIdTypeNamespace(t *testing.T) {
 	t.Parallel()
 
 	type testCase struct {
@@ -24,7 +24,7 @@ func TestArmTypeResourceIds(t *testing.T) {
 	testCases := map[string]testCase{
 		"simple-match": {
 			rid: types.StringValue("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/foo"),
-			validator: alzvalidators.ArmTypeResourceId(
+			validator: alzvalidators.ArmResourceIdTypeNamespace(
 				"Microsoft.Resources",
 				"resourceGroups",
 			),
@@ -32,7 +32,7 @@ func TestArmTypeResourceIds(t *testing.T) {
 		},
 		"mg-match": {
 			rid: types.StringValue("/providers/Microsoft.Management/managementGroups/foo/providers/Microsoft.Authorization/policyDefinitions/foo"),
-			validator: alzvalidators.ArmTypeResourceId(
+			validator: alzvalidators.ArmResourceIdTypeNamespace(
 				"Microsoft.Authorization",
 				"policyDefinitions",
 			),
@@ -40,7 +40,7 @@ func TestArmTypeResourceIds(t *testing.T) {
 		},
 		"subresource-match": {
 			rid: types.StringValue("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/foo/providers/Microsoft.Network/virtualNetworks/bar/subnets/baz"),
-			validator: alzvalidators.ArmTypeResourceId(
+			validator: alzvalidators.ArmResourceIdTypeNamespace(
 				"Microsoft.Network",
 				"virtualNetworks/subnets",
 			),
@@ -48,7 +48,7 @@ func TestArmTypeResourceIds(t *testing.T) {
 		},
 		"rg-match": {
 			rid: types.StringValue("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/foo"),
-			validator: alzvalidators.ArmTypeResourceId(
+			validator: alzvalidators.ArmResourceIdTypeNamespace(
 				"Microsoft.Resources",
 				"resourceGroups",
 			),

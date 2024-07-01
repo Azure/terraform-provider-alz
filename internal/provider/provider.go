@@ -161,7 +161,7 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 
 func (p *AlzProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		// NewPolicyRoleAssignmentResource,
+		NewPolicyRoleAssignmentsResource,
 	}
 }
 

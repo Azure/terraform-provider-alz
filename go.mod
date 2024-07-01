@@ -3,7 +3,7 @@ module github.com/Azure/terraform-provider-alz
 go 1.22.4
 
 require (
-	github.com/Azure/alzlib v0.15.0
+	github.com/Azure/alzlib v0.16.0
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.12.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.7.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization v1.0.0
@@ -35,7 +35,7 @@ require (
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
 	github.com/bgentry/speakeasy v0.1.0 // indirect
 	github.com/bmatcuk/doublestar/v4 v4.6.1 // indirect
-	github.com/brunoga/deep v1.2.3 // indirect
+	github.com/brunoga/deep v1.2.4 // indirect
 	github.com/cloudflare/circl v1.3.8 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/color v1.17.0 // indirect

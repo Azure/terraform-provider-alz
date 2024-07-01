@@ -34,6 +34,8 @@ data "alz_architecture" "example" {
 ### Optional
 
 - `policy_assignments_to_modify` (Attributes Map) A mested map of policy assignments to modify. The key is the management group id, and the value is an object with a single attribute, `policy_assignments`. This is another map. (see [below for nested schema](#nestedatt--policy_assignments_to_modify))
+- `policy_role_assignments` (Attributes Set) A set of role assignments that need to be created for the policies that have been assigned in the hierarchy. Since we will likely be using system assigned identities, we don't know the principal ID until after the deployment. Therefore this data can be used to create the role assignments after the deployment. (see [below for nested schema](#nestedatt--policy_role_assignments))
+- `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only
 
@@ -55,13 +57,13 @@ Optional:
 - `enforcement_mode` (String) The enforcement mode for the policy assignment. Valid values are `Default` and `DoNotEnforce`.
 - `identity` (String) The identity type. Must be one of `SystemAssigned` or `UserAssigned`.
 - `identity_ids` (Set of String) A set of zero or one identity ids to assign to the policy assignment. Required if `identity` is `UserAssigned`. **Do not** pass in computed values, instead construct the resource id yourself.
-- `non_compliance_message` (Attributes) The non-compliance messages to use for the policy assignment. (see [below for nested schema](#nestedatt--policy_assignments_to_modify--policy_assignments--non_compliance_message))
+- `non_compliance_messages` (Attributes Set) The non-compliance messages to use for the policy assignment. (see [below for nested schema](#nestedatt--policy_assignments_to_modify--policy_assignments--non_compliance_messages))
 - `overrides` (Attributes List) The overrides for this policy assignment. There are a maximum of 10 overrides allowed per assignment. If specified here the overrides will replace the existing overrides. (see [below for nested schema](#nestedatt--policy_assignments_to_modify--policy_assignments--overrides))
 - `parameters` (String) The parameters to use for the policy assignment. **Note:** This is a JSON string, and not a map. This is because the parameter values have different types, which confuses the type system used by the provider sdk. Use `jsonencode()` to construct the map. The map keys must be strings, the values are `any` type. Example: `jsonencode({"param1": "value1", "param2": 2})`
 - `resource_selectors` (Attributes List) The resource selectors to use for the policy assignment. A maximum of 10 resource selectors are allowed per assignment. If specified here the resource selectors will replace any existing resource selectors. (see [below for nested schema](#nestedatt--policy_assignments_to_modify--policy_assignments--resource_selectors))
 
-<a id="nestedatt--policy_assignments_to_modify--policy_assignments--non_compliance_message"></a>
-### Nested Schema for `policy_assignments_to_modify.policy_assignments.non_compliance_message`
+<a id="nestedatt--policy_assignments_to_modify--policy_assignments--non_compliance_messages"></a>
+### Nested Schema for `policy_assignments_to_modify.policy_assignments.non_compliance_messages`
 
 Required:
 
@@ -125,6 +127,24 @@ Optional:
 
 
 
+<a id="nestedatt--policy_role_assignments"></a>
+### Nested Schema for `policy_role_assignments`
+
+Read-Only:
+
+- `policy_assignment_name` (String) The name of the policy assignment to enable retrieval of the identity id.
+- `role_definition_id` (String) The role definition id to assign.
+- `scope` (String) The scope of the assignment.
+
+
+<a id="nestedblock--timeouts"></a>
+### Nested Schema for `timeouts`
+
+Optional:
+
+- `read` (String) The maximum time to wait for a read operation to complete.
+
+
 <a id="nestedatt--management_groups"></a>
 ### Nested Schema for `management_groups`
 
@@ -141,3 +161,4 @@ Read-Only:
 - `exists` (Boolean) Whether the management group already exists or not. Used to determine if the management group should be created or just have policy/role resources created within.
 - `id` (String) The id of the management group. This the last segment of the resource id.
 - `level` (Number) The level of the management group in the hierarchy, relative to the supplied root management group. The level starts at zero.
+- `parent_id` (String) The parent management group id.

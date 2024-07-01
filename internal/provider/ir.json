@@ -399,7 +399,7 @@
                                         "path": "github.com/Azure/terraform-provider-alz/internal/alzvalidators"
                                       }
                                     ],
-                                    "schema_definition": "setvalidator.ValueStringsAre(alzvalidators.ArmTypeResourceId(\"Microsoft.ManagedIdentity\", \"userAssignedIdentities\"))"
+                                    "schema_definition": "setvalidator.ValueStringsAre(alzvalidators.ArmResourceIdTypeNamespace(\"Microsoft.ManagedIdentity\", \"userAssignedIdentities\"))"
                                   }
                                 },
                                 {
@@ -813,6 +813,13 @@
                     }
                   },
                   {
+                    "name": "parent_id",
+                    "string": {
+                      "description": "The parent management group id.",
+                      "computed_optional_required": "computed"
+                    }
+                  },
+                  {
                     "name": "display_name",
                     "string": {
                       "description": "The display name of the management group.",
@@ -904,6 +911,13 @@
                       "description": "The name of the policy assignment to enable retrieval of the identity id.",
                       "computed_optional_required": "computed"
                     }
+                  },
+                  {
+                    "name": "management_group_id",
+                    "string": {
+                      "description": "The id of the management group where the policy assignment will be created.",
+                      "computed_optional_required": "computed"
+                    }
                   }
                 ]
               }
@@ -972,7 +986,19 @@
                     "name": "scope",
                     "string": {
                       "description": "The scope of the assignment.",
-                      "computed_optional_required": "required"
+                      "computed_optional_required": "required",
+                      "validators": [
+                        {
+                          "custom": {
+                            "imports": [
+                              {
+                                "path": "github.com/Azure/terraform-provider-alz/internal/alzvalidators"
+                              }
+                            ],
+                            "schema_definition": "alzvalidators.ArmResourceId()"
+                          }
+                        }
+                      ]
                     }
                   },
                   {

@@ -48,8 +48,6 @@ func testAccArchitectureDataSourceConfig() string {
 	// libPath := filepath.Join(cwd, "testdata/testacc_lib")
 
 	return `
-provider "alz" {}
-
 provider "azurerm" {
   features {}
 }

@@ -13,26 +13,26 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 )
 
-var _ validator.String = armPolicyDefinitionValidator{}
+var _ validator.String = armResourceIdNamespaceTypeValidator{}
 
-// armPolicyDefinitionValidator validates that a string Attribute's value matches the specified regular expression.
-type armPolicyDefinitionValidator struct {
+// armResourceIdValidator validates that a string Attribute's value matches the specified regular expression.
+type armResourceIdNamespaceTypeValidator struct {
 	armtype   string
 	namespace string
 }
 
 // Description describes the validation in plain text formatting.
-func (validator armPolicyDefinitionValidator) Description(_ context.Context) string {
-	return fmt.Sprintf("value must be ARM resource id in namespace '%s', of type, '%s'", validator.namespace, validator.armtype)
+func (validator armResourceIdNamespaceTypeValidator) Description(_ context.Context) string {
+	return fmt.Sprintf("Value must be ARM resource id in namespace '%s', of type, '%s'", validator.namespace, validator.armtype)
 }
 
 // MarkdownDescription describes the validation in Markdown formatting.
-func (validator armPolicyDefinitionValidator) MarkdownDescription(ctx context.Context) string {
+func (validator armResourceIdNamespaceTypeValidator) MarkdownDescription(ctx context.Context) string {
 	return validator.Description(ctx)
 }
 
 // Validate performs the validation.
-func (v armPolicyDefinitionValidator) ValidateString(ctx context.Context, request validator.StringRequest, response *validator.StringResponse) {
+func (v armResourceIdNamespaceTypeValidator) ValidateString(ctx context.Context, request validator.StringRequest, response *validator.StringResponse) {
 	if request.ConfigValue.IsNull() || request.ConfigValue.IsUnknown() {
 		return
 	}
@@ -55,8 +55,8 @@ func (v armPolicyDefinitionValidator) ValidateString(ctx context.Context, reques
 //   - Matches the given namespace and resource type
 //
 // Null (unconfigured) and unknown (known after apply) values are skipped.
-func ArmTypeResourceId(ns, t string) validator.String {
-	return armPolicyDefinitionValidator{
+func ArmResourceIdTypeNamespace(ns, t string) validator.String {
+	return armResourceIdNamespaceTypeValidator{
 		armtype:   t,
 		namespace: ns,
 	}

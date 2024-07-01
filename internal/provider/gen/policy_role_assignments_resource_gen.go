@@ -5,8 +5,10 @@ package gen
 import (
 	"context"
 	"fmt"
+	"github.com/Azure/terraform-provider-alz/internal/alzvalidators"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
@@ -40,6 +42,9 @@ func PolicyRoleAssignmentsResourceSchema(ctx context.Context) schema.Schema {
 							Required:            true,
 							Description:         "The scope of the assignment.",
 							MarkdownDescription: "The scope of the assignment.",
+							Validators: []validator.String{
+								alzvalidators.ArmResourceId(),
+							},
 						},
 					},
 					CustomType: AssignmentsType{

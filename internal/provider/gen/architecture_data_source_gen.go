@@ -63,6 +63,11 @@ func ArchitectureDataSourceSchema(ctx context.Context) schema.Schema {
 							Description:         "The level of the management group in the hierarchy, relative to the supplied root management group. The level starts at zero.",
 							MarkdownDescription: "The level of the management group in the hierarchy, relative to the supplied root management group. The level starts at zero.",
 						},
+						"parent_id": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The parent management group id.",
+							MarkdownDescription: "The parent management group id.",
+						},
 						"policy_assignments": schema.MapAttribute{
 							ElementType:         types.StringType,
 							Optional:            true,
@@ -138,7 +143,7 @@ func ArchitectureDataSourceSchema(ctx context.Context) schema.Schema {
 										Description:         "A set of zero or one identity ids to assign to the policy assignment. Required if `identity` is `UserAssigned`. **Do not** pass in computed values, instead construct the resource id yourself.",
 										MarkdownDescription: "A set of zero or one identity ids to assign to the policy assignment. Required if `identity` is `UserAssigned`. **Do not** pass in computed values, instead construct the resource id yourself.",
 										Validators: []validator.Set{
-											setvalidator.ValueStringsAre(alzvalidators.ArmTypeResourceId("Microsoft.ManagedIdentity", "userAssignedIdentities")),
+											setvalidator.ValueStringsAre(alzvalidators.ArmResourceIdTypeNamespace("Microsoft.ManagedIdentity", "userAssignedIdentities")),
 											setvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("identity")),
 											setvalidator.SizeBetween(0, 1),
 										},
@@ -342,6 +347,11 @@ func ArchitectureDataSourceSchema(ctx context.Context) schema.Schema {
 			"policy_role_assignments": schema.SetNestedAttribute{
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
+						"management_group_id": schema.StringAttribute{
+							Computed:            true,
+							Description:         "The id of the management group where the policy assignment will be created.",
+							MarkdownDescription: "The id of the management group where the policy assignment will be created.",
+						},
 						"policy_assignment_name": schema.StringAttribute{
 							Computed:            true,
 							Description:         "The name of the policy assignment to enable retrieval of the identity id.",
@@ -503,6 +513,24 @@ func (t ManagementGroupsType) ValueFromObject(ctx context.Context, in basetypes.
 			fmt.Sprintf(`level expected to be basetypes.NumberValue, was: %T`, levelAttribute))
 	}
 
+	parentIdAttribute, ok := attributes["parent_id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`parent_id is missing from object`)
+
+		return nil, diags
+	}
+
+	parentIdVal, ok := parentIdAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`parent_id expected to be basetypes.StringValue, was: %T`, parentIdAttribute))
+	}
+
 	policyAssignmentsAttribute, ok := attributes["policy_assignments"]
 
 	if !ok {
@@ -584,6 +612,7 @@ func (t ManagementGroupsType) ValueFromObject(ctx context.Context, in basetypes.
 		Exists:               existsVal,
 		Id:                   idVal,
 		Level:                levelVal,
+		ParentId:             parentIdVal,
 		PolicyAssignments:    policyAssignmentsVal,
 		PolicyDefinitions:    policyDefinitionsVal,
 		PolicySetDefinitions: policySetDefinitionsVal,
@@ -727,6 +756,24 @@ func NewManagementGroupsValue(attributeTypes map[string]attr.Type, attributes ma
 			fmt.Sprintf(`level expected to be basetypes.NumberValue, was: %T`, levelAttribute))
 	}
 
+	parentIdAttribute, ok := attributes["parent_id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`parent_id is missing from object`)
+
+		return NewManagementGroupsValueUnknown(), diags
+	}
+
+	parentIdVal, ok := parentIdAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`parent_id expected to be basetypes.StringValue, was: %T`, parentIdAttribute))
+	}
+
 	policyAssignmentsAttribute, ok := attributes["policy_assignments"]
 
 	if !ok {
@@ -808,6 +855,7 @@ func NewManagementGroupsValue(attributeTypes map[string]attr.Type, attributes ma
 		Exists:               existsVal,
 		Id:                   idVal,
 		Level:                levelVal,
+		ParentId:             parentIdVal,
 		PolicyAssignments:    policyAssignmentsVal,
 		PolicyDefinitions:    policyDefinitionsVal,
 		PolicySetDefinitions: policySetDefinitionsVal,
@@ -888,6 +936,7 @@ type ManagementGroupsValue struct {
 	Exists               basetypes.BoolValue   `tfsdk:"exists"`
 	Id                   basetypes.StringValue `tfsdk:"id"`
 	Level                basetypes.NumberValue `tfsdk:"level"`
+	ParentId             basetypes.StringValue `tfsdk:"parent_id"`
 	PolicyAssignments    basetypes.MapValue    `tfsdk:"policy_assignments"`
 	PolicyDefinitions    basetypes.MapValue    `tfsdk:"policy_definitions"`
 	PolicySetDefinitions basetypes.MapValue    `tfsdk:"policy_set_definitions"`
@@ -896,7 +945,7 @@ type ManagementGroupsValue struct {
 }
 
 func (v ManagementGroupsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 8)
+	attrTypes := make(map[string]tftypes.Type, 9)
 
 	var val tftypes.Value
 	var err error
@@ -905,6 +954,7 @@ func (v ManagementGroupsValue) ToTerraformValue(ctx context.Context) (tftypes.Va
 	attrTypes["exists"] = basetypes.BoolType{}.TerraformType(ctx)
 	attrTypes["id"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["level"] = basetypes.NumberType{}.TerraformType(ctx)
+	attrTypes["parent_id"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["policy_assignments"] = basetypes.MapType{
 		ElemType: types.StringType,
 	}.TerraformType(ctx)
@@ -922,7 +972,7 @@ func (v ManagementGroupsValue) ToTerraformValue(ctx context.Context) (tftypes.Va
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 8)
+		vals := make(map[string]tftypes.Value, 9)
 
 		val, err = v.DisplayName.ToTerraformValue(ctx)
 
@@ -955,6 +1005,14 @@ func (v ManagementGroupsValue) ToTerraformValue(ctx context.Context) (tftypes.Va
 		}
 
 		vals["level"] = val
+
+		val, err = v.ParentId.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["parent_id"] = val
 
 		val, err = v.PolicyAssignments.ToTerraformValue(ctx)
 
@@ -1027,6 +1085,7 @@ func (v ManagementGroupsValue) ToObjectValue(ctx context.Context) (basetypes.Obj
 			"exists":       basetypes.BoolType{},
 			"id":           basetypes.StringType{},
 			"level":        basetypes.NumberType{},
+			"parent_id":    basetypes.StringType{},
 			"policy_assignments": basetypes.MapType{
 				ElemType: types.StringType,
 			},
@@ -1052,6 +1111,7 @@ func (v ManagementGroupsValue) ToObjectValue(ctx context.Context) (basetypes.Obj
 			"exists":       basetypes.BoolType{},
 			"id":           basetypes.StringType{},
 			"level":        basetypes.NumberType{},
+			"parent_id":    basetypes.StringType{},
 			"policy_assignments": basetypes.MapType{
 				ElemType: types.StringType,
 			},
@@ -1077,6 +1137,7 @@ func (v ManagementGroupsValue) ToObjectValue(ctx context.Context) (basetypes.Obj
 			"exists":       basetypes.BoolType{},
 			"id":           basetypes.StringType{},
 			"level":        basetypes.NumberType{},
+			"parent_id":    basetypes.StringType{},
 			"policy_assignments": basetypes.MapType{
 				ElemType: types.StringType,
 			},
@@ -1102,6 +1163,7 @@ func (v ManagementGroupsValue) ToObjectValue(ctx context.Context) (basetypes.Obj
 			"exists":       basetypes.BoolType{},
 			"id":           basetypes.StringType{},
 			"level":        basetypes.NumberType{},
+			"parent_id":    basetypes.StringType{},
 			"policy_assignments": basetypes.MapType{
 				ElemType: types.StringType,
 			},
@@ -1122,6 +1184,7 @@ func (v ManagementGroupsValue) ToObjectValue(ctx context.Context) (basetypes.Obj
 		"exists":       basetypes.BoolType{},
 		"id":           basetypes.StringType{},
 		"level":        basetypes.NumberType{},
+		"parent_id":    basetypes.StringType{},
 		"policy_assignments": basetypes.MapType{
 			ElemType: types.StringType,
 		},
@@ -1151,6 +1214,7 @@ func (v ManagementGroupsValue) ToObjectValue(ctx context.Context) (basetypes.Obj
 			"exists":                 v.Exists,
 			"id":                     v.Id,
 			"level":                  v.Level,
+			"parent_id":              v.ParentId,
 			"policy_assignments":     policyAssignmentsVal,
 			"policy_definitions":     policyDefinitionsVal,
 			"policy_set_definitions": policySetDefinitionsVal,
@@ -1191,6 +1255,10 @@ func (v ManagementGroupsValue) Equal(o attr.Value) bool {
 		return false
 	}
 
+	if !v.ParentId.Equal(other.ParentId) {
+		return false
+	}
+
 	if !v.PolicyAssignments.Equal(other.PolicyAssignments) {
 		return false
 	}
@@ -1224,6 +1292,7 @@ func (v ManagementGroupsValue) AttributeTypes(ctx context.Context) map[string]at
 		"exists":       basetypes.BoolType{},
 		"id":           basetypes.StringType{},
 		"level":        basetypes.NumberType{},
+		"parent_id":    basetypes.StringType{},
 		"policy_assignments": basetypes.MapType{
 			ElemType: types.StringType,
 		},
@@ -4630,6 +4699,24 @@ func (t PolicyRoleAssignmentsType) ValueFromObject(ctx context.Context, in baset
 
 	attributes := in.Attributes()
 
+	managementGroupIdAttribute, ok := attributes["management_group_id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`management_group_id is missing from object`)
+
+		return nil, diags
+	}
+
+	managementGroupIdVal, ok := managementGroupIdAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`management_group_id expected to be basetypes.StringValue, was: %T`, managementGroupIdAttribute))
+	}
+
 	policyAssignmentNameAttribute, ok := attributes["policy_assignment_name"]
 
 	if !ok {
@@ -4689,6 +4776,7 @@ func (t PolicyRoleAssignmentsType) ValueFromObject(ctx context.Context, in baset
 	}
 
 	return PolicyRoleAssignmentsValue{
+		ManagementGroupId:    managementGroupIdVal,
 		PolicyAssignmentName: policyAssignmentNameVal,
 		RoleDefinitionId:     roleDefinitionIdVal,
 		Scope:                scopeVal,
@@ -4759,6 +4847,24 @@ func NewPolicyRoleAssignmentsValue(attributeTypes map[string]attr.Type, attribut
 		return NewPolicyRoleAssignmentsValueUnknown(), diags
 	}
 
+	managementGroupIdAttribute, ok := attributes["management_group_id"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`management_group_id is missing from object`)
+
+		return NewPolicyRoleAssignmentsValueUnknown(), diags
+	}
+
+	managementGroupIdVal, ok := managementGroupIdAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`management_group_id expected to be basetypes.StringValue, was: %T`, managementGroupIdAttribute))
+	}
+
 	policyAssignmentNameAttribute, ok := attributes["policy_assignment_name"]
 
 	if !ok {
@@ -4818,6 +4924,7 @@ func NewPolicyRoleAssignmentsValue(attributeTypes map[string]attr.Type, attribut
 	}
 
 	return PolicyRoleAssignmentsValue{
+		ManagementGroupId:    managementGroupIdVal,
 		PolicyAssignmentName: policyAssignmentNameVal,
 		RoleDefinitionId:     roleDefinitionIdVal,
 		Scope:                scopeVal,
@@ -4893,6 +5000,7 @@ func (t PolicyRoleAssignmentsType) ValueType(ctx context.Context) attr.Value {
 var _ basetypes.ObjectValuable = PolicyRoleAssignmentsValue{}
 
 type PolicyRoleAssignmentsValue struct {
+	ManagementGroupId    basetypes.StringValue `tfsdk:"management_group_id"`
 	PolicyAssignmentName basetypes.StringValue `tfsdk:"policy_assignment_name"`
 	RoleDefinitionId     basetypes.StringValue `tfsdk:"role_definition_id"`
 	Scope                basetypes.StringValue `tfsdk:"scope"`
@@ -4900,11 +5008,12 @@ type PolicyRoleAssignmentsValue struct {
 }
 
 func (v PolicyRoleAssignmentsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 3)
+	attrTypes := make(map[string]tftypes.Type, 4)
 
 	var val tftypes.Value
 	var err error
 
+	attrTypes["management_group_id"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["policy_assignment_name"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["role_definition_id"] = basetypes.StringType{}.TerraformType(ctx)
 	attrTypes["scope"] = basetypes.StringType{}.TerraformType(ctx)
@@ -4913,7 +5022,15 @@ func (v PolicyRoleAssignmentsValue) ToTerraformValue(ctx context.Context) (tftyp
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 3)
+		vals := make(map[string]tftypes.Value, 4)
+
+		val, err = v.ManagementGroupId.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["management_group_id"] = val
 
 		val, err = v.PolicyAssignmentName.ToTerraformValue(ctx)
 
@@ -4969,6 +5086,7 @@ func (v PolicyRoleAssignmentsValue) ToObjectValue(ctx context.Context) (basetype
 	var diags diag.Diagnostics
 
 	attributeTypes := map[string]attr.Type{
+		"management_group_id":    basetypes.StringType{},
 		"policy_assignment_name": basetypes.StringType{},
 		"role_definition_id":     basetypes.StringType{},
 		"scope":                  basetypes.StringType{},
@@ -4985,6 +5103,7 @@ func (v PolicyRoleAssignmentsValue) ToObjectValue(ctx context.Context) (basetype
 	objVal, diags := types.ObjectValue(
 		attributeTypes,
 		map[string]attr.Value{
+			"management_group_id":    v.ManagementGroupId,
 			"policy_assignment_name": v.PolicyAssignmentName,
 			"role_definition_id":     v.RoleDefinitionId,
 			"scope":                  v.Scope,
@@ -5006,6 +5125,10 @@ func (v PolicyRoleAssignmentsValue) Equal(o attr.Value) bool {
 
 	if v.state != attr.ValueStateKnown {
 		return true
+	}
+
+	if !v.ManagementGroupId.Equal(other.ManagementGroupId) {
+		return false
 	}
 
 	if !v.PolicyAssignmentName.Equal(other.PolicyAssignmentName) {
@@ -5033,6 +5156,7 @@ func (v PolicyRoleAssignmentsValue) Type(ctx context.Context) attr.Type {
 
 func (v PolicyRoleAssignmentsValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 	return map[string]attr.Type{
+		"management_group_id":    basetypes.StringType{},
 		"policy_assignment_name": basetypes.StringType{},
 		"role_definition_id":     basetypes.StringType{},
 		"scope":                  basetypes.StringType{},

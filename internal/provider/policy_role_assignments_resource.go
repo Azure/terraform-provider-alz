@@ -14,6 +14,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization"
 	"github.com/Azure/terraform-provider-alz/internal/provider/gen"
 	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -27,7 +28,7 @@ var _ resource.ResourceWithConfigure = &PolicyRoleAssignmentsResource{}
 
 var respErr *azcore.ResponseError
 
-func NewPolicyRoleAssignmentResource() resource.Resource {
+func NewPolicyRoleAssignmentsResource() resource.Resource {
 	return &PolicyRoleAssignmentsResource{}
 }
 
@@ -94,7 +95,7 @@ func (r *PolicyRoleAssignmentsResource) Create(ctx context.Context, req resource
 		return
 	}
 	data.Assignments = newAssignmentsSet
-
+	data.Id = types.StringValue(uuid.NewString())
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -156,7 +157,6 @@ func (r *PolicyRoleAssignmentsResource) Update(ctx context.Context, req resource
 	for _, v := range plannedAssignments {
 		// If the assignment is already in state (comparison by scope, role def id and principal id), read it
 		if pra := policyRoleAssignmentFromSlice(currentAssignments, v); pra != nil {
-			// Ok, then just read it
 			tflog.Debug(ctx, fmt.Sprintf("reading role assignment: %s", pra.ResourceId.ValueString()))
 			assignment, err := readPolicyRoleAssignment(ctx, r.alz.clients.RoleAssignmentsClient, pra.ResourceId.ValueString())
 			if err != nil {
@@ -164,6 +164,7 @@ func (r *PolicyRoleAssignmentsResource) Update(ctx context.Context, req resource
 				return
 			}
 			newAssignments = append(newAssignments, *assignment)
+			continue
 		}
 		// If not then we create it
 		name := genPolicyRoleAssignmentId(v)
@@ -193,6 +194,7 @@ func (r *PolicyRoleAssignmentsResource) Update(ctx context.Context, req resource
 		return
 	}
 	planned.Assignments = newAssignmentsSet
+	planned.Id = current.Id
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &planned)...)
 }
@@ -254,22 +256,19 @@ func readPolicyRoleAssignment(ctx context.Context, client *armauthorization.Role
 			if e.StatusCode != 404 {
 				return nil, err
 			}
-			assignment := gen.AssignmentsValue{
-				PrincipalId:      types.StringNull(),
-				RoleDefinitionId: types.StringNull(),
-				Scope:            types.StringNull(),
-				ResourceId:       types.StringNull(),
-			}
+			assignment := gen.NewAssignmentsValueNull()
 			return &assignment, nil
 		}
 	}
-	assignment := gen.AssignmentsValue{
-		PrincipalId:      types.StringValue(*ra.Properties.PrincipalID),
-		RoleDefinitionId: types.StringValue(standardizeRoleAssignmentRoleDefinititionId(*ra.Properties.RoleDefinitionID)),
-		Scope:            types.StringValue(*ra.Properties.Scope),
-		ResourceId:       types.StringValue(*ra.ID),
-	}
-
+	assignment := gen.NewAssignmentsValueMust(
+		gen.NewAssignmentsValueNull().AttributeTypes(ctx),
+		map[string]attr.Value{
+			"principal_id":       types.StringValue(*ra.Properties.PrincipalID),
+			"role_definition_id": types.StringValue(standardizeRoleAssignmentRoleDefinititionId(*ra.Properties.RoleDefinitionID)),
+			"scope":              types.StringValue(*ra.Properties.Scope),
+			"resource_id":        types.StringValue(*ra.ID),
+		},
+	)
 	return &assignment, nil
 }
 
