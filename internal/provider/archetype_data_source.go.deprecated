@@ -18,7 +18,6 @@ import (
 	"github.com/Azure/terraform-provider-alz/internal/alzvalidators"
 	"github.com/Azure/terraform-provider-alz/internal/typehelper"
 	mapset "github.com/deckarep/golang-set/v2"
-	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -832,9 +831,4 @@ func convertPolicyAssignmentParametersToSdkType(src alztypes.PolicyParameterValu
 
 func isKnown(val attr.Value) bool {
 	return !val.IsNull() && !val.IsUnknown()
-}
-
-func genPolicyRoleAssignmentId(pra alzlib.PolicyRoleAssignment) string {
-	u := uuid.NewSHA1(uuid.NameSpaceURL, []byte(pra.AssignmentName+pra.RoleDefinitionId+pra.Scope))
-	return u.String()
 }

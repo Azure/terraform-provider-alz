@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization"
 	"github.com/Azure/terraform-provider-alz/internal/provider/gen"
+	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -71,23 +72,35 @@ func (r *PolicyRoleAssignmentsResource) Create(ctx context.Context, req resource
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	for k, v := range data.Assignments.Elements() {
-		assignment, err := createPolicyRoleAssignment(ctx, r.alz.clients.RoleAssignmentsClient, k, v)
+	newAssignments := make([]gen.AssignmentsValue, len(data.Assignments.Elements()))
+	for i, v := range data.Assignments.Elements() {
+		pra, ok := v.(gen.AssignmentsValue)
+		if !ok {
+			resp.Diagnostics.AddError("Schema Error", "Unable to cast attr.Value to PolicyRoleAssignmentsValue")
+			return
+		}
+		name := genPolicyRoleAssignmentId(pra)
+		err := createPolicyRoleAssignment(ctx, r.alz.clients.RoleAssignmentsClient, name, &pra)
 		if err != nil {
 			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create role assignment, got error: %s", err))
 			return
 		}
-		data.Assignments[k] = *assignment
+		newAssignments[i] = pra
 	}
+
+	newAssignmentsSet, diags := types.SetValueFrom(ctx, gen.NewAssignmentsValueNull().Type(ctx), newAssignments)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	data.Assignments = newAssignmentsSet
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *PolicyRoleAssignmentsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data PolicyRoleAssignmentsResourceModel
-
+	var data gen.PolicyRoleAssignmentsModel
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 
@@ -95,24 +108,36 @@ func (r *PolicyRoleAssignmentsResource) Read(ctx context.Context, req resource.R
 		return
 	}
 
-	for k, v := range data.Assignments {
-		tflog.Info(ctx, fmt.Sprintf("reading role assignment: %s", v.ResourceID.ValueString()))
-		if v.ResourceID.IsNull() || v.RoleDefinitionID.IsUnknown() {
+	newAssignments := make([]gen.AssignmentsValue, 0, len(data.Assignments.Elements()))
+	for _, v := range data.Assignments.Elements() {
+		pra, ok := v.(gen.AssignmentsValue)
+		if !ok {
+			resp.Diagnostics.AddError("Schema Error", "Unable to cast attr.Value to PolicyRoleAssignmentsValue")
+			return
+		}
+		tflog.Debug(ctx, fmt.Sprintf("reading role assignment: %s", pra.ResourceId.ValueString()))
+		if pra.ResourceId.IsNull() || pra.RoleDefinitionId.IsUnknown() {
 			continue
 		}
-		assignment, err := readPolicyRoleAssignment(ctx, r.alz.clients.RoleAssignmentsClient, v.ResourceID.ValueString())
+		assignment, err := readPolicyRoleAssignment(ctx, r.alz.clients.RoleAssignmentsClient, pra.ResourceId.ValueString())
 		if err != nil {
 			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read role assignment, got error: %s", err))
 			return
 		}
-		data.Assignments[k] = *assignment
+		newAssignments = append(newAssignments, *assignment)
 	}
-
+	newAssignmentsSet, diags := types.SetValueFrom(ctx, gen.NewAssignmentsValueNull().Type(ctx), newAssignments)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	data.Assignments = newAssignmentsSet
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *PolicyRoleAssignmentsResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var planned, current PolicyRoleAssignmentsResourceModel
+	var planned, current gen.PolicyRoleAssignmentsModel
+	var plannedAssignments, currentAssignments []gen.AssignmentsValue
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planned)...)
@@ -121,59 +146,59 @@ func (r *PolicyRoleAssignmentsResource) Update(ctx context.Context, req resource
 		return
 	}
 
-	for k, v := range planned.Assignments {
-		// If the assignment is planned to be created, create it
-		asis, ok := current.Assignments[k]
-		if !ok {
-			tflog.Info(ctx, fmt.Sprintf("creating role assignment %s at scope %s", k, v.Scope.ValueString()))
-			assignment, err := createPolicyRoleAssignment(ctx, r.alz.clients.RoleAssignmentsClient, k, v)
+	resp.Diagnostics.Append(planned.Assignments.ElementsAs(ctx, &plannedAssignments, false)...)
+	resp.Diagnostics.Append(current.Assignments.ElementsAs(ctx, &currentAssignments, false)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	newAssignments := make([]gen.AssignmentsValue, 0, len(plannedAssignments))
+	for _, v := range plannedAssignments {
+		// If the assignment is already in state (comparison by scope, role def id and principal id), read it
+		if pra := policyRoleAssignmentFromSlice(currentAssignments, v); pra != nil {
+			// Ok, then just read it
+			tflog.Debug(ctx, fmt.Sprintf("reading role assignment: %s", pra.ResourceId.ValueString()))
+			assignment, err := readPolicyRoleAssignment(ctx, r.alz.clients.RoleAssignmentsClient, pra.ResourceId.ValueString())
 			if err != nil {
-				resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create role assignment, got error: %s", err))
+				resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read role assignment, got error: %s", err))
 				return
 			}
-			planned.Assignments[k] = *assignment
+			newAssignments = append(newAssignments, *assignment)
 		}
-		if ok {
-			// This shouldn't happen as the map key is deterministic and based on these values, however, if it does, update the assignment.
-			if asis.PrincipalId != v.PrincipalId || asis.RoleDefinitionID != v.RoleDefinitionID || asis.Scope != v.Scope {
-				tflog.Info(ctx, fmt.Sprintf("updating role assignment: %s at scope %s", k, v.Scope.ValueString()))
-				assignment, err := createPolicyRoleAssignment(ctx, r.alz.clients.RoleAssignmentsClient, k, v)
-				if err != nil {
-					resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create role assignment, got error: %s", err))
-					return
-				}
-				planned.Assignments[k] = *assignment
-			} else {
-				// Ok, then just read it
-				tflog.Info(ctx, fmt.Sprintf("reading role assignment: %s", asis.ResourceID.ValueString()))
-				assignment, err := readPolicyRoleAssignment(ctx, r.alz.clients.RoleAssignmentsClient, asis.ResourceID.ValueString())
-				if err != nil {
-					resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read role assignment, got error: %s", err))
-					return
-				}
-				planned.Assignments[k] = *assignment
-			}
+		// If not then we create it
+		name := genPolicyRoleAssignmentId(v)
+		tflog.Debug(ctx, fmt.Sprintf("creating role assignment %s at scope %s", name, v.Scope.ValueString()))
+		err := createPolicyRoleAssignment(ctx, r.alz.clients.RoleAssignmentsClient, name, &v)
+		if err != nil {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create role assignment, got error: %s", err))
+			return
 		}
-
+		newAssignments = append(newAssignments, v)
 	}
 
 	// If the assignment is planned to be deleted, delete it
-	for k, v := range current.Assignments {
-		if _, ok := planned.Assignments[k]; !ok {
-			tflog.Info(ctx, fmt.Sprintf("deleting role assignment: %s (%s at scope %s)", v.ResourceID.ValueString(), k, v.Scope.ValueString()))
-			if err := deletePolicyRoleAssignment(ctx, r.alz.clients.RoleAssignmentsClient, v.ResourceID.ValueString()); err != nil {
-				resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete role assignment, got error: %s", err))
-				return
-			}
+	for _, v := range currentAssignments {
+		if policyRoleAssignmentFromSlice(plannedAssignments, v) != nil {
+			continue
+		}
+		tflog.Debug(ctx, fmt.Sprintf("deleting role assignment: %s", v.ResourceId.ValueString()))
+		if err := deletePolicyRoleAssignment(ctx, r.alz.clients.RoleAssignmentsClient, v.ResourceId.ValueString()); err != nil {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete role assignment, got error: %s", err))
+			return
 		}
 	}
-
+	newAssignmentsSet, diags := types.SetValueFrom(ctx, gen.NewAssignmentsValueNull().Type(ctx), newAssignments)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	planned.Assignments = newAssignmentsSet
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &planned)...)
 }
 
 func (r *PolicyRoleAssignmentsResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data PolicyRoleAssignmentsResourceModel
+	var data gen.PolicyRoleAssignmentsModel
 
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
@@ -182,21 +207,35 @@ func (r *PolicyRoleAssignmentsResource) Delete(ctx context.Context, req resource
 		return
 	}
 
-	for k, v := range data.Assignments {
-		tflog.Info(ctx, fmt.Sprintf("deleting role assignment: %s", v.ResourceID.ValueString()))
-		if err := deletePolicyRoleAssignment(ctx, r.alz.clients.RoleAssignmentsClient, v.ResourceID.ValueString()); err != nil {
+	for _, v := range data.Assignments.Elements() {
+		pra, ok := v.(gen.AssignmentsValue)
+		if !ok {
+			resp.Diagnostics.AddError("Schema Error", "Unable to cast attr.Value to PolicyRoleAssignmentsValue")
+			return
+		}
+		tflog.Debug(ctx, fmt.Sprintf("deleting role assignment: %s", pra.ResourceId.ValueString()))
+		if err := deletePolicyRoleAssignment(ctx, r.alz.clients.RoleAssignmentsClient, pra.ResourceId.ValueString()); err != nil {
 			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete role assignment, got error: %s", err))
 		}
-		delete(data.Assignments, k)
 	}
 
 	data.Id = types.StringNull()
+	data.Assignments = types.SetNull(gen.NewAssignmentsValueNull().Type(ctx))
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *PolicyRoleAssignmentsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
+func policyRoleAssignmentFromSlice(s []gen.AssignmentsValue, want gen.AssignmentsValue) *gen.AssignmentsValue {
+	for _, v := range s {
+		if v.PrincipalId == want.PrincipalId && v.RoleDefinitionId == want.RoleDefinitionId && v.Scope == want.Scope {
+			return &v
+		}
+	}
+	return nil
 }
 
 func standardizeRoleAssignmentRoleDefinititionId(id string) string {
@@ -207,7 +246,7 @@ func standardizeRoleAssignmentRoleDefinititionId(id string) string {
 	return id
 }
 
-func readPolicyRoleAssignment(ctx context.Context, client *armauthorization.RoleAssignmentsClient, resourceId string) (*PolicyRoleAssignmentsAssignmentResourceModel, error) {
+func readPolicyRoleAssignment(ctx context.Context, client *armauthorization.RoleAssignmentsClient, resourceId string) (*gen.AssignmentsValue, error) {
 	ra, err := client.GetByID(ctx, resourceId, nil)
 	if err != nil {
 		if errors.As(err, &respErr) {
@@ -215,20 +254,20 @@ func readPolicyRoleAssignment(ctx context.Context, client *armauthorization.Role
 			if e.StatusCode != 404 {
 				return nil, err
 			}
-			assignment := PolicyRoleAssignmentsAssignmentResourceModel{
+			assignment := gen.AssignmentsValue{
 				PrincipalId:      types.StringNull(),
-				RoleDefinitionID: types.StringNull(),
+				RoleDefinitionId: types.StringNull(),
 				Scope:            types.StringNull(),
-				ResourceID:       types.StringNull(),
+				ResourceId:       types.StringNull(),
 			}
 			return &assignment, nil
 		}
 	}
-	assignment := PolicyRoleAssignmentsAssignmentResourceModel{
+	assignment := gen.AssignmentsValue{
 		PrincipalId:      types.StringValue(*ra.Properties.PrincipalID),
-		RoleDefinitionID: types.StringValue(standardizeRoleAssignmentRoleDefinititionId(*ra.Properties.RoleDefinitionID)),
+		RoleDefinitionId: types.StringValue(standardizeRoleAssignmentRoleDefinititionId(*ra.Properties.RoleDefinitionID)),
 		Scope:            types.StringValue(*ra.Properties.Scope),
-		ResourceID:       types.StringValue(*ra.ID),
+		ResourceId:       types.StringValue(*ra.ID),
 	}
 
 	return &assignment, nil
@@ -265,4 +304,9 @@ func deletePolicyRoleAssignment(ctx context.Context, client *armauthorization.Ro
 		}
 	}
 	return nil
+}
+
+func genPolicyRoleAssignmentId(pra gen.AssignmentsValue) string {
+	u := uuid.NewSHA1(uuid.NameSpaceURL, []byte(pra.PrincipalId.ValueString()+pra.Scope.ValueString()+pra.RoleDefinitionId.ValueString()))
+	return u.String()
 }
