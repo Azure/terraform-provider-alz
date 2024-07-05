@@ -22,51 +22,6 @@ import (
 func AlzProviderSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"alz_library_references": schema.ListNestedAttribute{
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"custom_url": schema.StringAttribute{
-							Optional:            true,
-							Sensitive:           true,
-							Description:         "A custom path/URL to the library to use. Conflicts with `path` and `tag`. For supported protocols, see [go-getter](https://pkg.go.dev/github.com/hashicorp/go-getter/v2). Value is marked sensitive as may contain secrets.",
-							MarkdownDescription: "A custom path/URL to the library to use. Conflicts with `path` and `tag`. For supported protocols, see [go-getter](https://pkg.go.dev/github.com/hashicorp/go-getter/v2). Value is marked sensitive as may contain secrets.",
-							Validators: []validator.String{
-								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtMapKey("path")),
-								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtMapKey("tag")),
-							},
-						},
-						"path": schema.StringAttribute{
-							Optional:            true,
-							Description:         "The path in the ALZ Library, e.g. `platform/alz`. Conflicts with `custom_url`.",
-							MarkdownDescription: "The path in the ALZ Library, e.g. `platform/alz`. Conflicts with `custom_url`.",
-							Validators: []validator.String{
-								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtMapKey("custom_url")),
-								stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtMapKey("ref")),
-							},
-						},
-						"ref": schema.StringAttribute{
-							Optional:            true,
-							Description:         "This is the version of the library to use, e.g. `2024.03.03`. Conflicts with `custom_url`.",
-							MarkdownDescription: "This is the version of the library to use, e.g. `2024.03.03`. Conflicts with `custom_url`.",
-							Validators: []validator.String{
-								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtMapKey("custom_url")),
-								stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtMapKey("path")),
-							},
-						},
-					},
-					CustomType: AlzLibraryReferencesType{
-						ObjectType: types.ObjectType{
-							AttrTypes: AlzLibraryReferencesValue{}.AttributeTypes(ctx),
-						},
-					},
-				},
-				Optional:            true,
-				Description:         "A list of references to the [ALZ library](https://aka.ms/alz/library) to use. Each reference should either contain the `path` (e.g. `platform/alz`) and the `tag` (e.g. `2024.03.03`), or a `custom_url` to be supplied to go-getter.\nIf this value is not specified, the default value will be used, which is:\n\n```terraform\nalz_library_references = [\n  { path = \"platform/alz\", tag = \"2024.03.03\" },\n]\n```\n",
-				MarkdownDescription: "A list of references to the [ALZ library](https://aka.ms/alz/library) to use. Each reference should either contain the `path` (e.g. `platform/alz`) and the `tag` (e.g. `2024.03.03`), or a `custom_url` to be supplied to go-getter.\nIf this value is not specified, the default value will be used, which is:\n\n```terraform\nalz_library_references = [\n  { path = \"platform/alz\", tag = \"2024.03.03\" },\n]\n```\n",
-				Validators: []validator.List{
-					listvalidator.UniqueValues(),
-				},
-			},
 			"auxiliary_tenant_ids": schema.ListAttribute{
 				ElementType:         types.StringType,
 				Optional:            true,
@@ -105,6 +60,51 @@ func AlzProviderSchema(ctx context.Context) schema.Schema {
 				Optional:            true,
 				Description:         "Whether to allow overwriting of the library by other lib directories. Default is `false`.",
 				MarkdownDescription: "Whether to allow overwriting of the library by other lib directories. Default is `false`.",
+			},
+			"library_references": schema.ListNestedAttribute{
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"custom_url": schema.StringAttribute{
+							Optional:            true,
+							Sensitive:           true,
+							Description:         "A custom path/URL to the library to use. Conflicts with `path` and `tag`. For supported protocols, see [go-getter](https://pkg.go.dev/github.com/hashicorp/go-getter/v2). Value is marked sensitive as may contain secrets.",
+							MarkdownDescription: "A custom path/URL to the library to use. Conflicts with `path` and `tag`. For supported protocols, see [go-getter](https://pkg.go.dev/github.com/hashicorp/go-getter/v2). Value is marked sensitive as may contain secrets.",
+							Validators: []validator.String{
+								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("path")),
+								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("tag")),
+							},
+						},
+						"path": schema.StringAttribute{
+							Optional:            true,
+							Description:         "The path in the ALZ Library, e.g. `platform/alz`. Conflicts with `custom_url`.",
+							MarkdownDescription: "The path in the ALZ Library, e.g. `platform/alz`. Conflicts with `custom_url`.",
+							Validators: []validator.String{
+								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("custom_url")),
+								stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("ref")),
+							},
+						},
+						"ref": schema.StringAttribute{
+							Optional:            true,
+							Description:         "This is the version of the library to use, e.g. `2024.03.03`. Conflicts with `custom_url`.",
+							MarkdownDescription: "This is the version of the library to use, e.g. `2024.03.03`. Conflicts with `custom_url`.",
+							Validators: []validator.String{
+								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("custom_url")),
+								stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("path")),
+							},
+						},
+					},
+					CustomType: LibraryReferencesType{
+						ObjectType: types.ObjectType{
+							AttrTypes: LibraryReferencesValue{}.AttributeTypes(ctx),
+						},
+					},
+				},
+				Optional:            true,
+				Description:         "A list of references to the [ALZ library](https://aka.ms/alz/library) to use. Each reference should either contain the `path` (e.g. `platform/alz`) and the `tag` (e.g. `2024.03.03`), or a `custom_url` to be supplied to go-getter.\nIf this value is not specified, the default value will be used, which is:\n\n```terraform\nalz_library_references = [\n  { path = \"platform/alz\", tag = \"2024.03.03\" },\n]\n```\n",
+				MarkdownDescription: "A list of references to the [ALZ library](https://aka.ms/alz/library) to use. Each reference should either contain the `path` (e.g. `platform/alz`) and the `tag` (e.g. `2024.03.03`), or a `custom_url` to be supplied to go-getter.\nIf this value is not specified, the default value will be used, which is:\n\n```terraform\nalz_library_references = [\n  { path = \"platform/alz\", tag = \"2024.03.03\" },\n]\n```\n",
+				Validators: []validator.List{
+					listvalidator.UniqueValues(),
+				},
 			},
 			"oidc_request_token": schema.StringAttribute{
 				Optional:            true,
@@ -160,7 +160,6 @@ func AlzProviderSchema(ctx context.Context) schema.Schema {
 }
 
 type AlzModel struct {
-	AlzLibraryReferences      types.List   `tfsdk:"alz_library_references"`
 	AuxiliaryTenantIds        types.List   `tfsdk:"auxiliary_tenant_ids"`
 	ClientCertificatePassword types.String `tfsdk:"client_certificate_password"`
 	ClientCertificatePath     types.String `tfsdk:"client_certificate_path"`
@@ -168,6 +167,7 @@ type AlzModel struct {
 	ClientSecret              types.String `tfsdk:"client_secret"`
 	Environment               types.String `tfsdk:"environment"`
 	LibOverwriteEnabled       types.Bool   `tfsdk:"lib_overwrite_enabled"`
+	LibraryReferences         types.List   `tfsdk:"library_references"`
 	OidcRequestToken          types.String `tfsdk:"oidc_request_token"`
 	OidcRequestUrl            types.String `tfsdk:"oidc_request_url"`
 	OidcToken                 types.String `tfsdk:"oidc_token"`
@@ -179,14 +179,14 @@ type AlzModel struct {
 	UseOidc                   types.Bool   `tfsdk:"use_oidc"`
 }
 
-var _ basetypes.ObjectTypable = AlzLibraryReferencesType{}
+var _ basetypes.ObjectTypable = LibraryReferencesType{}
 
-type AlzLibraryReferencesType struct {
+type LibraryReferencesType struct {
 	basetypes.ObjectType
 }
 
-func (t AlzLibraryReferencesType) Equal(o attr.Type) bool {
-	other, ok := o.(AlzLibraryReferencesType)
+func (t LibraryReferencesType) Equal(o attr.Type) bool {
+	other, ok := o.(LibraryReferencesType)
 
 	if !ok {
 		return false
@@ -195,11 +195,11 @@ func (t AlzLibraryReferencesType) Equal(o attr.Type) bool {
 	return t.ObjectType.Equal(other.ObjectType)
 }
 
-func (t AlzLibraryReferencesType) String() string {
-	return "AlzLibraryReferencesType"
+func (t LibraryReferencesType) String() string {
+	return "LibraryReferencesType"
 }
 
-func (t AlzLibraryReferencesType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
+func (t LibraryReferencesType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	attributes := in.Attributes()
@@ -262,7 +262,7 @@ func (t AlzLibraryReferencesType) ValueFromObject(ctx context.Context, in basety
 		return nil, diags
 	}
 
-	return AlzLibraryReferencesValue{
+	return LibraryReferencesValue{
 		CustomUrl: customUrlVal,
 		Path:      pathVal,
 		Ref:       refVal,
@@ -270,19 +270,19 @@ func (t AlzLibraryReferencesType) ValueFromObject(ctx context.Context, in basety
 	}, diags
 }
 
-func NewAlzLibraryReferencesValueNull() AlzLibraryReferencesValue {
-	return AlzLibraryReferencesValue{
+func NewLibraryReferencesValueNull() LibraryReferencesValue {
+	return LibraryReferencesValue{
 		state: attr.ValueStateNull,
 	}
 }
 
-func NewAlzLibraryReferencesValueUnknown() AlzLibraryReferencesValue {
-	return AlzLibraryReferencesValue{
+func NewLibraryReferencesValueUnknown() LibraryReferencesValue {
+	return LibraryReferencesValue{
 		state: attr.ValueStateUnknown,
 	}
 }
 
-func NewAlzLibraryReferencesValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (AlzLibraryReferencesValue, diag.Diagnostics) {
+func NewLibraryReferencesValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (LibraryReferencesValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	// Reference: https://github.com/hashicorp/terraform-plugin-framework/issues/521
@@ -293,11 +293,11 @@ func NewAlzLibraryReferencesValue(attributeTypes map[string]attr.Type, attribute
 
 		if !ok {
 			diags.AddError(
-				"Missing AlzLibraryReferencesValue Attribute Value",
-				"While creating a AlzLibraryReferencesValue value, a missing attribute value was detected. "+
-					"A AlzLibraryReferencesValue must contain values for all attributes, even if null or unknown. "+
+				"Missing LibraryReferencesValue Attribute Value",
+				"While creating a LibraryReferencesValue value, a missing attribute value was detected. "+
+					"A LibraryReferencesValue must contain values for all attributes, even if null or unknown. "+
 					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
-					fmt.Sprintf("AlzLibraryReferencesValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
+					fmt.Sprintf("LibraryReferencesValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
 			)
 
 			continue
@@ -305,12 +305,12 @@ func NewAlzLibraryReferencesValue(attributeTypes map[string]attr.Type, attribute
 
 		if !attributeType.Equal(attribute.Type(ctx)) {
 			diags.AddError(
-				"Invalid AlzLibraryReferencesValue Attribute Type",
-				"While creating a AlzLibraryReferencesValue value, an invalid attribute value was detected. "+
-					"A AlzLibraryReferencesValue must use a matching attribute type for the value. "+
+				"Invalid LibraryReferencesValue Attribute Type",
+				"While creating a LibraryReferencesValue value, an invalid attribute value was detected. "+
+					"A LibraryReferencesValue must use a matching attribute type for the value. "+
 					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
-					fmt.Sprintf("AlzLibraryReferencesValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
-					fmt.Sprintf("AlzLibraryReferencesValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
+					fmt.Sprintf("LibraryReferencesValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
+					fmt.Sprintf("LibraryReferencesValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
 			)
 		}
 	}
@@ -320,17 +320,17 @@ func NewAlzLibraryReferencesValue(attributeTypes map[string]attr.Type, attribute
 
 		if !ok {
 			diags.AddError(
-				"Extra AlzLibraryReferencesValue Attribute Value",
-				"While creating a AlzLibraryReferencesValue value, an extra attribute value was detected. "+
-					"A AlzLibraryReferencesValue must not contain values beyond the expected attribute types. "+
+				"Extra LibraryReferencesValue Attribute Value",
+				"While creating a LibraryReferencesValue value, an extra attribute value was detected. "+
+					"A LibraryReferencesValue must not contain values beyond the expected attribute types. "+
 					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
-					fmt.Sprintf("Extra AlzLibraryReferencesValue Attribute Name: %s", name),
+					fmt.Sprintf("Extra LibraryReferencesValue Attribute Name: %s", name),
 			)
 		}
 	}
 
 	if diags.HasError() {
-		return NewAlzLibraryReferencesValueUnknown(), diags
+		return NewLibraryReferencesValueUnknown(), diags
 	}
 
 	customUrlAttribute, ok := attributes["custom_url"]
@@ -340,7 +340,7 @@ func NewAlzLibraryReferencesValue(attributeTypes map[string]attr.Type, attribute
 			"Attribute Missing",
 			`custom_url is missing from object`)
 
-		return NewAlzLibraryReferencesValueUnknown(), diags
+		return NewLibraryReferencesValueUnknown(), diags
 	}
 
 	customUrlVal, ok := customUrlAttribute.(basetypes.StringValue)
@@ -358,7 +358,7 @@ func NewAlzLibraryReferencesValue(attributeTypes map[string]attr.Type, attribute
 			"Attribute Missing",
 			`path is missing from object`)
 
-		return NewAlzLibraryReferencesValueUnknown(), diags
+		return NewLibraryReferencesValueUnknown(), diags
 	}
 
 	pathVal, ok := pathAttribute.(basetypes.StringValue)
@@ -376,7 +376,7 @@ func NewAlzLibraryReferencesValue(attributeTypes map[string]attr.Type, attribute
 			"Attribute Missing",
 			`ref is missing from object`)
 
-		return NewAlzLibraryReferencesValueUnknown(), diags
+		return NewLibraryReferencesValueUnknown(), diags
 	}
 
 	refVal, ok := refAttribute.(basetypes.StringValue)
@@ -388,10 +388,10 @@ func NewAlzLibraryReferencesValue(attributeTypes map[string]attr.Type, attribute
 	}
 
 	if diags.HasError() {
-		return NewAlzLibraryReferencesValueUnknown(), diags
+		return NewLibraryReferencesValueUnknown(), diags
 	}
 
-	return AlzLibraryReferencesValue{
+	return LibraryReferencesValue{
 		CustomUrl: customUrlVal,
 		Path:      pathVal,
 		Ref:       refVal,
@@ -399,8 +399,8 @@ func NewAlzLibraryReferencesValue(attributeTypes map[string]attr.Type, attribute
 	}, diags
 }
 
-func NewAlzLibraryReferencesValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) AlzLibraryReferencesValue {
-	object, diags := NewAlzLibraryReferencesValue(attributeTypes, attributes)
+func NewLibraryReferencesValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) LibraryReferencesValue {
+	object, diags := NewLibraryReferencesValue(attributeTypes, attributes)
 
 	if diags.HasError() {
 		// This could potentially be added to the diag package.
@@ -414,15 +414,15 @@ func NewAlzLibraryReferencesValueMust(attributeTypes map[string]attr.Type, attri
 				diagnostic.Detail()))
 		}
 
-		panic("NewAlzLibraryReferencesValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
+		panic("NewLibraryReferencesValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
 	}
 
 	return object
 }
 
-func (t AlzLibraryReferencesType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
+func (t LibraryReferencesType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
 	if in.Type() == nil {
-		return NewAlzLibraryReferencesValueNull(), nil
+		return NewLibraryReferencesValueNull(), nil
 	}
 
 	if !in.Type().Equal(t.TerraformType(ctx)) {
@@ -430,11 +430,11 @@ func (t AlzLibraryReferencesType) ValueFromTerraform(ctx context.Context, in tft
 	}
 
 	if !in.IsKnown() {
-		return NewAlzLibraryReferencesValueUnknown(), nil
+		return NewLibraryReferencesValueUnknown(), nil
 	}
 
 	if in.IsNull() {
-		return NewAlzLibraryReferencesValueNull(), nil
+		return NewLibraryReferencesValueNull(), nil
 	}
 
 	attributes := map[string]attr.Value{}
@@ -457,23 +457,23 @@ func (t AlzLibraryReferencesType) ValueFromTerraform(ctx context.Context, in tft
 		attributes[k] = a
 	}
 
-	return NewAlzLibraryReferencesValueMust(AlzLibraryReferencesValue{}.AttributeTypes(ctx), attributes), nil
+	return NewLibraryReferencesValueMust(LibraryReferencesValue{}.AttributeTypes(ctx), attributes), nil
 }
 
-func (t AlzLibraryReferencesType) ValueType(ctx context.Context) attr.Value {
-	return AlzLibraryReferencesValue{}
+func (t LibraryReferencesType) ValueType(ctx context.Context) attr.Value {
+	return LibraryReferencesValue{}
 }
 
-var _ basetypes.ObjectValuable = AlzLibraryReferencesValue{}
+var _ basetypes.ObjectValuable = LibraryReferencesValue{}
 
-type AlzLibraryReferencesValue struct {
+type LibraryReferencesValue struct {
 	CustomUrl basetypes.StringValue `tfsdk:"custom_url"`
 	Path      basetypes.StringValue `tfsdk:"path"`
 	Ref       basetypes.StringValue `tfsdk:"ref"`
 	state     attr.ValueState
 }
 
-func (v AlzLibraryReferencesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
+func (v LibraryReferencesValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
 	attrTypes := make(map[string]tftypes.Type, 3)
 
 	var val tftypes.Value
@@ -527,19 +527,19 @@ func (v AlzLibraryReferencesValue) ToTerraformValue(ctx context.Context) (tftype
 	}
 }
 
-func (v AlzLibraryReferencesValue) IsNull() bool {
+func (v LibraryReferencesValue) IsNull() bool {
 	return v.state == attr.ValueStateNull
 }
 
-func (v AlzLibraryReferencesValue) IsUnknown() bool {
+func (v LibraryReferencesValue) IsUnknown() bool {
 	return v.state == attr.ValueStateUnknown
 }
 
-func (v AlzLibraryReferencesValue) String() string {
-	return "AlzLibraryReferencesValue"
+func (v LibraryReferencesValue) String() string {
+	return "LibraryReferencesValue"
 }
 
-func (v AlzLibraryReferencesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
+func (v LibraryReferencesValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	attributeTypes := map[string]attr.Type{
@@ -567,8 +567,8 @@ func (v AlzLibraryReferencesValue) ToObjectValue(ctx context.Context) (basetypes
 	return objVal, diags
 }
 
-func (v AlzLibraryReferencesValue) Equal(o attr.Value) bool {
-	other, ok := o.(AlzLibraryReferencesValue)
+func (v LibraryReferencesValue) Equal(o attr.Value) bool {
+	other, ok := o.(LibraryReferencesValue)
 
 	if !ok {
 		return false
@@ -597,15 +597,15 @@ func (v AlzLibraryReferencesValue) Equal(o attr.Value) bool {
 	return true
 }
 
-func (v AlzLibraryReferencesValue) Type(ctx context.Context) attr.Type {
-	return AlzLibraryReferencesType{
+func (v LibraryReferencesValue) Type(ctx context.Context) attr.Type {
+	return LibraryReferencesType{
 		basetypes.ObjectType{
 			AttrTypes: v.AttributeTypes(ctx),
 		},
 	}
 }
 
-func (v AlzLibraryReferencesValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
+func (v LibraryReferencesValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
 	return map[string]attr.Type{
 		"custom_url": basetypes.StringType{},
 		"path":       basetypes.StringType{},

@@ -117,7 +117,7 @@
           }
         },
         {
-          "name": "alz_library_references",
+          "name": "library_references",
           "list_nested": {
             "optional_required": "optional",
             "description": "A list of references to the [ALZ library](https://aka.ms/alz/library) to use. Each reference should either contain the `path` (e.g. `platform/alz`) and the `tag` (e.g. `2024.03.03`), or a `custom_url` to be supplied to go-getter.\nIf this value is not specified, the default value will be used, which is:\n\n```terraform\nalz_library_references = [\n  { path = \"platform/alz\", tag = \"2024.03.03\" },\n]\n```\n",
@@ -136,7 +136,7 @@
                               "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
                             }
                           ],
-                          "schema_definition": "stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtMapKey(\"custom_url\"))"
+                          "schema_definition": "stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName(\"custom_url\"))"
                         }
                       },
                       {
@@ -146,7 +146,7 @@
                               "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
                             }
                           ],
-                          "schema_definition": "stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtMapKey(\"ref\"))"
+                          "schema_definition": "stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName(\"ref\"))"
                         }
                       }
                     ]
@@ -165,7 +165,7 @@
                               "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
                             }
                           ],
-                          "schema_definition": "stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtMapKey(\"custom_url\"))"
+                          "schema_definition": "stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName(\"custom_url\"))"
                         }
                       },
                       {
@@ -175,7 +175,7 @@
                               "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
                             }
                           ],
-                          "schema_definition": "stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtMapKey(\"path\"))"
+                          "schema_definition": "stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName(\"path\"))"
                         }
                       }
                     ]
@@ -198,7 +198,7 @@
                               "path": "github.com/hashicorp/terraform-plugin-framework/path"
                             }
                           ],
-                          "schema_definition": "stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtMapKey(\"path\"))"
+                          "schema_definition": "stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName(\"path\"))"
                         }
                       },
                       {
@@ -211,7 +211,7 @@
                               "path": "github.com/hashicorp/terraform-plugin-framework/path"
                             }
                           ],
-                          "schema_definition": "stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtMapKey(\"tag\"))"
+                          "schema_definition": "stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName(\"tag\"))"
                         }
                       }
                     ]

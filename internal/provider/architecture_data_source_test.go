@@ -24,9 +24,9 @@ func TestAccAlzArchitectureDataSource(t *testing.T) {
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
 		ExternalProviders: map[string]resource.ExternalProvider{
-			"azurerm": {
-				Source:            "hashicorp/azurerm",
-				VersionConstraint: "~> 3.107",
+			"azapi": {
+				Source:            "azure/azapi",
+				VersionConstraint: "~> 1.14",
 			},
 		},
 		Steps: []resource.TestStep{
@@ -48,15 +48,20 @@ func testAccArchitectureDataSourceConfig() string {
 	// libPath := filepath.Join(cwd, "testdata/testacc_lib")
 
 	return `
-provider "azurerm" {
-  features {}
+provider "alz" {
+  library_references = [
+  {
+	  path = "platform/alz"
+		ref  = "2024.07.01"
+	}
+	]
 }
 
-data "azurerm_client_config" "current" {}
+data "azapi_client_config" "current" {}
 
 data "alz_architecture" "test" {
   name                     = "alz"
-	root_management_group_id = data.azurerm_client_config.current.tenant_id
+	root_management_group_id = data.azapi_client_config.current.tenant_id
 	location                 = "northeurope"
 }
 `
