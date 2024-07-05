@@ -90,7 +90,7 @@ For more information please visit the [GitHub repository](https://github.com/Azu
 - `client_secret` (String, Sensitive) The client secret which should be used. For use when authenticating as a service principal using a client secret. If not specified, value will be attempted to be read from the `ARM_CLIENT_SECRET` environment variable.
 - `environment` (String)
 - `lib_overwrite_enabled` (Boolean) Whether to allow overwriting of the library by other lib directories. Default is `false`.
-- `library_references` (Attributes List) A list of references to the [ALZ library](https://aka.ms/alz/library) to use. Each reference should either contain the `path` (e.g. `platform/alz`) and the `tag` (e.g. `2024.03.03`), or a `custom_url` to be supplied to go-getter.
+- `library_references` (Attributes List) A list of references to the [ALZ library](https://aka.ms/alz/library) to use. Each reference should either contain the `path` (e.g. `platform/alz`) and the `ref` (e.g. `2024.03.03`), or a `custom_url` to be supplied to go-getter.
 If this value is not specified, the default value will be used, which is:
 
 ```terraform
@@ -113,6 +113,6 @@ alz_library_references = [
 
 Optional:
 
-- `custom_url` (String, Sensitive) A custom path/URL to the library to use. Conflicts with `path` and `tag`. For supported protocols, see [go-getter](https://pkg.go.dev/github.com/hashicorp/go-getter/v2). Value is marked sensitive as may contain secrets.
-- `path` (String) The path in the ALZ Library, e.g. `platform/alz`. Conflicts with `custom_url`.
-- `ref` (String) This is the version of the library to use, e.g. `2024.03.03`. Conflicts with `custom_url`.
+- `custom_url` (String, Sensitive) A custom path/URL to the library to use. Conflicts with `path` and `ref`. For supported protocols, see [go-getter](https://pkg.go.dev/github.com/hashicorp/go-getter/v2). Value is marked sensitive as may contain secrets.
+- `path` (String) The path in the ALZ Library, e.g. `platform/alz`. Also requires `ref`. Conflicts with `custom_url`.
+- `ref` (String) This is the version of the library to use, e.g. `2024.03.03`. Also requires `path`. Conflicts with `custom_url`.
