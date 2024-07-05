@@ -13,7 +13,6 @@ description: |-
 
 Use the Azure Landing Zones (ALZ) provider to generate data to allow you to simplify provisioning of your ALZ configuration.
 Its principal use is to generate data to deploy resources with the [AzureRM](https://github.com/Azure/terraform-provider-azurerm) provider.
-However, the provider does deploy some resources directly, in order to work around limitations in Terraform.
 
 Use the navigation to the left to read about the available resources.
 
@@ -28,7 +27,7 @@ provider "alz" {
   alz_library_references = [
     {
       path = "platform/alz"
-      ref  = "2024.03.03"
+      ref  = "2024.07.01"
     },
     {
       custom_url = "${path.root}/lib"
