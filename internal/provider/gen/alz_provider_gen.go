@@ -67,17 +67,17 @@ func AlzProviderSchema(ctx context.Context) schema.Schema {
 						"custom_url": schema.StringAttribute{
 							Optional:            true,
 							Sensitive:           true,
-							Description:         "A custom path/URL to the library to use. Conflicts with `path` and `tag`. For supported protocols, see [go-getter](https://pkg.go.dev/github.com/hashicorp/go-getter/v2). Value is marked sensitive as may contain secrets.",
-							MarkdownDescription: "A custom path/URL to the library to use. Conflicts with `path` and `tag`. For supported protocols, see [go-getter](https://pkg.go.dev/github.com/hashicorp/go-getter/v2). Value is marked sensitive as may contain secrets.",
+							Description:         "A custom path/URL to the library to use. Conflicts with `path` and `ref`. For supported protocols, see [go-getter](https://pkg.go.dev/github.com/hashicorp/go-getter/v2). Value is marked sensitive as may contain secrets.",
+							MarkdownDescription: "A custom path/URL to the library to use. Conflicts with `path` and `ref`. For supported protocols, see [go-getter](https://pkg.go.dev/github.com/hashicorp/go-getter/v2). Value is marked sensitive as may contain secrets.",
 							Validators: []validator.String{
 								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("path")),
-								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("tag")),
+								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("ref")),
 							},
 						},
 						"path": schema.StringAttribute{
 							Optional:            true,
-							Description:         "The path in the ALZ Library, e.g. `platform/alz`. Conflicts with `custom_url`.",
-							MarkdownDescription: "The path in the ALZ Library, e.g. `platform/alz`. Conflicts with `custom_url`.",
+							Description:         "The path in the ALZ Library, e.g. `platform/alz`. Also requires `ref`. Conflicts with `custom_url`.",
+							MarkdownDescription: "The path in the ALZ Library, e.g. `platform/alz`. Also requires `ref`. Conflicts with `custom_url`.",
 							Validators: []validator.String{
 								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("custom_url")),
 								stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("ref")),
@@ -85,8 +85,8 @@ func AlzProviderSchema(ctx context.Context) schema.Schema {
 						},
 						"ref": schema.StringAttribute{
 							Optional:            true,
-							Description:         "This is the version of the library to use, e.g. `2024.03.03`. Conflicts with `custom_url`.",
-							MarkdownDescription: "This is the version of the library to use, e.g. `2024.03.03`. Conflicts with `custom_url`.",
+							Description:         "This is the version of the library to use, e.g. `2024.03.03`. Also requires `path`. Conflicts with `custom_url`.",
+							MarkdownDescription: "This is the version of the library to use, e.g. `2024.03.03`. Also requires `path`. Conflicts with `custom_url`.",
 							Validators: []validator.String{
 								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("custom_url")),
 								stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("path")),
@@ -100,8 +100,8 @@ func AlzProviderSchema(ctx context.Context) schema.Schema {
 					},
 				},
 				Optional:            true,
-				Description:         "A list of references to the [ALZ library](https://aka.ms/alz/library) to use. Each reference should either contain the `path` (e.g. `platform/alz`) and the `tag` (e.g. `2024.03.03`), or a `custom_url` to be supplied to go-getter.\nIf this value is not specified, the default value will be used, which is:\n\n```terraform\nalz_library_references = [\n  { path = \"platform/alz\", tag = \"2024.03.03\" },\n]\n```\n",
-				MarkdownDescription: "A list of references to the [ALZ library](https://aka.ms/alz/library) to use. Each reference should either contain the `path` (e.g. `platform/alz`) and the `tag` (e.g. `2024.03.03`), or a `custom_url` to be supplied to go-getter.\nIf this value is not specified, the default value will be used, which is:\n\n```terraform\nalz_library_references = [\n  { path = \"platform/alz\", tag = \"2024.03.03\" },\n]\n```\n",
+				Description:         "A list of references to the [ALZ library](https://aka.ms/alz/library) to use. Each reference should either contain the `path` (e.g. `platform/alz`) and the `ref` (e.g. `2024.03.03`), or a `custom_url` to be supplied to go-getter.\nIf this value is not specified, the default value will be used, which is:\n\n```terraform\nalz_library_references = [\n  { path = \"platform/alz\", tag = \"2024.03.03\" },\n]\n```\n",
+				MarkdownDescription: "A list of references to the [ALZ library](https://aka.ms/alz/library) to use. Each reference should either contain the `path` (e.g. `platform/alz`) and the `ref` (e.g. `2024.03.03`), or a `custom_url` to be supplied to go-getter.\nIf this value is not specified, the default value will be used, which is:\n\n```terraform\nalz_library_references = [\n  { path = \"platform/alz\", tag = \"2024.03.03\" },\n]\n```\n",
 				Validators: []validator.List{
 					listvalidator.UniqueValues(),
 				},

@@ -120,14 +120,14 @@
           "name": "library_references",
           "list_nested": {
             "optional_required": "optional",
-            "description": "A list of references to the [ALZ library](https://aka.ms/alz/library) to use. Each reference should either contain the `path` (e.g. `platform/alz`) and the `tag` (e.g. `2024.03.03`), or a `custom_url` to be supplied to go-getter.\nIf this value is not specified, the default value will be used, which is:\n\n```terraform\nalz_library_references = [\n  { path = \"platform/alz\", tag = \"2024.03.03\" },\n]\n```\n",
+            "description": "A list of references to the [ALZ library](https://aka.ms/alz/library) to use. Each reference should either contain the `path` (e.g. `platform/alz`) and the `ref` (e.g. `2024.03.03`), or a `custom_url` to be supplied to go-getter.\nIf this value is not specified, the default value will be used, which is:\n\n```terraform\nalz_library_references = [\n  { path = \"platform/alz\", tag = \"2024.03.03\" },\n]\n```\n",
             "nested_object": {
               "attributes": [
                 {
                   "name": "path",
                   "string": {
                     "optional_required": "optional",
-                    "description": "The path in the ALZ Library, e.g. `platform/alz`. Conflicts with `custom_url`.",
+                    "description": "The path in the ALZ Library, e.g. `platform/alz`. Also requires `ref`. Conflicts with `custom_url`.",
                     "validators": [
                       {
                         "custom": {
@@ -156,7 +156,7 @@
                   "name": "ref",
                   "string": {
                     "optional_required": "optional",
-                    "description": "This is the version of the library to use, e.g. `2024.03.03`. Conflicts with `custom_url`.",
+                    "description": "This is the version of the library to use, e.g. `2024.03.03`. Also requires `path`. Conflicts with `custom_url`.",
                     "validators": [
                       {
                         "custom": {
@@ -185,7 +185,7 @@
                   "name": "custom_url",
                   "string": {
                     "optional_required": "optional",
-                    "description": "A custom path/URL to the library to use. Conflicts with `path` and `tag`. For supported protocols, see [go-getter](https://pkg.go.dev/github.com/hashicorp/go-getter/v2). Value is marked sensitive as may contain secrets.",
+                    "description": "A custom path/URL to the library to use. Conflicts with `path` and `ref`. For supported protocols, see [go-getter](https://pkg.go.dev/github.com/hashicorp/go-getter/v2). Value is marked sensitive as may contain secrets.",
                     "sensitive": true,
                     "validators": [
                       {
@@ -211,7 +211,7 @@
                               "path": "github.com/hashicorp/terraform-plugin-framework/path"
                             }
                           ],
-                          "schema_definition": "stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName(\"tag\"))"
+                          "schema_definition": "stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName(\"ref\"))"
                         }
                       }
                     ]
