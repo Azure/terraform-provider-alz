@@ -143,7 +143,7 @@ Read-Only:
 
 Optional:
 
-- `read` (String) The maximum time to wait for a read operation to complete.
+- `read` (String) A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
 
 
 <a id="nestedatt--management_groups"></a>
