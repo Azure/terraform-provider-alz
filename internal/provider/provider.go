@@ -7,10 +7,7 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
-	"net/url"
 	"os"
-	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -23,30 +20,36 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy"
-	"github.com/hashicorp/go-getter/v2"
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/Azure/terraform-provider-alz/internal/provider/gen"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
-	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
+// Run go generate to automatically generate provider, data source and resource types
+// from the intermediate representation JSON file `ir.json`.
+//go:generate tfplugingen-framework generate provider --package gen --output ./gen
+//go:generate tfplugingen-framework generate data-sources --package gen --output ./gen
+//go:generate tfplugingen-framework generate resources --package gen --output ./gen
+
 const (
-	userAgentBase   = "AzureTerraformAlzProvider"
-	alzLibDirBase   = ".alzlib"
-	alzLibUrlFmtStr = "github.com/Azure/Azure-Landing-Zones-Library//platform/alz?"
-	alzLibRef       = "platform/alz/2024.03.00"
+	userAgentBase = "AzureTerraformAlzProvider"
+	alzLibDirBase = ".alzlib"
+	alzLibRef     = "2024.07.01"
+	alzLibPath    = "platform/alz"
 )
 
 // Ensure ScaffoldingProvider satisfies various provider interfaces.
-var _ provider.Provider = &AlzProvider{}
+var (
+	_ provider.Provider              = &AlzProvider{}
+	_ provider.ProviderWithFunctions = &AlzProvider{}
+)
 
 // AlzProvider defines the provider implementation.
 type AlzProvider struct {
@@ -67,159 +70,13 @@ type alzProviderData struct {
 	clients *AlzProviderClients
 }
 
-// AlzProviderModel describes the provider data model.
-type AlzProviderModel struct {
-	AlzLibRef                 types.String `tfsdk:"alz_lib_ref"`
-	AuxiliaryTenantIds        types.List   `tfsdk:"auxiliary_tenant_ids"`
-	ClientCertificatePassword types.String `tfsdk:"client_certificate_password"`
-	ClientCertificatePath     types.String `tfsdk:"client_certificate_path"`
-	ClientId                  types.String `tfsdk:"client_id"`
-	ClientSecret              types.String `tfsdk:"client_secret"`
-	Environment               types.String `tfsdk:"environment"`
-	LibOverwriteEnabled       types.Bool   `tfsdk:"lib_overwrite_enabled"`
-	LibUrls                   types.List   `tfsdk:"lib_urls"`
-	OidcRequestToken          types.String `tfsdk:"oidc_request_token"`
-	OidcRequestUrl            types.String `tfsdk:"oidc_request_url"`
-	OidcToken                 types.String `tfsdk:"oidc_token"`
-	OidcTokenFilePath         types.String `tfsdk:"oidc_token_file_path"`
-	SkipProviderRegistration  types.Bool   `tfsdk:"skip_provider_registration"`
-	TenantId                  types.String `tfsdk:"tenant_id"`
-	UseAlzLib                 types.Bool   `tfsdk:"use_alz_lib"`
-	UseCli                    types.Bool   `tfsdk:"use_cli"`
-	UseMsi                    types.Bool   `tfsdk:"use_msi"`
-	UseOidc                   types.Bool   `tfsdk:"use_oidc"`
-}
-
 func (p *AlzProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
 	resp.TypeName = "alz"
 	resp.Version = p.version
 }
 
 func (p *AlzProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
-	resp.Schema = schema.Schema{
-		MarkdownDescription: "ALZ provider to generate archetype data for use with the ALZ Terraform module.",
-
-		Attributes: map[string]schema.Attribute{
-			"lib_overwrite_enabled": schema.BoolAttribute{
-				MarkdownDescription: "Whether to allow overwriting of the library by other lib directories. Default is `false`.",
-				Optional:            true,
-			},
-
-			"auxiliary_tenant_ids": schema.ListAttribute{
-				MarkdownDescription: "A list of auxiliary tenant ids which should be used. If not specified, value will be attempted to be read from the `ARM_AUXILIARY_TENANT_IDS` environment variable. When configuring from the environment, use a semicolon as a delimiter.",
-				ElementType:         types.StringType,
-				Optional:            true,
-				Validators: []validator.List{
-					listvalidator.ValueStringsAre(
-						stringvalidator.RegexMatches(regexp.MustCompile(`^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$`), "The client id must be a valid lowercase UUID."),
-					),
-				},
-			},
-
-			"client_certificate_password": schema.StringAttribute{
-				MarkdownDescription: "The password associated with the client certificate. For use when authenticating as a service principal using a client certificate. If not specified, value will be attempted to be read from the `ARM_CLIENT_CERTIFICATE_PASSWORD` environment variable.",
-				Optional:            true,
-				Sensitive:           true,
-			},
-
-			"client_certificate_path": schema.StringAttribute{
-				MarkdownDescription: "The path to the client certificate associated with the service principal for use when authenticating as a service principal using a client certificate. If not specified, value will be attempted to be read from the `ARM_CLIENT_CERTIFICATE_PATH` environment variable.",
-				Optional:            true,
-			},
-
-			"client_id": schema.StringAttribute{
-				MarkdownDescription: "The client id which should be used. For use when authenticating as a service principal. If not specified, value will be attempted to be read from the `ARM_CLIENT_ID` environment variable.",
-				Optional:            true,
-				Validators: []validator.String{
-					stringvalidator.RegexMatches(regexp.MustCompile(`^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$`), "The client id must be a valid lowercase UUID."),
-				},
-			},
-
-			"client_secret": schema.StringAttribute{
-				MarkdownDescription: "The client secret which should be used. For use when authenticating as a service principal using a client secret. If not specified, value will be attempted to be read from the `ARM_CLIENT_SECRET` environment variable.",
-				Optional:            true,
-				Sensitive:           true,
-			},
-
-			"environment": schema.StringAttribute{
-				MarkdownDescription: "The cloud environment which should be used. Possible values are `public`, `usgovernment` and `china`. Defaults to `public`. If not specified, value will be attempted to be read from the `ARM_ENVIRONMENT` environment variable.",
-				Optional:            true,
-				Validators: []validator.String{
-					stringvalidator.OneOf("public", "usgovernment", "china"),
-				},
-			},
-
-			"lib_urls": schema.ListAttribute{
-				MarkdownDescription: "A list of directories or URLs to use for ALZ libraries. The URLs will be processed in order. See <https://pkg.go.dev/github.com/hashicorp/go-getter#readme-url-format> for URL syntax. Note that if use_alz_lib is set to true then it will always be the first library used.",
-				ElementType:         types.StringType,
-				Optional:            true,
-				Validators: []validator.List{
-					listvalidator.UniqueValues(),
-				},
-			},
-
-			"oidc_request_token": schema.StringAttribute{
-				MarkdownDescription: "The bearer token for the request to the OIDC provider. For use when authenticating using OpenID Connect. If not specified, value will be attempted to be read from the first non-empty value of the `ARM_OIDC_REQUEST_TOKEN` and `ACTIONS_ID_TOKEN_REQUEST_TOKEN` environment variables.",
-				Optional:            true,
-				Sensitive:           true,
-			},
-
-			"oidc_request_url": schema.StringAttribute{
-				MarkdownDescription: "The URL for the OIDC provider from which to request an id token. For use when authenticating as a service principal using OpenID Connect. If not specified, value will be attempted to be read from the first non-empty value of the `ARM_OIDC_REQUEST_URL` and `ACTIONS_ID_TOKEN_REQUEST_URL` environment variables.",
-				Optional:            true,
-			},
-
-			"oidc_token": schema.StringAttribute{
-				MarkdownDescription: "The OIDC id token for use when authenticating as a service principal using OpenID Connect. If not specified, value will be attempted to be read from the `ARM_OIDC_TOKEN` environment variable.",
-				Optional:            true,
-				Sensitive:           true,
-			},
-
-			"oidc_token_file_path": schema.StringAttribute{
-				MarkdownDescription: "The path to a file containing an OIDC id token for use when authenticating using OpenID Connect. If not specified, value will be attempted to be read from the `ARM_OIDC_TOKEN_FILE_PATH` environment variable.",
-				Optional:            true,
-			},
-
-			"skip_provider_registration": schema.BoolAttribute{
-				MarkdownDescription: "Should the provider skip registering all of the resource providers that it supports, if they're not already registered? Default is `false`. If not specified, value will be attempted to be read from the `ARM_SKIP_PROVIDER_REGISTRATION` environment variable.",
-				Optional:            true,
-			},
-
-			"tenant_id": schema.StringAttribute{
-				MarkdownDescription: "The Tenant ID which should be used. If not specified, value will be attempted to be read from the `ARM_TENANT_ID` environment variable.",
-				Optional:            true,
-				Validators: []validator.String{
-					stringvalidator.RegexMatches(regexp.MustCompile(`^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$`), "The tenant id must be a valid lowercase UUID."),
-				},
-			},
-
-			"use_alz_lib": schema.BoolAttribute{
-				MarkdownDescription: "Use the default ALZ library to resolve archetypes. Default is `true`. " +
-					"The ALZ library is always used first, and then the directories or URLs specified in `lib_urls` are used in order.",
-				Optional: true,
-			},
-
-			"alz_lib_ref": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf("The reference (tag) in the ALZ library to use. Default is `%s`.", alzLibRef),
-				Optional:            true,
-			},
-
-			"use_cli": schema.BoolAttribute{
-				MarkdownDescription: "Allow Azure CLI to be used for authentication. Default is `true`. If not specified, value will be attempted to be read from the `ARM_USE_CLI` environment variable.",
-				Optional:            true,
-			},
-
-			"use_msi": schema.BoolAttribute{
-				MarkdownDescription: "Allow managed service identity to be used for authentication. Default is `false`. If not specified, value will be attempted to be read from the `ARM_USE_MSI` environment variable.",
-				Optional:            true,
-			},
-
-			"use_oidc": schema.BoolAttribute{
-				MarkdownDescription: "Allow OpenID Connect to be used for authentication. Default is `false`. If not specified, value will be attempted to be read from the `ARM_USE_OIDC` environment variable.",
-				Optional:            true,
-			},
-		},
-	}
+	resp.Schema = gen.AlzProviderSchema(ctx)
 }
 
 func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
@@ -234,7 +91,7 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 
 	tflog.Debug(ctx, "Provider AlzLib not present, beginning configuration")
 
-	var data AlzProviderModel
+	var data gen.AlzModel
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 
@@ -254,7 +111,7 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 	}
 
 	// Set the default values if not already set in the config or by environment.
-	configureDefaults(&data)
+	configureDefaults(ctx, &data)
 
 	// Get a token credential.
 	cred, diags := getTokenCredential(data)
@@ -277,36 +134,15 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 		return
 	}
 
-	// Configure clients
-
-	// Create the fs.FS library file systems based on the configuration.
-	urls := make([]string, 0)
-	if data.UseAlzLib.ValueBool() {
-		q := url.Values{}
-		q.Add("ref", data.AlzLibRef.ValueString())
-		q.Add("depth", "1")
-		urls = append(urls, alzLibUrlFmtStr+q.Encode())
-	}
-	if len(data.LibUrls.Elements()) != 0 {
-		// We turn the list of elements into a list of strings,
-		// if we use the Elements() method, we get a list of *attr.Value and the .String() method
-		// results in a string wrapped in double quotes.
-		dirs := make([]string, 0, len(data.LibUrls.Elements()))
-		if diags := data.LibUrls.ElementsAs(ctx, &dirs, false); diags.HasError() {
-			resp.Diagnostics = append(resp.Diagnostics, diags...)
-			return
-		}
-		urls = append(urls, dirs...)
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-	defer cancel()
-	libdirfs, err := getLibs(ctx, urls)
-	if err != nil {
-		resp.Diagnostics.AddError("Failed to download libraries", err.Error())
+	// Configure lib references
+	libDirFs, diags := downloadLibs(ctx, &data)
+	resp.Diagnostics = append(resp.Diagnostics, diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-	if err := alz.Init(ctx, libdirfs...); err != nil {
+
+	// Init alzlib
+	if err := alz.Init(ctx, libDirFs...); err != nil {
 		resp.Diagnostics.AddError("Failed to initialize AlzLib", err.Error())
 		return
 	}
@@ -325,15 +161,18 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 
 func (p *AlzProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		NewPolicyRoleAssignmentResource,
+		NewPolicyRoleAssignmentsResource,
 	}
 }
 
 func (p *AlzProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
-		NewArchetypeDataSource,
-		NewArchetypeKeysDataSource,
+		NewArchitectureDataSource,
 	}
+}
+
+func (p *AlzProvider) Functions(ctx context.Context) []func() function.Function {
+	return []func() function.Function{}
 }
 
 func New(version string) func() provider.Provider {
@@ -342,6 +181,38 @@ func New(version string) func() provider.Provider {
 			version: version,
 		}
 	}
+}
+
+func downloadLibs(ctx context.Context, data *gen.AlzModel) ([]fs.FS, diag.Diagnostics) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
+
+	var diags diag.Diagnostics
+
+	alzLibRefs := make([]gen.AlzLibraryReferencesValue, len(data.AlzLibraryReferences.Elements()))
+	diags = data.AlzLibraryReferences.ElementsAs(ctx, &alzLibRefs, false)
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	libDirFs := make([]fs.FS, len(alzLibRefs))
+	for i, ref := range alzLibRefs {
+		if !ref.CustomUrl.IsNull() {
+			ldfs, err := alzlib.FetchLibraryByGetterString(ctx, ref.CustomUrl.ValueString(), strconv.Itoa(i))
+			if err != nil {
+				diags.AddError("Failed to fetch library", err.Error())
+				return nil, diags
+			}
+			libDirFs[i] = ldfs
+		}
+		ldfs, err := alzlib.FetchAzureLandingZonesLibraryMember(ctx, ref.Path.ValueString(), ref.Ref.ValueString(), strconv.Itoa(i))
+		if err != nil {
+			diags.AddError("Failed to fetch library", err.Error())
+			return nil, diags
+		}
+		libDirFs[i] = ldfs
+	}
+	return libDirFs, nil
 }
 
 func getFirstSetEnvVar(envVars ...string) string {
@@ -355,7 +226,7 @@ func getFirstSetEnvVar(envVars ...string) string {
 
 // configureAuxTenants gets a slice of the auxiliary tenant IDs from the provider data,
 // or the environment variable `ARM_AUXILIARY_TENANT_IDS` if the provider data is not set.
-func configureAuxTenants(ctx context.Context, data *AlzProviderModel) diag.Diagnostics {
+func configureAuxTenants(ctx context.Context, data *gen.AlzModel) diag.Diagnostics {
 	var auxTenants []string
 	if data.AuxiliaryTenantIds.IsNull() {
 		if v := os.Getenv("ARM_AUXILIARY_TENANT_IDS"); v != "" {
@@ -369,7 +240,7 @@ func configureAuxTenants(ctx context.Context, data *AlzProviderModel) diag.Diagn
 }
 
 // configureFromEnvironment sets the provider data from environment variables.
-func configureFromEnvironment(data *AlzProviderModel) {
+func configureFromEnvironment(data *gen.AlzModel) {
 	if val := getFirstSetEnvVar("ARM_CLIENT_CERTIFICATE_PASSWORD"); val != "" && data.ClientCertificatePassword.IsNull() {
 		data.ClientCertificatePassword = types.StringValue(val)
 	}
@@ -437,7 +308,7 @@ func str2Bool(val string) bool {
 }
 
 // configureAzIdentityEnvironment sets the environment variables used by go Azure sdk's azidentity package.
-func configureAzIdentityEnvironment(data *AlzProviderModel) {
+func configureAzIdentityEnvironment(data *gen.AlzModel) {
 	// Maps the auth related environment variables used in the provider to what azidentity honors.
 	if !data.TenantId.IsNull() {
 		// #nosec G104
@@ -483,13 +354,17 @@ func listElementsToStrings(list []attr.Value) []string {
 }
 
 // configureAlzLib configures the alzlib for use by the provider.
-func configureAlzLib(token *azidentity.ChainedTokenCredential, data AlzProviderModel, userAgent string) (*alzlib.AlzLib, diag.Diagnostics) {
+func configureAlzLib(token *azidentity.ChainedTokenCredential, data gen.AlzModel, userAgent string) (*alzlib.AlzLib, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	popts := new(policy.ClientOptions)
 	popts.DisableRPRegistration = data.SkipProviderRegistration.ValueBool()
 	popts.PerRetryPolicies = append(popts.PerRetryPolicies, withUserAgent(userAgent))
 
-	alz := alzlib.NewAlzLib()
+	opts := &alzlib.AlzLibOptions{
+		AllowOverwrite: data.LibOverwriteEnabled.ValueBool(),
+		Parallelism:    10,
+	}
+	alz := alzlib.NewAlzLib(opts)
 	cf, err := armpolicy.NewClientFactory("", token, popts)
 	if err != nil {
 		diags.AddError("failed to create Azure Policy client factory: %v", err.Error())
@@ -498,12 +373,10 @@ func configureAlzLib(token *azidentity.ChainedTokenCredential, data AlzProviderM
 
 	alz.AddPolicyClient(cf)
 
-	alz.Options.AllowOverwrite = data.LibOverwriteEnabled.ValueBool()
-
 	return alz, diags
 }
 
-func getClients(token *azidentity.ChainedTokenCredential, data AlzProviderModel, userAgent string) (*AlzProviderClients, diag.Diagnostics) {
+func getClients(token *azidentity.ChainedTokenCredential, data gen.AlzModel, userAgent string) (*AlzProviderClients, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	clients := new(AlzProviderClients)
 
@@ -526,7 +399,7 @@ func getClients(token *azidentity.ChainedTokenCredential, data AlzProviderModel,
 }
 
 // getTokenCredential gets a token credential based on the provider data.
-func getTokenCredential(data AlzProviderModel) (*azidentity.ChainedTokenCredential, diag.Diagnostics) {
+func getTokenCredential(data gen.AlzModel) (*azidentity.ChainedTokenCredential, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	var cloudConfig cloud.Configuration
 	env := data.Environment.ValueString()
@@ -556,7 +429,7 @@ func getTokenCredential(data AlzProviderModel) (*azidentity.ChainedTokenCredenti
 }
 
 // configureDefaults sets default values if they aren't already set.
-func configureDefaults(data *AlzProviderModel) {
+func configureDefaults(ctx context.Context, data *gen.AlzModel) {
 	// Use azure public cloud by default.
 	if data.Environment.IsNull() {
 		data.Environment = types.StringValue("public")
@@ -582,23 +455,26 @@ func configureDefaults(data *AlzProviderModel) {
 		data.UseCli = types.BoolValue(true)
 	}
 
-	// Use internal AlzLib reference library by default.
-	if data.UseAlzLib.IsNull() {
-		data.UseAlzLib = types.BoolValue(true)
-	}
-
 	// Do not allow library overwrite by default.
 	if data.LibOverwriteEnabled.IsNull() {
 		data.LibOverwriteEnabled = types.BoolValue(false)
 	}
 
-	// Set alzLibRef
-	if data.AlzLibRef.IsNull() {
-		data.AlzLibRef = types.StringValue(alzLibRef)
+	// Set alz library references to the default value if not already set.
+	if data.AlzLibraryReferences.IsNull() {
+		element := gen.NewAlzLibraryReferencesValueMust(
+			gen.NewAlzLibraryReferencesValueNull().AttributeTypes(ctx),
+			map[string]attr.Value{
+				"ref":        types.StringValue(alzLibRef),
+				"path":       types.StringValue(alzLibPath),
+				"custom_url": types.StringNull(),
+			},
+		)
+		data.AlzLibraryReferences = types.ListValueMust(element.Type(ctx), []attr.Value{element})
 	}
 }
 
-func newDefaultAzureCredential(data AlzProviderModel, options *azidentity.DefaultAzureCredentialOptions) (*azidentity.ChainedTokenCredential, diag.Diagnostics) {
+func newDefaultAzureCredential(data gen.AlzModel, options *azidentity.DefaultAzureCredentialOptions) (*azidentity.ChainedTokenCredential, diag.Diagnostics) {
 	var creds []azcore.TokenCredential
 	var diags diag.Diagnostics
 
@@ -673,34 +549,4 @@ func newDefaultAzureCredential(data AlzProviderModel, options *azidentity.Defaul
 	}
 
 	return chain, nil
-}
-
-// getLibs downloads the libraries from the URLs and returns a slice of fs.FS
-// for use in the alzlib.
-func getLibs(ctx context.Context, urls []string) ([]fs.FS, error) {
-	res := make([]fs.FS, len(urls))
-	pwd, err := os.Getwd()
-	client := &getter.Client{}
-	if err != nil {
-		return nil, fmt.Errorf("failed to get working directory: %w", err)
-	}
-
-	for i, src := range urls {
-		dst := filepath.Join(alzLibDirBase, strconv.Itoa(i))
-		if _, err := os.Stat(dst); err == nil {
-			if err := os.RemoveAll(dst); err != nil {
-				return nil, fmt.Errorf("failed to remove existing directory %s: %w", dst, err)
-			}
-		}
-		req := &getter.Request{
-			Src: src,
-			Dst: dst,
-			Pwd: pwd,
-		}
-		if _, err := client.Get(ctx, req); err != nil {
-			return nil, err
-		}
-		res[i] = os.DirFS(dst)
-	}
-	return res, nil
 }

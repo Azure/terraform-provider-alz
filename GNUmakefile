@@ -24,3 +24,9 @@ lint:
 .PHONY: docs
 docs:
 	go generate
+
+.PHONY: genprovider
+genprovider:
+	cd internal/provider
+	go generate
+	cd ../..

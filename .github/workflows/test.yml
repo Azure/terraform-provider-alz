@@ -6,7 +6,7 @@ name: Tests
 on:
   pull_request:
     paths-ignore:
-      - 'README.md'
+      - "README.md"
 
 # Testing only needs permissions to read the repository contents.
 permissions:
@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: 'go.mod'
+          go-version-file: "go.mod"
           cache: true
       - run: go mod download
       - run: go build -v .
@@ -38,9 +38,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: 'go.mod'
+          go-version-file: "go.mod"
           cache: true
-      - run: go generate ./...
+      - run: go generate
+        name: go generate (website)
+      - run: go install github.com/hashicorp/terraform-plugin-codegen-framework/cmd/tfplugingen-framework@latest
+        name: install tfplugingen-framework
+      - run: go generate
+        name: go generate (provider schema)
+        working-directory: ${{ github.workspace }}/internal/provider
       - name: git diff
         run: |
           git diff --compact-summary --exit-code || \
@@ -58,13 +64,13 @@ jobs:
       matrix:
         # list whatever Terraform versions here you would like to support
         terraform:
-          - '1.0.*'
-          - '1.6.*'
+          - "1.0.*"
+          - "1.6.*"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: 'go.mod'
+          go-version-file: "go.mod"
           cache: true
       - uses: Azure/login@v2
         with:

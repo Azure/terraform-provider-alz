@@ -1,0 +1,1020 @@
+{
+  "$schema": "https://raw.githubusercontent.com/hashicorp/terraform-plugin-codegen-spec/main/spec/v0.1/schema.json",
+  "version": "0.1",
+  "provider": {
+    "name": "alz",
+    "schema": {
+      "markdown_description": "ALZ provider to generate archetype data for use with the ALZ Terraform module.",
+      "description": "ALZ provider to generate archetype data for use with the ALZ Terraform module.",
+      "attributes": [
+        {
+          "name": "lib_overwrite_enabled",
+          "bool": {
+            "optional_required": "optional",
+            "description": "Whether to allow overwriting of the library by other lib directories. Default is `false`."
+          }
+        },
+        {
+          "name": "auxiliary_tenant_ids",
+          "list": {
+            "element_type": {
+              "string": {}
+            },
+            "optional_required": "optional",
+            "description": "A list of auxiliary tenant ids which should be used. If not specified, value will be attempted to be read from the `ARM_AUXILIARY_TENANT_IDS` environment variable. When configuring from the environment, use a semicolon as a delimiter."
+          }
+        },
+        {
+          "name": "client_certificate_password",
+          "string": {
+            "optional_required": "optional",
+            "sensitive": true,
+            "description": "The password associated with the client certificate. For use when authenticating as a service principal using a client certificate. If not specified, value will be attempted to be read from the `ARM_CLIENT_CERTIFICATE_PASSWORD` environment variable."
+          }
+        },
+        {
+          "name": "client_certificate_path",
+          "string": {
+            "optional_required": "optional",
+            "description": "The path to the client certificate associated with the service principal for use when authenticating as a service principal using a client certificate. If not specified, value will be attempted to be read from the `ARM_CLIENT_CERTIFICATE_PATH` environment variable."
+          }
+        },
+        {
+          "name": "client_id",
+          "string": {
+            "optional_required": "optional",
+            "description": "The client id which should be used. For use when authenticating as a service principal. If not specified, value will be attempted to be read from the `ARM_CLIENT_ID` environment variable."
+          }
+        },
+        {
+          "name": "client_secret",
+          "string": {
+            "optional_required": "optional",
+            "sensitive": true,
+            "description": "The client secret which should be used. For use when authenticating as a service principal using a client secret. If not specified, value will be attempted to be read from the `ARM_CLIENT_SECRET` environment variable."
+          }
+        },
+        {
+          "name": "environment",
+          "string": {
+            "optional_required": "optional",
+            "validators": [
+              {
+                "custom": {
+                  "imports": [
+                    {
+                      "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                    }
+                  ],
+                  "schema_definition": "stringvalidator.OneOf(\"public\", \"usgovernment\", \"china\")"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "name": "oidc_request_token",
+          "string": {
+            "optional_required": "optional",
+            "sensitive": true,
+            "description": "The bearer token for the request to the OIDC provider. For use when authenticating using OpenID Connect. If not specified, value will be attempted to be read from the first non-empty value of the `ARM_OIDC_REQUEST_TOKEN` and `ACTIONS_ID_TOKEN_REQUEST_TOKEN` environment variables."
+          }
+        },
+        {
+          "name": "oidc_request_url",
+          "string": {
+            "optional_required": "optional",
+            "description": "The URL for the OIDC provider from which to request an id token. For use when authenticating as a service principal using OpenID Connect. If not specified, value will be attempted to be read from the first non-empty value of the `ARM_OIDC_REQUEST_URL` and `ACTIONS_ID_TOKEN_REQUEST_URL` environment variables."
+          }
+        },
+        {
+          "name": "oidc_token",
+          "string": {
+            "optional_required": "optional",
+            "sensitive": true,
+            "description": "The OIDC id token for use when authenticating as a service principal using OpenID Connect. If not specified, value will be attempted to be read from the `ARM_OIDC_TOKEN` environment variable."
+          }
+        },
+        {
+          "name": "oidc_token_file_path",
+          "string": {
+            "optional_required": "optional",
+            "description": "The path to a file containing an OIDC id token for use when authenticating using OpenID Connect. If not specified, value will be attempted to be read from the `ARM_OIDC_TOKEN_FILE_PATH` environment variable."
+          }
+        },
+        {
+          "name": "skip_provider_registration",
+          "bool": {
+            "optional_required": "optional",
+            "description": "Should the provider skip registering all of the resource providers that it supports, if they're not already registered? Default is `false`. If not specified, value will be attempted to be read from the `ARM_SKIP_PROVIDER_REGISTRATION` environment variable."
+          }
+        },
+        {
+          "name": "tenant_id",
+          "string": {
+            "optional_required": "optional",
+            "description": "The Tenant ID which should be used. If not specified, value will be attempted to be read from the `ARM_TENANT_ID` environment variable."
+          }
+        },
+        {
+          "name": "alz_library_references",
+          "list_nested": {
+            "optional_required": "optional",
+            "description": "A list of references to the [ALZ library](https://aka.ms/alz/library) to use. Each reference should either contain the `path` (e.g. `platform/alz`) and the `tag` (e.g. `2024.03.03`), or a `custom_url` to be supplied to go-getter.\nIf this value is not specified, the default value will be used, which is:\n\n```terraform\nalz_library_references = [\n  { path = \"platform/alz\", tag = \"2024.03.03\" },\n]\n```\n",
+            "nested_object": {
+              "attributes": [
+                {
+                  "name": "path",
+                  "string": {
+                    "optional_required": "optional",
+                    "description": "The path in the ALZ Library, e.g. `platform/alz`. Conflicts with `custom_url`.",
+                    "validators": [
+                      {
+                        "custom": {
+                          "imports": [
+                            {
+                              "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                            }
+                          ],
+                          "schema_definition": "stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtMapKey(\"custom_url\"))"
+                        }
+                      },
+                      {
+                        "custom": {
+                          "imports": [
+                            {
+                              "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                            }
+                          ],
+                          "schema_definition": "stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtMapKey(\"ref\"))"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "name": "ref",
+                  "string": {
+                    "optional_required": "optional",
+                    "description": "This is the version of the library to use, e.g. `2024.03.03`. Conflicts with `custom_url`.",
+                    "validators": [
+                      {
+                        "custom": {
+                          "imports": [
+                            {
+                              "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                            }
+                          ],
+                          "schema_definition": "stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtMapKey(\"custom_url\"))"
+                        }
+                      },
+                      {
+                        "custom": {
+                          "imports": [
+                            {
+                              "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                            }
+                          ],
+                          "schema_definition": "stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtMapKey(\"path\"))"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "name": "custom_url",
+                  "string": {
+                    "optional_required": "optional",
+                    "description": "A custom path/URL to the library to use. Conflicts with `path` and `tag`. For supported protocols, see [go-getter](https://pkg.go.dev/github.com/hashicorp/go-getter/v2). Value is marked sensitive as may contain secrets.",
+                    "sensitive": true,
+                    "validators": [
+                      {
+                        "custom": {
+                          "imports": [
+                            {
+                              "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                            },
+                            {
+                              "path": "github.com/hashicorp/terraform-plugin-framework/path"
+                            }
+                          ],
+                          "schema_definition": "stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtMapKey(\"path\"))"
+                        }
+                      },
+                      {
+                        "custom": {
+                          "imports": [
+                            {
+                              "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                            },
+                            {
+                              "path": "github.com/hashicorp/terraform-plugin-framework/path"
+                            }
+                          ],
+                          "schema_definition": "stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtMapKey(\"tag\"))"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "validators": [
+              {
+                "custom": {
+                  "imports": [
+                    {
+                      "path": "github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+                    }
+                  ],
+                  "schema_definition": "listvalidator.UniqueValues()"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "name": "use_cli",
+          "bool": {
+            "optional_required": "optional",
+            "description": "Allow Azure CLI to be used for authentication. Default is `true`. If not specified, value will be attempted to be read from the `ARM_USE_CLI` environment variable."
+          }
+        },
+        {
+          "name": "use_msi",
+          "bool": {
+            "optional_required": "optional",
+            "description": "Allow managed service identity to be used for authentication. Default is `false`. If not specified, value will be attempted to be read from the `ARM_USE_MSI` environment variable."
+          }
+        },
+        {
+          "name": "use_oidc",
+          "bool": {
+            "optional_required": "optional",
+            "description": "Allow OpenID Connect to be used for authentication. Default is `false`. If not specified, value will be attempted to be read from the `ARM_USE_OIDC` environment variable."
+          }
+        }
+      ]
+    }
+  },
+  "datasources": [
+    {
+      "name": "architecture",
+      "schema": {
+        "markdown_description": "The architecture data source provides the information required to deploy an ALZ management group hierarchy, including policy and additional role assignment detail.",
+        "description": "The architecture data source provides the information required to deploy an ALZ management group hierarchy, including policy and additional role assignment detail.",
+        "attributes": [
+          {
+            "name": "name",
+            "string": {
+              "description": "The name of the architecture to deploy.",
+              "computed_optional_required": "required",
+              "validators": [
+                {
+                  "custom": {
+                    "imports": [
+                      {
+                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                      }
+                    ],
+                    "schema_definition": "stringvalidator.LengthAtLeast(1)"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "id",
+            "string": {
+              "description": "A computed value representing the unique identifier for the architecture. Mandatory for acceptance testing.",
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "root_management_group_id",
+            "string": {
+              "description": "The root management group id under which to deploy the architecture.",
+              "computed_optional_required": "required",
+              "validators": [
+                {
+                  "custom": {
+                    "imports": [
+                      {
+                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                      }
+                    ],
+                    "schema_definition": "stringvalidator.LengthAtLeast(1)"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "location",
+            "string": {
+              "description": "The Azure region used as a default for resources.",
+              "computed_optional_required": "required",
+              "validators": [
+                {
+                  "custom": {
+                    "imports": [
+                      {
+                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                      }
+                    ],
+                    "schema_definition": "stringvalidator.LengthAtLeast(1)"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "policy_assignments_to_modify",
+            "map_nested": {
+              "computed_optional_required": "optional",
+              "description": "A mested map of policy assignments to modify. The key is the management group id, and the value is an object with a single attribute, `policy_assignments`. This is another map.",
+              "nested_object": {
+                "attributes": [
+                  {
+                    "name": "policy_assignments",
+                    "map_nested": {
+                      "description": "A map of policy assignments to modify. The key is the policy assignment name, and the value is an object containing the modifications to make.",
+                      "computed_optional_required": "optional",
+                      "nested_object": {
+                        "attributes": [
+                          {
+                            "name": "enforcement_mode",
+                            "string": {
+                              "computed_optional_required": "optional",
+                              "description": "The enforcement mode for the policy assignment. Valid values are `Default` and `DoNotEnforce`.",
+                              "validators": [
+                                {
+                                  "custom": {
+                                    "imports": [
+                                      {
+                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                                      }
+                                    ],
+                                    "schema_definition": "stringvalidator.OneOf(\"Default\", \"DoNotEnforce\")"
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "name": "identity",
+                            "string": {
+                              "description": "The identity type. Must be one of `SystemAssigned` or `UserAssigned`.",
+                              "computed_optional_required": "optional",
+                              "validators": [
+                                {
+                                  "custom": {
+                                    "imports": [
+                                      {
+                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                                      }
+                                    ],
+                                    "schema_definition": "stringvalidator.OneOf(\"SystemAssigned\", \"UserAssigned\")"
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "name": "identity_ids",
+                            "set": {
+                              "computed_optional_required": "optional",
+                              "element_type": {
+                                "string": {}
+                              },
+                              "description": "A set of zero or one identity ids to assign to the policy assignment. Required if `identity` is `UserAssigned`. **Do not** pass in computed values, instead construct the resource id yourself.",
+                              "validators": [
+                                {
+                                  "custom": {
+                                    "imports": [
+                                      {
+                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+                                      },
+                                      {
+                                        "path": "github.com/Azure/terraform-provider-alz/internal/alzvalidators"
+                                      }
+                                    ],
+                                    "schema_definition": "setvalidator.ValueStringsAre(alzvalidators.ArmResourceIdTypeNamespace(\"Microsoft.ManagedIdentity\", \"userAssignedIdentities\"))"
+                                  }
+                                },
+                                {
+                                  "custom": {
+                                    "imports": [
+                                      {
+                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+                                      },
+                                      {
+                                        "path": "github.com/hashicorp/terraform-plugin-framework/path"
+                                      }
+                                    ],
+                                    "schema_definition": "setvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName(\"identity\"))"
+                                  }
+                                },
+                                {
+                                  "custom": {
+                                    "imports": [
+                                      {
+                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+                                      }
+                                    ],
+                                    "schema_definition": "setvalidator.SizeBetween(0, 1)"
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "name": "non_compliance_messages",
+                            "set_nested": {
+                              "description": "The non-compliance messages to use for the policy assignment.",
+                              "computed_optional_required": "optional",
+                              "nested_object": {
+                                "attributes": [
+                                  {
+                                    "name": "message",
+                                    "string": {
+                                      "description": "The non-compliance message to use for the policy assignment.",
+                                      "computed_optional_required": "required"
+                                    }
+                                  },
+                                  {
+                                    "name": "policy_definition_reference_id",
+                                    "string": {
+                                      "description": "The policy definition reference id (not the resource id) to use for the non compliance message. This references the definition within the policy set.",
+                                      "computed_optional_required": "optional"
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          },
+                          {
+                            "name": "overrides",
+                            "list_nested": {
+                              "validators": [
+                                {
+                                  "custom": {
+                                    "imports": [
+                                      {
+                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+                                      }
+                                    ],
+                                    "schema_definition": "listvalidator.SizeAtMost(10)"
+                                  }
+                                },
+                                {
+                                  "custom": {
+                                    "imports": [
+                                      {
+                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+                                      }
+                                    ],
+                                    "schema_definition": "listvalidator.UniqueValues()"
+                                  }
+                                }
+                              ],
+                              "description": "The overrides for this policy assignment. There are a maximum of 10 overrides allowed per assignment. If specified here the overrides will replace the existing overrides.",
+                              "computed_optional_required": "optional",
+                              "nested_object": {
+                                "attributes": [
+                                  {
+                                    "name": "kind",
+                                    "string": {
+                                      "description": "The property the assignment will override. The supported kind is `policyEffect`.",
+                                      "computed_optional_required": "required",
+                                      "validators": [
+                                        {
+                                          "custom": {
+                                            "imports": [
+                                              {
+                                                "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                                              }
+                                            ],
+                                            "schema_definition": "stringvalidator.OneOf(\"policyEffect\")"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "name": "value",
+                                    "string": {
+                                      "description": "The new value which will override the existing value. The supported values are: `addToNetworkGroup`, `append`, `audit`, `auditIfNotExists`, `deny`, `denyAction`, `deployIfNotExists`, `disabled`, `manual`, `modify`, `mutate`. <https://learn.microsoft.com/azure/governance/policy/concepts/effects>",
+                                      "computed_optional_required": "required",
+                                      "validators": [
+                                        {
+                                          "custom": {
+                                            "imports": [
+                                              {
+                                                "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                                              }
+                                            ],
+                                            "schema_definition": "stringvalidator.OneOf(\"addToNetworkGroup\", \"append\", \"audit\", \"auditIfNotExists\", \"deny\", \"denyAction\", \"deployIfNotExists\", \"disabled\", \"manual\", \"modify\", \"mutate\")"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "name": "override_selectors",
+                                    "list_nested": {
+                                      "description": "The selectors to use for the override.",
+                                      "computed_optional_required": "optional",
+                                      "nested_object": {
+                                        "attributes": [
+                                          {
+                                            "name": "kind",
+                                            "string": {
+                                              "computed_optional_required": "required",
+                                              "description": "The property of a selector that describes what characteristic will narrow down the scope of the override. Allowed value for kind: `policyEffect` is: `policyDefinitionReferenceId`.",
+                                              "validators": [
+                                                {
+                                                  "custom": {
+                                                    "imports": [
+                                                      {
+                                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                                                      }
+                                                    ],
+                                                    "schema_definition": "stringvalidator.OneOf(\"policyDefinitionReferenceId\")"
+                                                  }
+                                                }
+                                              ]
+                                            }
+                                          },
+                                          {
+                                            "name": "in",
+                                            "set": {
+                                              "description": "The list of values that the selector will match. Conflicts with `not_in`.",
+                                              "computed_optional_required": "optional",
+                                              "element_type": {
+                                                "string": {}
+                                              },
+                                              "validators": [
+                                                {
+                                                  "custom": {
+                                                    "imports": [
+                                                      {
+                                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+                                                      }
+                                                    ],
+                                                    "schema_definition": "setvalidator.SizeAtMost(50)"
+                                                  }
+                                                },
+                                                {
+                                                  "custom": {
+                                                    "imports": [
+                                                      {
+                                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+                                                      },
+                                                      {
+                                                        "path": "github.com/hashicorp/terraform-plugin-framework/path"
+                                                      }
+                                                    ],
+                                                    "schema_definition": "setvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName(\"not_in\"))"
+                                                  }
+                                                }
+                                              ]
+                                            }
+                                          },
+                                          {
+                                            "name": "not_in",
+                                            "set": {
+                                              "description": "The list of values that the selector will not match. Conflicts with `in`.",
+                                              "computed_optional_required": "optional",
+                                              "element_type": {
+                                                "string": {}
+                                              },
+                                              "validators": [
+                                                {
+                                                  "custom": {
+                                                    "imports": [
+                                                      {
+                                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+                                                      }
+                                                    ],
+                                                    "schema_definition": "setvalidator.SizeAtMost(50)"
+                                                  }
+                                                },
+                                                {
+                                                  "custom": {
+                                                    "imports": [
+                                                      {
+                                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+                                                      },
+                                                      {
+                                                        "path": "github.com/hashicorp/terraform-plugin-framework/path"
+                                                      }
+                                                    ],
+                                                    "schema_definition": "setvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName(\"not_in\"))"
+                                                  }
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          },
+                          {
+                            "name": "resource_selectors",
+                            "list_nested": {
+                              "validators": [
+                                {
+                                  "custom": {
+                                    "imports": [
+                                      {
+                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+                                      }
+                                    ],
+                                    "schema_definition": "listvalidator.SizeAtMost(10)"
+                                  }
+                                },
+                                {
+                                  "custom": {
+                                    "imports": [
+                                      {
+                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+                                      }
+                                    ],
+                                    "schema_definition": "listvalidator.UniqueValues()"
+                                  }
+                                }
+                              ],
+                              "description": "The resource selectors to use for the policy assignment. A maximum of 10 resource selectors are allowed per assignment. If specified here the resource selectors will replace any existing resource selectors.",
+                              "computed_optional_required": "optional",
+                              "nested_object": {
+                                "attributes": [
+                                  {
+                                    "name": "name",
+                                    "string": {
+                                      "description": "The name of the resource selector. The name must be unique within the assignment.",
+                                      "computed_optional_required": "required",
+                                      "validators": [
+                                        {
+                                          "custom": {
+                                            "imports": [
+                                              {
+                                                "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                                              }
+                                            ],
+                                            "schema_definition": "stringvalidator.LengthAtLeast(1)"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "name": "resource_selector_selectors",
+                                    "list_nested": {
+                                      "description": "The selectors to use for the resource selector.",
+                                      "computed_optional_required": "optional",
+                                      "nested_object": {
+                                        "attributes": [
+                                          {
+                                            "name": "kind",
+                                            "string": {
+                                              "description": "The property of a selector that describes what characteristic will narrow down the set of evaluated resources. Each kind can only be used once in a single resource selector. Allowed values are: `resourceLocation`, `resourceType`, `resourceWithoutLocation`. `resourceWithoutLocation` cannot be used in the same resource selector as `resourceLocation`.",
+                                              "computed_optional_required": "required",
+                                              "validators": [
+                                                {
+                                                  "custom": {
+                                                    "imports": [
+                                                      {
+                                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                                                      }
+                                                    ],
+                                                    "schema_definition": "stringvalidator.OneOf(\"resourceLocation\", \"resourceType\", \"resourceWithoutLocation\")"
+                                                  }
+                                                }
+                                              ]
+                                            }
+                                          },
+                                          {
+                                            "name": "in",
+                                            "set": {
+                                              "description": "The list of values that the selector will match. Conflicts with `not_in`.",
+                                              "computed_optional_required": "optional",
+                                              "element_type": {
+                                                "string": {}
+                                              },
+                                              "validators": [
+                                                {
+                                                  "custom": {
+                                                    "imports": [
+                                                      {
+                                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+                                                      }
+                                                    ],
+                                                    "schema_definition": "setvalidator.SizeAtMost(50)"
+                                                  }
+                                                },
+                                                {
+                                                  "custom": {
+                                                    "imports": [
+                                                      {
+                                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+                                                      },
+                                                      {
+                                                        "path": "github.com/hashicorp/terraform-plugin-framework/path"
+                                                      }
+                                                    ],
+                                                    "schema_definition": "setvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName(\"not_in\"))"
+                                                  }
+                                                }
+                                              ]
+                                            }
+                                          },
+                                          {
+                                            "name": "not_in",
+                                            "set": {
+                                              "description": "The list of values that the selector will not match. Conflicts with `in`.",
+                                              "computed_optional_required": "optional",
+                                              "element_type": {
+                                                "string": {}
+                                              },
+                                              "validators": [
+                                                {
+                                                  "custom": {
+                                                    "imports": [
+                                                      {
+                                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+                                                      }
+                                                    ],
+                                                    "schema_definition": "setvalidator.SizeAtMost(50)"
+                                                  }
+                                                },
+                                                {
+                                                  "custom": {
+                                                    "imports": [
+                                                      {
+                                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+                                                      },
+                                                      {
+                                                        "path": "github.com/hashicorp/terraform-plugin-framework/path"
+                                                      }
+                                                    ],
+                                                    "schema_definition": "setvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName(\"not_in\"))"
+                                                  }
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          },
+                          {
+                            "name": "parameters",
+                            "string": {
+                              "description": "The parameters to use for the policy assignment. **Note:** This is a JSON string, and not a map. This is because the parameter values have different types, which confuses the type system used by the provider sdk. Use `jsonencode()` to construct the map. The map keys must be strings, the values are `any` type. Example: `jsonencode({\"param1\": \"value1\", \"param2\": 2})`",
+                              "computed_optional_required": "optional",
+                              "custom_type": {
+                                "import": {
+                                  "path": "github.com/Azure/terraform-provider-alz/internal/alztypes"
+                                },
+                                "type": "alztypes.PolicyParameterType{}",
+                                "value_type": "alztypes.PolicyParameterValue"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "management_groups",
+            "list_nested": {
+              "description": "This is a list of objects pertaining to the tier of management groups to be deployed (relative to the supplied root management group id). Use the `level` attribute to specify the tier of management groups to deploy.",
+              "computed_optional_required": "computed",
+              "nested_object": {
+                "attributes": [
+                  {
+                    "name": "id",
+                    "string": {
+                      "description": "The id of the management group. This the last segment of the resource id.",
+                      "computed_optional_required": "computed"
+                    }
+                  },
+                  {
+                    "name": "parent_id",
+                    "string": {
+                      "description": "The parent management group id.",
+                      "computed_optional_required": "computed"
+                    }
+                  },
+                  {
+                    "name": "display_name",
+                    "string": {
+                      "description": "The display name of the management group.",
+                      "computed_optional_required": "computed_optional"
+                    }
+                  },
+                  {
+                    "name": "level",
+                    "number": {
+                      "description": "The level of the management group in the hierarchy, relative to the supplied root management group. The level starts at zero.",
+                      "computed_optional_required": "computed"
+                    }
+                  },
+                  {
+                    "name": "exists",
+                    "bool": {
+                      "description": "Whether the management group already exists or not. Used to determine if the management group should be created or just have policy/role resources created within.",
+                      "computed_optional_required": "computed"
+                    }
+                  },
+                  {
+                    "name": "policy_assignments",
+                    "map": {
+                      "description": "The policy assignments to apply to the management group. The key is the policy assignment name, and the value is the policy assignment JSON as a string.",
+                      "element_type": {
+                        "string": {}
+                      },
+                      "computed_optional_required": "computed_optional"
+                    }
+                  },
+                  {
+                    "name": "policy_definitions",
+                    "map": {
+                      "description": "The policy definitions to apply to the management group. The key is the policy definition name, and the value is the policy definition JSON as a string.",
+                      "element_type": {
+                        "string": {}
+                      },
+                      "computed_optional_required": "computed_optional"
+                    }
+                  },
+                  {
+                    "name": "policy_set_definitions",
+                    "map": {
+                      "description": "The policy set definitions to apply to the management group. The key is the policy set definition name, and the value is the policy set definition JSON as a string.",
+                      "element_type": {
+                        "string": {}
+                      },
+                      "computed_optional_required": "computed_optional"
+                    }
+                  },
+                  {
+                    "name": "role_definitions",
+                    "map": {
+                      "description": "The role definitions to apply to the management group. The key is the role definition name, and the value is the role definition JSON as a string.",
+                      "element_type": {
+                        "string": {}
+                      },
+                      "computed_optional_required": "computed_optional"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "policy_role_assignments",
+            "set_nested": {
+              "computed_optional_required": "computed_optional",
+              "description": "A set of role assignments that need to be created for the policies that have been assigned in the hierarchy. Since we will likely be using system assigned identities, we don't know the principal ID until after the deployment. Therefore this data can be used to create the role assignments after the deployment.",
+              "nested_object": {
+                "attributes": [
+                  {
+                    "name": "role_definition_id",
+                    "string": {
+                      "description": "The role definition id to assign.",
+                      "computed_optional_required": "computed"
+                    }
+                  },
+                  {
+                    "name": "scope",
+                    "string": {
+                      "description": "The scope of the assignment.",
+                      "computed_optional_required": "computed"
+                    }
+                  },
+                  {
+                    "name": "policy_assignment_name",
+                    "string": {
+                      "description": "The name of the policy assignment to enable retrieval of the identity id.",
+                      "computed_optional_required": "computed"
+                    }
+                  },
+                  {
+                    "name": "management_group_id",
+                    "string": {
+                      "description": "The id of the management group where the policy assignment will be created.",
+                      "computed_optional_required": "computed"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "blocks": [
+          {
+            "name": "timeouts",
+            "single_nested": {
+              "attributes": [
+                {
+                  "name": "read",
+                  "string": {
+                    "description": "The maximum time to wait for a read operation to complete.",
+                    "computed_optional_required": "optional"
+                  }
+                }
+              ],
+              "custom_type": {
+                "import": {
+                  "path": "github.com/hashicorp/terraform-plugin-framework-timeouts/datasource/timeouts"
+                },
+                "type": "timeouts.Type{}",
+                "value_type": "timeouts.Value"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "resources": [
+    {
+      "name": "policy_role_assignments",
+      "schema": {
+        "deprecation_message": "The functionality provided by this meta resource now exists in the module, where it is more appropriate. Please do not use this.",
+        "attributes": [
+          {
+            "name": "id",
+            "string": {
+              "description": "The id architecture.",
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "assignments",
+            "set_nested": {
+              "computed_optional_required": "required",
+              "nested_object": {
+                "attributes": [
+                  {
+                    "name": "principal_id",
+                    "string": {
+                      "description": "The principal id to assign the role to.",
+                      "computed_optional_required": "required"
+                    }
+                  },
+                  {
+                    "name": "role_definition_id",
+                    "string": {
+                      "description": "The role definition id to assign.",
+                      "computed_optional_required": "required"
+                    }
+                  },
+                  {
+                    "name": "scope",
+                    "string": {
+                      "description": "The scope of the assignment.",
+                      "computed_optional_required": "required",
+                      "validators": [
+                        {
+                          "custom": {
+                            "imports": [
+                              {
+                                "path": "github.com/Azure/terraform-provider-alz/internal/alzvalidators"
+                              }
+                            ],
+                            "schema_definition": "alzvalidators.ArmResourceId()"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "name": "resource_id",
+                    "string": {
+                      "description": "The resource id of the role assignment.",
+                      "computed_optional_required": "computed"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
