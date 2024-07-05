@@ -38,55 +38,55 @@ import (
 // }
 
 // testAccArchitectureDataSourceConfig returns a test configuration for TestAccAlzArchetypeDataSource.
-func testAccAlzPolicyRoleAssignmentsResourceConfigOne() string {
-	return `
-provider "alz" {}
+// func testAccAlzPolicyRoleAssignmentsResourceConfigOne() string {
+// 	return `
+// provider "alz" {}
 
-provider "azurerm" {
-  features {}
-}
+// provider "azurerm" {
+//   features {}
+// }
 
-data "azurerm_client_config" "current" {}
+// data "azurerm_client_config" "current" {}
 
-resource "alz_policy_role_assignments" "test" {
-	assignments = [
-		{
-			principal_id       = data.azurerm_client_config.current.object_id
-			role_definition_id = "/providers/Microsoft.Authorization/roleDefinitions/acdd72a7-3385-48ef-bd42-f606fba81ae7" # reader
-			scope              = "/subscriptions/${data.azurerm_client_config.current.subscription_id}"
-		}
-	]
-}
-`
-}
+// resource "alz_policy_role_assignments" "test" {
+// 	assignments = [
+// 		{
+// 			principal_id       = data.azurerm_client_config.current.object_id
+// 			role_definition_id = "/providers/Microsoft.Authorization/roleDefinitions/acdd72a7-3385-48ef-bd42-f606fba81ae7" # reader
+// 			scope              = "/subscriptions/${data.azurerm_client_config.current.subscription_id}"
+// 		}
+// 	]
+// }
+// `
+// }
 
-// testAccArchitectureDataSourceConfig returns a test configuration for TestAccAlzArchetypeDataSource.
-func testAccAlzPolicyRoleAssignmentsResourceConfigTwo() string {
-	return `
-provider "alz" {}
+// // testAccArchitectureDataSourceConfig returns a test configuration for TestAccAlzArchetypeDataSource.
+// func testAccAlzPolicyRoleAssignmentsResourceConfigTwo() string {
+// 	return `
+// provider "alz" {}
 
-provider "azurerm" {
-  features {}
-}
+// provider "azurerm" {
+//   features {}
+// }
 
-data "azurerm_client_config" "current" {}
+// data "azurerm_client_config" "current" {}
 
-resource "alz_policy_role_assignments" "test" {
-	assignments = [
-		{
-			principal_id       = data.azurerm_client_config.current.object_id
-			role_definition_id = "/providers/Microsoft.Authorization/roleDefinitions/acdd72a7-3385-48ef-bd42-f606fba81ae7" # reader
-			scope              = "/subscriptions/${data.azurerm_client_config.current.subscription_id}"
-		},
-		{
-			principal_id       = data.azurerm_client_config.current.object_id
-			role_definition_id = "/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c" # contributor
-			scope              = "/subscriptions/${data.azurerm_client_config.current.subscription_id}"
-		}
-	]
-}
-`
-}
+// resource "alz_policy_role_assignments" "test" {
+// 	assignments = [
+// 		{
+// 			principal_id       = data.azurerm_client_config.current.object_id
+// 			role_definition_id = "/providers/Microsoft.Authorization/roleDefinitions/acdd72a7-3385-48ef-bd42-f606fba81ae7" # reader
+// 			scope              = "/subscriptions/${data.azurerm_client_config.current.subscription_id}"
+// 		},
+// 		{
+// 			principal_id       = data.azurerm_client_config.current.object_id
+// 			role_definition_id = "/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c" # contributor
+// 			scope              = "/subscriptions/${data.azurerm_client_config.current.subscription_id}"
+// 		}
+// 	]
+// }
+// `
+// }
 
 func TestStandardizeRoleAssignmentRoleDefinititionId(t *testing.T) {
 	// Test a valid input.
