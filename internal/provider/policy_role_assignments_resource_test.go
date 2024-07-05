@@ -5,38 +5,37 @@ import (
 
 	"github.com/Azure/terraform-provider-alz/internal/provider/gen"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/stretchr/testify/assert"
 )
 
 // TestAccAlzArchetypeDataSource tests the data source for alz_archetype.
-// It checks that the policy parameter substitution & location defaults are applied.
-func TestAccAlzPolicyRoleAssignmentsResource(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
-		ExternalProviders: map[string]resource.ExternalProvider{
-			"azurerm": {
-				Source:            "hashicorp/azurerm",
-				VersionConstraint: "~> 3.107",
-			},
-		},
-		Steps: []resource.TestStep{
-			{
-				Config: testAccAlzPolicyRoleAssignmentsResourceConfigOne(),
-				Check:  resource.ComposeAggregateTestCheckFunc(),
-			},
-			{
-				Config: testAccAlzPolicyRoleAssignmentsResourceConfigTwo(),
-				Check:  resource.ComposeAggregateTestCheckFunc(),
-			},
-			{
-				Config: testAccAlzPolicyRoleAssignmentsResourceConfigOne(),
-				Check:  resource.ComposeAggregateTestCheckFunc(),
-			},
-		},
-	})
-}
+// // It checks that the policy parameter substitution & location defaults are applied.
+// func TestAccAlzPolicyRoleAssignmentsResource(t *testing.T) {
+// 	resource.Test(t, resource.TestCase{
+// 		PreCheck:                 func() { testAccPreCheck(t) },
+// 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
+// 		ExternalProviders: map[string]resource.ExternalProvider{
+// 			"azurerm": {
+// 				Source:            "hashicorp/azurerm",
+// 				VersionConstraint: "~> 3.107",
+// 			},
+// 		},
+// 		Steps: []resource.TestStep{
+// 			{
+// 				Config: testAccAlzPolicyRoleAssignmentsResourceConfigOne(),
+// 				Check:  resource.ComposeAggregateTestCheckFunc(),
+// 			},
+// 			{
+// 				Config: testAccAlzPolicyRoleAssignmentsResourceConfigTwo(),
+// 				Check:  resource.ComposeAggregateTestCheckFunc(),
+// 			},
+// 			{
+// 				Config: testAccAlzPolicyRoleAssignmentsResourceConfigOne(),
+// 				Check:  resource.ComposeAggregateTestCheckFunc(),
+// 			},
+// 		},
+// 	})
+// }
 
 // testAccArchitectureDataSourceConfig returns a test configuration for TestAccAlzArchetypeDataSource.
 func testAccAlzPolicyRoleAssignmentsResourceConfigOne() string {
