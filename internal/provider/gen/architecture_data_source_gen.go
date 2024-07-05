@@ -393,11 +393,11 @@ func ArchitectureDataSourceSchema(ctx context.Context) schema.Schema {
 				Attributes: map[string]schema.Attribute{
 					"read": schema.StringAttribute{
 						Optional:            true,
-						Description:         "The maximum time to wait for a read operation to complete.",
-						MarkdownDescription: "The maximum time to wait for a read operation to complete.",
+						Description:         "A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as \"30s\" or \"2h45m\". Valid time units are \"s\" (seconds), \"m\" (minutes), \"h\" (hours).",
+						MarkdownDescription: "A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as \"30s\" or \"2h45m\". Valid time units are \"s\" (seconds), \"m\" (minutes), \"h\" (hours).",
 					},
 				},
-				CustomType: timeouts.Type{},
+				CustomType: timeouts.Type{ObjectType: types.ObjectType{AttrTypes: map[string]attr.Type{"read": types.StringType}}},
 			},
 		},
 		Description:         "The architecture data source provides the information required to deploy an ALZ management group hierarchy, including policy and additional role assignment detail.",

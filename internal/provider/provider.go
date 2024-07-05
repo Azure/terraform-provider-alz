@@ -189,8 +189,8 @@ func downloadLibs(ctx context.Context, data *gen.AlzModel) ([]fs.FS, diag.Diagno
 
 	var diags diag.Diagnostics
 
-	alzLibRefs := make([]gen.AlzLibraryReferencesValue, len(data.AlzLibraryReferences.Elements()))
-	diags = data.AlzLibraryReferences.ElementsAs(ctx, &alzLibRefs, false)
+	alzLibRefs := make([]gen.LibraryReferencesValue, len(data.LibraryReferences.Elements()))
+	diags = data.LibraryReferences.ElementsAs(ctx, &alzLibRefs, false)
 	if diags.HasError() {
 		return nil, diags
 	}
@@ -461,16 +461,16 @@ func configureDefaults(ctx context.Context, data *gen.AlzModel) {
 	}
 
 	// Set alz library references to the default value if not already set.
-	if data.AlzLibraryReferences.IsNull() {
-		element := gen.NewAlzLibraryReferencesValueMust(
-			gen.NewAlzLibraryReferencesValueNull().AttributeTypes(ctx),
+	if data.LibraryReferences.IsNull() {
+		element := gen.NewLibraryReferencesValueMust(
+			gen.NewLibraryReferencesValueNull().AttributeTypes(ctx),
 			map[string]attr.Value{
 				"ref":        types.StringValue(alzLibRef),
 				"path":       types.StringValue(alzLibPath),
 				"custom_url": types.StringNull(),
 			},
 		)
-		data.AlzLibraryReferences = types.ListValueMust(element.Type(ctx), []attr.Value{element})
+		data.LibraryReferences = types.ListValueMust(element.Type(ctx), []attr.Value{element})
 	}
 }
 

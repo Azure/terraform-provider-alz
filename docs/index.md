@@ -24,7 +24,7 @@ Use the navigation to the left to read about the available resources.
 
 ```terraform
 provider "alz" {
-  alz_library_references = [
+  library_references = [
     {
       path = "platform/alz"
       ref  = "2024.07.01"
@@ -83,14 +83,6 @@ For more information please visit the [GitHub repository](https://github.com/Azu
 
 ### Optional
 
-- `alz_library_references` (Attributes List) A list of references to the [ALZ library](https://aka.ms/alz/library) to use. Each reference should either contain the `path` (e.g. `platform/alz`) and the `tag` (e.g. `2024.03.03`), or a `custom_url` to be supplied to go-getter.
-If this value is not specified, the default value will be used, which is:
-
-```terraform
-alz_library_references = [
-  { path = "platform/alz", tag = "2024.03.03" },
-]
-``` (see [below for nested schema](#nestedatt--alz_library_references))
 - `auxiliary_tenant_ids` (List of String) A list of auxiliary tenant ids which should be used. If not specified, value will be attempted to be read from the `ARM_AUXILIARY_TENANT_IDS` environment variable. When configuring from the environment, use a semicolon as a delimiter.
 - `client_certificate_password` (String, Sensitive) The password associated with the client certificate. For use when authenticating as a service principal using a client certificate. If not specified, value will be attempted to be read from the `ARM_CLIENT_CERTIFICATE_PASSWORD` environment variable.
 - `client_certificate_path` (String) The path to the client certificate associated with the service principal for use when authenticating as a service principal using a client certificate. If not specified, value will be attempted to be read from the `ARM_CLIENT_CERTIFICATE_PATH` environment variable.
@@ -98,6 +90,14 @@ alz_library_references = [
 - `client_secret` (String, Sensitive) The client secret which should be used. For use when authenticating as a service principal using a client secret. If not specified, value will be attempted to be read from the `ARM_CLIENT_SECRET` environment variable.
 - `environment` (String)
 - `lib_overwrite_enabled` (Boolean) Whether to allow overwriting of the library by other lib directories. Default is `false`.
+- `library_references` (Attributes List) A list of references to the [ALZ library](https://aka.ms/alz/library) to use. Each reference should either contain the `path` (e.g. `platform/alz`) and the `tag` (e.g. `2024.03.03`), or a `custom_url` to be supplied to go-getter.
+If this value is not specified, the default value will be used, which is:
+
+```terraform
+alz_library_references = [
+  { path = "platform/alz", tag = "2024.03.03" },
+]
+``` (see [below for nested schema](#nestedatt--library_references))
 - `oidc_request_token` (String, Sensitive) The bearer token for the request to the OIDC provider. For use when authenticating using OpenID Connect. If not specified, value will be attempted to be read from the first non-empty value of the `ARM_OIDC_REQUEST_TOKEN` and `ACTIONS_ID_TOKEN_REQUEST_TOKEN` environment variables.
 - `oidc_request_url` (String) The URL for the OIDC provider from which to request an id token. For use when authenticating as a service principal using OpenID Connect. If not specified, value will be attempted to be read from the first non-empty value of the `ARM_OIDC_REQUEST_URL` and `ACTIONS_ID_TOKEN_REQUEST_URL` environment variables.
 - `oidc_token` (String, Sensitive) The OIDC id token for use when authenticating as a service principal using OpenID Connect. If not specified, value will be attempted to be read from the `ARM_OIDC_TOKEN` environment variable.
@@ -108,8 +108,8 @@ alz_library_references = [
 - `use_msi` (Boolean) Allow managed service identity to be used for authentication. Default is `false`. If not specified, value will be attempted to be read from the `ARM_USE_MSI` environment variable.
 - `use_oidc` (Boolean) Allow OpenID Connect to be used for authentication. Default is `false`. If not specified, value will be attempted to be read from the `ARM_USE_OIDC` environment variable.
 
-<a id="nestedatt--alz_library_references"></a>
-### Nested Schema for `alz_library_references`
+<a id="nestedatt--library_references"></a>
+### Nested Schema for `library_references`
 
 Optional:
 
