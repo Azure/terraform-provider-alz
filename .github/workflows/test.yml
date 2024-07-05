@@ -40,7 +40,7 @@ jobs:
         with:
           go-version-file: "go.mod"
           cache: true
-      - run: go generate ./...
+      - run: go generate
         name: go generate (website)
       - run: go install github.com/hashicorp/terraform-plugin-codegen-framework/cmd/tfplugingen-framework@latest
         name: install tfplugingen-framework
