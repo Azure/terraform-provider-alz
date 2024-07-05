@@ -42,6 +42,8 @@ jobs:
           cache: true
       - run: go generate ./...
         name: go generate (website)
+      - run: go install github.com/hashicorp/terraform-plugin-codegen-framework/cmd/tfplugingen-framework@latest
+        name: install tfplugingen-framework
       - run: go generate
         name: go generate (provider schema)
         working-directory: ${{ github.workspace }}/internal/provider
