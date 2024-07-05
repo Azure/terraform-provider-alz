@@ -44,11 +44,19 @@ func PrimitiveToGo[T ToGoPrimitive](ctx context.Context, input attr.Value) (*T, 
 		if input.IsUnknown() {
 			if reflect.TypeOf(new(T)) == reflect.TypeOf(new(int64)) {
 				zero := int64(0)
-				return any(&zero).(*T), nil
+				ret, ok := any(&zero).(*T)
+				if !ok {
+					return nil, fmt.Errorf("PrimitiveToGo: unexpected type conversion, %s to %T", ty.String(), new(T))
+				}
+				return ret, nil
 			}
 			if reflect.TypeOf(new(T)) == reflect.TypeOf(new(float64)) {
 				zero := float64(0)
-				return any(&zero).(*T), nil
+				ret, ok := any(&zero).(*T)
+				if !ok {
+					return nil, fmt.Errorf("PrimitiveToGo: unexpected type conversion, %s to %T", ty.String(), new(T))
+				}
+				return ret, nil
 			}
 		}
 		val, ok := input.(types.Number)

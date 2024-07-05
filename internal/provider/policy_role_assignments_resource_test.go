@@ -81,7 +81,7 @@ resource "alz_policy_role_assignments" "test" {
 		},
 		{
 			principal_id       = data.azurerm_client_config.current.object_id
-			role_definition_id = "/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c" # contributer
+			role_definition_id = "/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c" # contributor
 			scope              = "/subscriptions/${data.azurerm_client_config.current.subscription_id}"
 		}
 	]
