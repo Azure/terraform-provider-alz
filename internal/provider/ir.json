@@ -932,7 +932,7 @@
                 {
                   "name": "read",
                   "string": {
-                    "description": "The maximum time to wait for a read operation to complete.",
+                    "description": "A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as \"30s\" or \"2h45m\". Valid time units are \"s\" (seconds), \"m\" (minutes), \"h\" (hours).",
                     "computed_optional_required": "optional"
                   }
                 }
@@ -941,7 +941,7 @@
                 "import": {
                   "path": "github.com/hashicorp/terraform-plugin-framework-timeouts/datasource/timeouts"
                 },
-                "type": "timeouts.Type{}",
+                "type": "timeouts.Type{ObjectType: types.ObjectType{AttrTypes: map[string]attr.Type{\"read\": types.StringType}}}",
                 "value_type": "timeouts.Value"
               }
             }

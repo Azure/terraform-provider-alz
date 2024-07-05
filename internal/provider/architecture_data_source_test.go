@@ -63,6 +63,10 @@ data "alz_architecture" "test" {
   name                     = "alz"
 	root_management_group_id = data.azapi_client_config.current.tenant_id
 	location                 = "northeurope"
+
+	timeouts {
+		read = "5m"
+	}
 }
 `
 }
