@@ -132,6 +132,7 @@ Optional:
 
 Read-Only:
 
+- `management_group_id` (String) The id of the management group where the policy assignment will be created.
 - `policy_assignment_name` (String) The name of the policy assignment to enable retrieval of the identity id.
 - `role_definition_id` (String) The role definition id to assign.
 - `scope` (String) The scope of the assignment.

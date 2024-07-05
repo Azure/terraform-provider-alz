@@ -61,6 +61,7 @@ func PolicyRoleAssignmentsResourceSchema(ctx context.Context) schema.Schema {
 				MarkdownDescription: "The id architecture.",
 			},
 		},
+		DeprecationMessage: "The functionality provided by this meta resource now exists in the module, where it is more appropriate. Please do not use this.",
 	}
 }
 
