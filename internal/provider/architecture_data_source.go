@@ -95,14 +95,24 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	// Modify policy assignments
-	mg2paModMap := make(map[string]gen.PolicyAssignmentsToModifyValue)
-	diags = data.PolicyAssignmentsToModify.ElementsAs(ctx, &mg2paModMap, false)
-	resp.Diagnostics.Append(diags...)
-	for mgName, pa2mod := range mg2paModMap {
-		pa2modMap := make(map[string]gen.PolicyAssignmentsValue)
-		diags = pa2mod.PolicyAssignments.ElementsAs(ctx, &pa2modMap, false)
-		resp.Diagnostics.Append(diags...)
-		for paName, mod := range pa2modMap {
+	for mgName, pa2modValue := range data.PolicyAssignmentsToModify.Elements() {
+		pa2mod, ok := pa2modValue.(gen.PolicyAssignmentsToModifyValue)
+		if !ok {
+			resp.Diagnostics.AddError(
+				"architectureDataSource.Read() Error converting policy assignments to modify",
+				"Error converting policy assignments to modify element to `gen.PolicyAssignmentsToModifyValue`",
+			)
+			return
+		}
+		for paName, modValue := range pa2mod.PolicyAssignments.Elements() {
+			mod, ok := modValue.(gen.PolicyAssignmentsValue)
+			if !ok {
+				resp.Diagnostics.AddError(
+					"architectureDataSource.Read() Error converting policy assignment to modify",
+					"Error converting policy assignments element to `gen.PolicyAssignmentsValue`",
+				)
+				return
+			}
 			enf, ident, noncompl, params, resourceSel, overrides, diags := policyAssignmentType2ArmPolicyValues(ctx, mod)
 			resp.Diagnostics.Append(diags...)
 			if diags.HasError() {

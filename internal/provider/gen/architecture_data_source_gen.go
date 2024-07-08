@@ -43,7 +43,6 @@ func ArchitectureDataSourceSchema(ctx context.Context) schema.Schema {
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"display_name": schema.StringAttribute{
-							Optional:            true,
 							Computed:            true,
 							Description:         "The display name of the management group.",
 							MarkdownDescription: "The display name of the management group.",
@@ -70,28 +69,24 @@ func ArchitectureDataSourceSchema(ctx context.Context) schema.Schema {
 						},
 						"policy_assignments": schema.MapAttribute{
 							ElementType:         types.StringType,
-							Optional:            true,
 							Computed:            true,
 							Description:         "The policy assignments to apply to the management group. The key is the policy assignment name, and the value is the policy assignment JSON as a string.",
 							MarkdownDescription: "The policy assignments to apply to the management group. The key is the policy assignment name, and the value is the policy assignment JSON as a string.",
 						},
 						"policy_definitions": schema.MapAttribute{
 							ElementType:         types.StringType,
-							Optional:            true,
 							Computed:            true,
 							Description:         "The policy definitions to apply to the management group. The key is the policy definition name, and the value is the policy definition JSON as a string.",
 							MarkdownDescription: "The policy definitions to apply to the management group. The key is the policy definition name, and the value is the policy definition JSON as a string.",
 						},
 						"policy_set_definitions": schema.MapAttribute{
 							ElementType:         types.StringType,
-							Optional:            true,
 							Computed:            true,
 							Description:         "The policy set definitions to apply to the management group. The key is the policy set definition name, and the value is the policy set definition JSON as a string.",
 							MarkdownDescription: "The policy set definitions to apply to the management group. The key is the policy set definition name, and the value is the policy set definition JSON as a string.",
 						},
 						"role_definitions": schema.MapAttribute{
 							ElementType:         types.StringType,
-							Optional:            true,
 							Computed:            true,
 							Description:         "The role definitions to apply to the management group. The key is the role definition name, and the value is the role definition JSON as a string.",
 							MarkdownDescription: "The role definitions to apply to the management group. The key is the role definition name, and the value is the role definition JSON as a string.",
@@ -374,7 +369,6 @@ func ArchitectureDataSourceSchema(ctx context.Context) schema.Schema {
 						},
 					},
 				},
-				Optional:            true,
 				Computed:            true,
 				Description:         "A set of role assignments that need to be created for the policies that have been assigned in the hierarchy. Since we will likely be using system assigned identities, we don't know the principal ID until after the deployment. Therefore this data can be used to create the role assignments after the deployment.",
 				MarkdownDescription: "A set of role assignments that need to be created for the policies that have been assigned in the hierarchy. Since we will likely be using system assigned identities, we don't know the principal ID until after the deployment. Therefore this data can be used to create the role assignments after the deployment.",
