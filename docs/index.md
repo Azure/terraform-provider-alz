@@ -74,7 +74,7 @@ Within the library are the following types of asserts:
 - **archetype overrides** - These create new archetypes based off an existing archetype.
 - **architecture definitions** - These files represent a deployed management group hierarchy, with the associated archetypes.
 
-~> **Important** If the provider does not have access to download the library, please download and use the `alz_library_references` to specify a local directory.
+~> **Important** If the provider does not have access to download the library, please download and use the `ibrary_references` to specify a local directory.
 
 For more information please visit the [GitHub repository](https://github.com/Azure/Azure-Landing-Zones-Library).
 
