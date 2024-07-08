@@ -823,7 +823,7 @@
                     "name": "display_name",
                     "string": {
                       "description": "The display name of the management group.",
-                      "computed_optional_required": "computed_optional"
+                      "computed_optional_required": "computed"
                     }
                   },
                   {
@@ -847,7 +847,7 @@
                       "element_type": {
                         "string": {}
                       },
-                      "computed_optional_required": "computed_optional"
+                      "computed_optional_required": "computed"
                     }
                   },
                   {
@@ -857,7 +857,7 @@
                       "element_type": {
                         "string": {}
                       },
-                      "computed_optional_required": "computed_optional"
+                      "computed_optional_required": "computed"
                     }
                   },
                   {
@@ -867,7 +867,7 @@
                       "element_type": {
                         "string": {}
                       },
-                      "computed_optional_required": "computed_optional"
+                      "computed_optional_required": "computed"
                     }
                   },
                   {
@@ -877,7 +877,7 @@
                       "element_type": {
                         "string": {}
                       },
-                      "computed_optional_required": "computed_optional"
+                      "computed_optional_required": "computed"
                     }
                   }
                 ]
@@ -887,7 +887,7 @@
           {
             "name": "policy_role_assignments",
             "set_nested": {
-              "computed_optional_required": "computed_optional",
+              "computed_optional_required": "computed",
               "description": "A set of role assignments that need to be created for the policies that have been assigned in the hierarchy. Since we will likely be using system assigned identities, we don't know the principal ID until after the deployment. Therefore this data can be used to create the role assignments after the deployment.",
               "nested_object": {
                 "attributes": [
