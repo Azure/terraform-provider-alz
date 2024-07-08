@@ -15,7 +15,7 @@ description: |-
 
 ## Unknown Values
 
-This module uses the ALZ Terraform provider. This uses a data source which **must** be read prior to creating the plan.
+This data source which **must** be read prior to creating the plan.
 If you pass an unknown/computed value into the module, it will not be able to read the data source until the plan is being applied.
 This may cause resources to be unnecessarily recreated.
 
@@ -27,8 +27,7 @@ Instead, use string interpolation to pass the values. For example:
 
 This is the recommended way to use this provider:
 
-> [!NOTE]
-> We assume that all variable inputs are literals.
+**Note:** We assume that all variable inputs are literals.
 
 ```terraform
 
