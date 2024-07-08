@@ -204,6 +204,7 @@ func downloadLibs(ctx context.Context, data *gen.AlzModel) ([]fs.FS, diag.Diagno
 				return nil, diags
 			}
 			libDirFs[i] = ldfs
+			continue
 		}
 		ldfs, err := alzlib.FetchAzureLandingZonesLibraryMember(ctx, ref.Path.ValueString(), ref.Ref.ValueString(), strconv.Itoa(i))
 		if err != nil {
