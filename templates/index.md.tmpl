@@ -31,6 +31,13 @@ Configuration for the ALZ provider can be derived from several sources, which ar
 1. Parameters in the provider configuration
 1. Environment variables
 
+
+### Deferred Actions
+
+We are awaiting the results of the upstream Terraform language experiment *deferred actions*. This may provide a solution to this issue.
+See the release notes [here](https://github.com/hashicorp/terraform/releases/tag/v1.10.0-alpha20240619) for more information.
+
+
 ## Versions
 
 For production use, you should constrain the acceptable provider versions via configuration, to ensure that new versions with breaking changes will not be automatically installed by `terraform init` in the future:
