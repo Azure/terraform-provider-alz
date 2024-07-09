@@ -246,8 +246,8 @@ func ArchitectureDataSourceSchema(ctx context.Context) schema.Schema {
 									"parameters": schema.MapAttribute{
 										ElementType:         jsontypes.NormalizedType{},
 										Optional:            true,
-										Description:         "The parameters to use for the policy assignment. The map key is the parameter name and the value is an JSON object containing a single `Value` attribute with the values to apply. E.g. `{ defaultName = jsonencode({Value = \"value\"}) }`",
-										MarkdownDescription: "The parameters to use for the policy assignment. The map key is the parameter name and the value is an JSON object containing a single `Value` attribute with the values to apply. E.g. `{ defaultName = jsonencode({Value = \"value\"}) }`",
+										Description:         "The parameters to use for the policy assignment. The map key is the parameter name and the value is an JSON object containing a single `Value` attribute with the values to apply. This to mitigate issues with the Terraform type system. E.g. `{ defaultName = jsonencode({Value = \"value\"}) }`",
+										MarkdownDescription: "The parameters to use for the policy assignment. The map key is the parameter name and the value is an JSON object containing a single `Value` attribute with the values to apply. This to mitigate issues with the Terraform type system. E.g. `{ defaultName = jsonencode({Value = \"value\"}) }`",
 									},
 									"resource_selectors": schema.ListNestedAttribute{
 										NestedObject: schema.NestedAttributeObject{
@@ -342,8 +342,8 @@ func ArchitectureDataSourceSchema(ctx context.Context) schema.Schema {
 			"policy_default_values": schema.MapAttribute{
 				ElementType:         jsontypes.NormalizedType{},
 				Optional:            true,
-				Description:         "A map of default values to apply to policy assignments. The key is the default name as defined in the library, and the value is an JSON object containing a single `Value` attribute with the values to apply. E.g. `{ defaultName = jsonencode({Value = \"value\"}) }`",
-				MarkdownDescription: "A map of default values to apply to policy assignments. The key is the default name as defined in the library, and the value is an JSON object containing a single `Value` attribute with the values to apply. E.g. `{ defaultName = jsonencode({Value = \"value\"}) }`",
+				Description:         "A map of default values to apply to policy assignments. The key is the default name as defined in the library, and the value is an JSON object containing a single `Value` attribute with the values to apply. This to mitigate issues with the Terraform type system. E.g. `{ defaultName = jsonencode({Value = \"value\"}) }`",
+				MarkdownDescription: "A map of default values to apply to policy assignments. The key is the default name as defined in the library, and the value is an JSON object containing a single `Value` attribute with the values to apply. This to mitigate issues with the Terraform type system. E.g. `{ defaultName = jsonencode({Value = \"value\"}) }`",
 			},
 			"policy_role_assignments": schema.SetNestedAttribute{
 				NestedObject: schema.NestedAttributeObject{
