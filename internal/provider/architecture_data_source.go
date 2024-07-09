@@ -93,42 +93,26 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
-	// Modify policy assignments
-	for mgName, pa2modValue := range data.PolicyAssignmentsToModify.Elements() {
-		pa2mod, ok := pa2modValue.(gen.PolicyAssignmentsToModifyValue)
-		if !ok {
+	// Set policy assignment defaults
+	defaultsMap, diags := convertPolicyAssignmentParametersMapToSdkType(data.PolicyDefaultValues)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	for defName, paramVal := range defaultsMap {
+		if err := depl.AddDefaultPolicyAssignmentValue(ctx, defName, paramVal); err != nil {
 			resp.Diagnostics.AddError(
-				"architectureDataSource.Read() Error converting policy assignments to modify",
-				"Error converting policy assignments to modify element to `gen.PolicyAssignmentsToModifyValue`",
+				fmt.Sprintf("architectureDataSource.Read() Error applying policy assignment default `%s`", defName),
+				err.Error(),
 			)
 			return
 		}
-		for paName, modValue := range pa2mod.PolicyAssignments.Elements() {
-			mod, ok := modValue.(gen.PolicyAssignmentsValue)
-			if !ok {
-				resp.Diagnostics.AddError(
-					"architectureDataSource.Read() Error converting policy assignment to modify",
-					"Error converting policy assignments element to `gen.PolicyAssignmentsValue`",
-				)
-				return
-			}
-			enf, ident, noncompl, params, resourceSel, overrides, diags := policyAssignmentType2ArmPolicyValues(ctx, mod)
-			resp.Diagnostics.Append(diags...)
-			if diags.HasError() {
-				resp.Diagnostics.AddError(
-					"architectureDataSource.Read() Error converting policy assignment values to Azure SDK types",
-					fmt.Sprintf("Error modifying policy assignment values for `%s` at mg `%s`", paName, mgName),
-				)
-				return
-			}
-			if err := depl.ManagementGroup(mgName).ModifyPolicyAssignment(paName, params, enf, noncompl, ident, resourceSel, overrides); err != nil {
-				resp.Diagnostics.AddError(
-					"architectureDataSource.Read() Error modifying policy assignment values in alzlib",
-					fmt.Sprintf("Error modifying policy assignment values for `%s` at mg `%s`: %s", paName, mgName, err.Error()),
-				)
-				return
-			}
-		}
+	}
+
+	// Modify policy assignments
+	modifyPolicyAssignments(ctx, depl, data, resp)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	// Generate policy role assignments
@@ -167,6 +151,45 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func modifyPolicyAssignments(ctx context.Context, depl *deployment.Hierarchy, data gen.ArchitectureModel, resp *datasource.ReadResponse) {
+	for mgName, pa2modValue := range data.PolicyAssignmentsToModify.Elements() {
+		pa2mod, ok := pa2modValue.(gen.PolicyAssignmentsToModifyValue)
+		if !ok {
+			resp.Diagnostics.AddError(
+				"architectureDataSource.Read() Error converting policy assignments to modify",
+				"Error converting policy assignments to modify element to `gen.PolicyAssignmentsToModifyValue`",
+			)
+			return
+		}
+		for paName, modValue := range pa2mod.PolicyAssignments.Elements() {
+			mod, ok := modValue.(gen.PolicyAssignmentsValue)
+			if !ok {
+				resp.Diagnostics.AddError(
+					"architectureDataSource.Read() Error converting policy assignment to modify",
+					"Error converting policy assignments element to `gen.PolicyAssignmentsValue`",
+				)
+				return
+			}
+			enf, ident, noncompl, params, resourceSel, overrides, diags := policyAssignmentType2ArmPolicyValues(ctx, mod)
+			resp.Diagnostics.Append(diags...)
+			if diags.HasError() {
+				resp.Diagnostics.AddError(
+					"architectureDataSource.Read() Error converting policy assignment values to Azure SDK types",
+					fmt.Sprintf("Error modifying policy assignment values for `%s` at mg `%s`", paName, mgName),
+				)
+				return
+			}
+			if err := depl.ManagementGroup(mgName).ModifyPolicyAssignment(paName, params, enf, noncompl, ident, resourceSel, overrides); err != nil {
+				resp.Diagnostics.AddError(
+					"architectureDataSource.Read() Error modifying policy assignment values in alzlib",
+					fmt.Sprintf("Error modifying policy assignment values for `%s` at mg `%s`: %s", paName, mgName, err.Error()),
+				)
+				return
+			}
+		}
+	}
 }
 
 func policyRoleAssignmentsSetToProviderType(ctx context.Context, input []deployment.PolicyRoleAssignment) (basetypes.SetValue, diag.Diagnostics) {
@@ -265,7 +288,7 @@ func policyAssignmentType2ArmPolicyValues(ctx context.Context, pa gen.PolicyAssi
 	}
 
 	// set parameters
-	parameters, diag = convertPolicyAssignmentParametersToSdkType(pa.Parameters)
+	parameters, diag = convertPolicyAssignmentParametersMapToSdkType(pa.Parameters)
 	diags.Append(diag...)
 	if diag.HasError() {
 		return nil, nil, nil, nil, nil, nil, diags
@@ -468,8 +491,8 @@ func convertPolicyAssignmentIdentityToSdkType(typ types.String, ids types.Set) (
 	return identity, nil
 }
 
-// convertPolicyAssignmentParametersToSdkType converts a map[string]any to a map[string]*armpolicy.ParameterValuesValue.
-func convertPolicyAssignmentParametersToSdkType(src types.Map) (map[string]*armpolicy.ParameterValuesValue, diag.Diagnostics) {
+// convertPolicyAssignmentParametersMapToSdkType converts a map with a JSON string value to a map[string]*armpolicy.ParameterValuesValue.
+func convertPolicyAssignmentParametersMapToSdkType(src types.Map) (map[string]*armpolicy.ParameterValuesValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	if !isKnown(src) {
 		return nil, nil

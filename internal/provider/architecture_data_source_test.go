@@ -264,13 +264,13 @@ func TestConvertPolicyAssignmentParametersToSdkType(t *testing.T) {
 	// Test with nil input
 	var src types.Map
 	var res map[string]*armpolicy.ParameterValuesValue
-	res, diags := convertPolicyAssignmentParametersToSdkType(src)
+	res, diags := convertPolicyAssignmentParametersMapToSdkType(src)
 	assert.False(t, diags.HasError())
 	assert.Nil(t, res)
 
 	// Test with empty input
 	src = types.MapNull(types.StringType)
-	res, diags = convertPolicyAssignmentParametersToSdkType(src)
+	res, diags = convertPolicyAssignmentParametersMapToSdkType(src)
 	assert.False(t, diags.HasError())
 	assert.Nil(t, res)
 
@@ -292,7 +292,7 @@ func TestConvertPolicyAssignmentParametersToSdkType(t *testing.T) {
 		"param3": string(param3Json),
 	})
 
-	res, diags = convertPolicyAssignmentParametersToSdkType(src)
+	res, diags = convertPolicyAssignmentParametersMapToSdkType(src)
 	assert.False(t, diags.HasError())
 	assert.NotNil(t, res)
 	assert.Len(t, res, 3)
