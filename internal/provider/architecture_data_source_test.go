@@ -10,6 +10,8 @@ import (
 	"github.com/Azure/terraform-provider-alz/internal/provider/gen"
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -83,9 +85,11 @@ func TestConvertPolicyAssignmentResourceSelectorsToSdkType(t *testing.T) {
 
 	notSetStringType, _ := basetypes.NewSetValueFrom(ctx, types.BoolType, []bool{true})
 	t.Run("EmptyInput", func(t *testing.T) {
+		resp := new(datasource.ReadResponse)
+		resp.Diagnostics = diag.Diagnostics{}
 		src := []gen.ResourceSelectorsValue{}
-		res, diags := convertPolicyAssignmentResourceSelectorsToSdkType(ctx, src)
-		assert.False(t, diags.HasError())
+		res := convertPolicyAssignmentResourceSelectorsToSdkType(ctx, src, resp)
+		assert.False(t, resp.Diagnostics.HasError())
 		assert.Nil(t, res)
 	})
 
@@ -145,9 +149,10 @@ func TestConvertPolicyAssignmentResourceSelectorsToSdkType(t *testing.T) {
 				},
 			},
 		}
-
-		res, diags := convertPolicyAssignmentResourceSelectorsToSdkType(ctx, src)
-		assert.False(t, diags.HasError())
+		resp := new(datasource.ReadResponse)
+		resp.Diagnostics = diag.Diagnostics{}
+		res := convertPolicyAssignmentResourceSelectorsToSdkType(ctx, src, resp)
+		assert.False(t, resp.Diagnostics.HasError())
 		assert.Equal(t, expected, res)
 	})
 
@@ -165,8 +170,10 @@ func TestConvertPolicyAssignmentResourceSelectorsToSdkType(t *testing.T) {
 		}
 
 		// Simulate an error during conversion
-		res, diags := convertPolicyAssignmentResourceSelectorsToSdkType(ctx, src)
-		assert.True(t, diags.HasError())
+		resp := new(datasource.ReadResponse)
+		resp.Diagnostics = diag.Diagnostics{}
+		res := convertPolicyAssignmentResourceSelectorsToSdkType(ctx, src, resp)
+		assert.True(t, resp.Diagnostics.HasError())
 		assert.Nil(t, res)
 	})
 }
@@ -176,38 +183,40 @@ func TestConvertPolicyAssignmentIdentityToSdkType(t *testing.T) {
 	// Test with unknown identity type
 	typ := types.StringValue("UnknownType")
 	ids := basetypes.NewSetUnknown(types.StringType)
-	identity, diags := convertPolicyAssignmentIdentityToSdkType(typ, ids)
+	resp := new(datasource.ReadResponse)
+	resp.Diagnostics = diag.Diagnostics{}
+	identity := convertPolicyAssignmentIdentityToSdkType(typ, ids, resp)
 	assert.Nil(t, identity)
-	assert.True(t, diags.HasError())
+	assert.True(t, resp.Diagnostics.HasError())
 
 	// Test with SystemAssigned identity type
 	typ = types.StringValue("SystemAssigned")
 	ids = basetypes.NewSetNull(types.StringType)
-	identity, diags = convertPolicyAssignmentIdentityToSdkType(typ, ids)
+	identity = convertPolicyAssignmentIdentityToSdkType(typ, ids, resp)
 	assert.NotNil(t, identity)
-	assert.False(t, diags.HasError())
+	assert.False(t, resp.Diagnostics.HasError())
 	assert.Equal(t, armpolicy.ResourceIdentityTypeSystemAssigned, *identity.Type)
 
 	// Test with UserAssigned identity type and empty ids
 	typ = types.StringValue("UserAssigned")
 	ids = basetypes.NewSetNull(types.StringType)
-	identity, diags = convertPolicyAssignmentIdentityToSdkType(typ, ids)
+	identity = convertPolicyAssignmentIdentityToSdkType(typ, ids, resp)
 	assert.Nil(t, identity)
-	assert.True(t, diags.HasError())
+	assert.True(t, resp.Diagnostics.HasError())
 
 	// Test with UserAssigned identity type and multiple ids
 	typ = types.StringValue("UserAssigned")
 	ids, _ = types.SetValueFrom(context.Background(), types.StringType, []string{"id1", "id2"})
-	identity, diags = convertPolicyAssignmentIdentityToSdkType(typ, ids)
+	identity = convertPolicyAssignmentIdentityToSdkType(typ, ids, resp)
 	assert.Nil(t, identity)
-	assert.True(t, diags.HasError())
+	assert.True(t, resp.Diagnostics.HasError())
 
 	// Test with UserAssigned identity type and valid id
 	typ = types.StringValue("UserAssigned")
 	ids, _ = types.SetValueFrom(context.Background(), types.StringType, []string{"id1"})
-	identity, diags = convertPolicyAssignmentIdentityToSdkType(typ, ids)
+	identity = convertPolicyAssignmentIdentityToSdkType(typ, ids, resp)
 	assert.NotNil(t, identity)
-	assert.False(t, diags.HasError())
+	assert.False(t, resp.Diagnostics.HasError())
 	assert.Equal(t, armpolicy.ResourceIdentityTypeUserAssigned, *identity.Type)
 	assert.Len(t, identity.UserAssignedIdentities, 1)
 	assert.Contains(t, identity.UserAssignedIdentities, "id1")
@@ -264,14 +273,16 @@ func TestConvertPolicyAssignmentParametersToSdkType(t *testing.T) {
 	// Test with nil input
 	var src types.Map
 	var res map[string]*armpolicy.ParameterValuesValue
-	res, diags := convertPolicyAssignmentParametersMapToSdkType(src)
-	assert.False(t, diags.HasError())
+	resp := new(datasource.ReadResponse)
+	resp.Diagnostics = diag.Diagnostics{}
+	res = convertPolicyAssignmentParametersMapToSdkType(src, resp)
+	assert.False(t, resp.Diagnostics.HasError())
 	assert.Nil(t, res)
 
 	// Test with empty input
 	src = types.MapNull(types.StringType)
-	res, diags = convertPolicyAssignmentParametersMapToSdkType(src)
-	assert.False(t, diags.HasError())
+	res = convertPolicyAssignmentParametersMapToSdkType(src, resp)
+	assert.False(t, resp.Diagnostics.HasError())
 	assert.Nil(t, res)
 
 	param1 := armpolicy.ParameterValuesValue{
@@ -292,8 +303,8 @@ func TestConvertPolicyAssignmentParametersToSdkType(t *testing.T) {
 		"param3": string(param3Json),
 	})
 
-	res, diags = convertPolicyAssignmentParametersMapToSdkType(src)
-	assert.False(t, diags.HasError())
+	res = convertPolicyAssignmentParametersMapToSdkType(src, resp)
+	assert.False(t, resp.Diagnostics.HasError())
 	assert.NotNil(t, res)
 	assert.Len(t, res, 3)
 	assert.Equal(t, "value1", res["param1"].Value)
@@ -336,10 +347,11 @@ func TestPolicyAssignmentType2ArmPolicyValues(t *testing.T) {
 			}),
 		Parameters: params,
 	}
+	resp := new(datasource.ReadResponse)
+	resp.Diagnostics = diag.Diagnostics{}
+	enforcementMode, identity, nonComplianceMessages, parameters, _, _ := policyAssignmentType2ArmPolicyValues(ctx, pa, resp)
 
-	enforcementMode, identity, nonComplianceMessages, parameters, _, _, diags := policyAssignmentType2ArmPolicyValues(ctx, pa)
-
-	assert.False(t, diags.HasError())
+	assert.False(t, resp.Diagnostics.HasError())
 	assert.Equal(t, armpolicy.EnforcementModeDoNotEnforce, *enforcementMode)
 	assert.Nil(t, identity)
 	assert.Len(t, nonComplianceMessages, 2)
