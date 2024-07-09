@@ -486,7 +486,7 @@ func convertPolicyAssignmentParametersMapToSdkType(src types.Map, resp *datasour
 		if !ok {
 			resp.Diagnostics.AddError(
 				"convertPolicyAssignmentParametersMapToSdkType: error",
-				"unable to convert parameter value to string",
+				"unable to convert parameter value to jsontypes.Normalized",
 			)
 			return nil
 		}
