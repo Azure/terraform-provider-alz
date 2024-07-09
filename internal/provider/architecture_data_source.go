@@ -10,7 +10,6 @@ import (
 	"github.com/Azure/alzlib/deployment"
 	"github.com/Azure/alzlib/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy"
-	"github.com/Azure/terraform-provider-alz/internal/alztypes"
 	"github.com/Azure/terraform-provider-alz/internal/provider/gen"
 	"github.com/Azure/terraform-provider-alz/internal/typehelper"
 	"github.com/Azure/terraform-provider-alz/internal/typehelper/frameworktype"
@@ -266,10 +265,7 @@ func policyAssignmentType2ArmPolicyValues(ctx context.Context, pa gen.PolicyAssi
 	}
 
 	// set parameters
-	params := alztypes.PolicyParameterValue{
-		StringValue: types.StringValue(pa.Parameters.ValueString()),
-	}
-	parameters, diag = convertPolicyAssignmentParametersToSdkType(params)
+	parameters, diag = convertPolicyAssignmentParametersToSdkType(pa.Parameters)
 	diags.Append(diag...)
 	if diag.HasError() {
 		return nil, nil, nil, nil, nil, nil, diags
@@ -473,29 +469,39 @@ func convertPolicyAssignmentIdentityToSdkType(typ types.String, ids types.Set) (
 }
 
 // convertPolicyAssignmentParametersToSdkType converts a map[string]any to a map[string]*armpolicy.ParameterValuesValue.
-func convertPolicyAssignmentParametersToSdkType(src alztypes.PolicyParameterValue) (map[string]*armpolicy.ParameterValuesValue, diag.Diagnostics) {
+func convertPolicyAssignmentParametersToSdkType(src types.Map) (map[string]*armpolicy.ParameterValuesValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	if !isKnown(src) {
 		return nil, nil
 	}
-	params := make(map[string]any)
-	if err := json.Unmarshal([]byte(src.ValueString()), &params); err != nil {
-		diags.AddError(
-			"convertPolicyAssignmentParametersToSdkType: error",
-			fmt.Sprintf("convertPolicyAssignmentParametersToSdkType: unable to unmarshal policy parameters: %s", err.Error()),
-		)
-		return nil, diags
+	result := make(map[string]*armpolicy.ParameterValuesValue)
+	for k, v := range src.Elements() {
+		vStr, ok := v.(types.String)
+		if !ok {
+			diags.AddError(
+				"convertPolicyAssignmentParametersToSdkType: error",
+				"unable to convert parameter value to string",
+			)
+			return nil, diags
+		}
+		var pv armpolicy.ParameterValuesValue
+		if err := json.Unmarshal([]byte(vStr.ValueString()), &pv); err != nil {
+			diags.AddError(
+				"convertPolicyAssignmentParametersToSdkType: error",
+				fmt.Sprintf("unable to unmarshal policy parameter value: %s", err.Error()),
+			)
+			return nil, diags
+		}
+		if pv.Value == nil {
+			diags.AddError(
+				"convertPolicyAssignmentParametersToSdkType: error",
+				fmt.Sprintf("policy parameter `%s` value is nil", k),
+			)
+			return nil, diags
+		}
+		result[k] = &pv
 	}
-	if len(params) == 0 {
-		return nil, nil
-	}
-	res := make(map[string]*armpolicy.ParameterValuesValue, len(params))
-	for k, v := range params {
-		val := new(armpolicy.ParameterValuesValue)
-		val.Value = v
-		res[k] = val
-	}
-	return res, nil
+	return result, nil
 }
 
 func isKnown(val attr.Value) bool {

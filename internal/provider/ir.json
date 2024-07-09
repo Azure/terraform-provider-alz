@@ -778,15 +778,19 @@
                           },
                           {
                             "name": "parameters",
-                            "string": {
-                              "description": "The parameters to use for the policy assignment. **Note:** This is a JSON string, and not a map. This is because the parameter values have different types, which confuses the type system used by the provider sdk. Use `jsonencode()` to construct the map. The map keys must be strings, the values are `any` type. Example: `jsonencode({\"param1\": \"value1\", \"param2\": 2})`",
+                            "map": {
+                              "description": "The parameters to use for the policy assignment. The map key is the parameter name and the value is an JSON object containing a single `Value` attribute with the values to apply. This to mitigate issues with the Terraform type system. E.g. `{ defaultName = jsonencode({Value = \"value\"}) }`",
                               "computed_optional_required": "optional",
-                              "custom_type": {
-                                "import": {
-                                  "path": "github.com/Azure/terraform-provider-alz/internal/alztypes"
-                                },
-                                "type": "alztypes.PolicyParameterType{}",
-                                "value_type": "alztypes.PolicyParameterValue"
+                              "element_type": {
+                                "string": {
+                                  "custom_type": {
+                                    "import": {
+                                      "path": "github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
+                                    },
+                                    "type": "jsontypes.NormalizedType{}",
+                                    "value_type": "jsontypes.Normalized"
+                                  }
+                                }
                               }
                             }
                           }
@@ -920,6 +924,24 @@
                     }
                   }
                 ]
+              }
+            }
+          },
+          {
+            "name": "policy_default_values",
+            "map": {
+              "computed_optional_required": "optional",
+              "description": "A map of default values to apply to policy assignments. The key is the default name as defined in the library, and the value is an JSON object containing a single `Value` attribute with the values to apply. This to mitigate issues with the Terraform type system. E.g. `{ defaultName = jsonencode({Value = \"value\"}) }`",
+              "element_type": {
+                "string": {
+                  "custom_type": {
+                    "import": {
+                      "path": "github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
+                    },
+                    "type": "jsontypes.NormalizedType{}",
+                    "value_type": "jsontypes.Normalized"
+                  }
+                }
               }
             }
           }

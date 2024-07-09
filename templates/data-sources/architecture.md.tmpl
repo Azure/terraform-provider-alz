@@ -43,9 +43,9 @@ data "alz_architecture" "example" {
     alzroot = {
       policy_assignments = {
         mypolicy = {
-          parameters = jsonencode({
-            parameterName = local.foo_resource_id
-          })
+          parameters = {
+            parameterName = jsonencode({Value = local.foo_resource_id})
+          }
         }
       }
     }

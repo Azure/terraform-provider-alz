@@ -7,7 +7,6 @@ import (
 	"github.com/Azure/alzlib/deployment"
 	"github.com/Azure/alzlib/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy"
-	"github.com/Azure/terraform-provider-alz/internal/alztypes"
 	"github.com/Azure/terraform-provider-alz/internal/provider/gen"
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -52,7 +51,7 @@ provider "alz" {
   library_references = [
   {
 	  path = "platform/alz"
-		ref  = "2024.07.01"
+		ref  = "2024.07.02"
 	}
 	]
 }
@@ -263,25 +262,35 @@ func TestConvertPolicyAssignmentEnforcementModeToSdkType(t *testing.T) {
 // TestConvertPolicyAssignmentParametersToSdkType tests the convertPolicyAssignmentParametersToSdkType function.
 func TestConvertPolicyAssignmentParametersToSdkType(t *testing.T) {
 	// Test with nil input
-	var src alztypes.PolicyParameterValue
+	var src types.Map
 	var res map[string]*armpolicy.ParameterValuesValue
 	res, diags := convertPolicyAssignmentParametersToSdkType(src)
 	assert.False(t, diags.HasError())
 	assert.Nil(t, res)
 
 	// Test with empty input
-	src = alztypes.PolicyParameterValue{}
+	src = types.MapNull(types.StringType)
 	res, diags = convertPolicyAssignmentParametersToSdkType(src)
 	assert.False(t, diags.HasError())
 	assert.Nil(t, res)
 
-	// Test with non-empty input
-	params, _ := alztypes.PolicyParameterType{}.ValueFromString(context.Background(), types.StringValue(`{
-		"param1": "value1",
-		"param2": 123,
-		"param3": true
-	}`))
-	src = params.(alztypes.PolicyParameterValue) //nolint:forcetypeassert
+	param1 := armpolicy.ParameterValuesValue{
+		Value: to.Ptr("value1"),
+	}
+	param2 := armpolicy.ParameterValuesValue{
+		Value: to.Ptr(123),
+	}
+	param3 := armpolicy.ParameterValuesValue{
+		Value: to.Ptr(true),
+	}
+	param1Json, _ := param1.MarshalJSON()
+	param2Json, _ := param2.MarshalJSON()
+	param3Json, _ := param3.MarshalJSON()
+	src, _ = types.MapValueFrom(context.Background(), types.StringType, map[string]string{
+		"param1": string(param1Json),
+		"param2": string(param2Json),
+		"param3": string(param3Json),
+	})
 
 	res, diags = convertPolicyAssignmentParametersToSdkType(src)
 	assert.False(t, diags.HasError())
@@ -294,12 +303,23 @@ func TestConvertPolicyAssignmentParametersToSdkType(t *testing.T) {
 
 func TestPolicyAssignmentType2ArmPolicyValues(t *testing.T) {
 	ctx := context.Background()
-	paramsIn, _ := alztypes.PolicyParameterType{}.ValueFromString(ctx, types.StringValue(`{
-		"param1": "value1",
-		"param2": 123,
-		"param3": true
-	}`))
-	paramsInStr, _ := paramsIn.ToStringValue(ctx)
+	param1 := armpolicy.ParameterValuesValue{
+		Value: to.Ptr("value1"),
+	}
+	param2 := armpolicy.ParameterValuesValue{
+		Value: to.Ptr(123),
+	}
+	param3 := armpolicy.ParameterValuesValue{
+		Value: to.Ptr(true),
+	}
+	param1Json, _ := param1.MarshalJSON()
+	param2Json, _ := param2.MarshalJSON()
+	param3Json, _ := param3.MarshalJSON()
+	params, _ := types.MapValueFrom(ctx, types.StringType, map[string]string{
+		"param1": string(param1Json),
+		"param2": string(param2Json),
+		"param3": string(param3Json),
+	})
 	pa := gen.PolicyAssignmentsValue{ //nolint:forcetypeassert
 		EnforcementMode: types.StringValue("DoNotEnforce"),
 		NonComplianceMessages: types.SetValueMust(
@@ -314,7 +334,7 @@ func TestPolicyAssignmentType2ArmPolicyValues(t *testing.T) {
 					PolicyDefinitionReferenceId: types.StringValue("PolicyDefinition2"),
 				},
 			}),
-		Parameters: paramsInStr,
+		Parameters: params,
 	}
 
 	enforcementMode, identity, nonComplianceMessages, parameters, _, _, diags := policyAssignmentType2ArmPolicyValues(ctx, pa)
