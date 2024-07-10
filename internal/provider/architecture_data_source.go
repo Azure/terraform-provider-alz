@@ -484,13 +484,20 @@ func convertPolicyAssignmentParametersMapToSdkType(src types.Map, resp *datasour
 		// Even thought he schema type is identical, from policy assignments to modify we receive basetypes.String values,
 		// but from policy default values we receive jsontypes.Noprmalized.
 		// We convert to Terraform value to get the string representation.
-		vTf, _ := v.ToTerraformValue(context.Background())
-		var vStr string
-		err := vTf.Copy().As(&vStr)
+		vTf, err := v.ToTerraformValue(context.Background())
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"convertPolicyAssignmentParametersMapToSdkType: error",
-				"unable to convert parameter value to jsontypes.Normalized",
+				"unable to convert parameter value to Terraform value",
+			)
+			return nil
+		}
+		var vStr string
+		err = vTf.Copy().As(&vStr)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"convertPolicyAssignmentParametersMapToSdkType: error",
+				"unable to convert parameter value to string",
 			)
 			return nil
 		}
