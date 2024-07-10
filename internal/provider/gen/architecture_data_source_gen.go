@@ -5,8 +5,8 @@ package gen
 import (
 	"context"
 	"fmt"
-	"github.com/Azure/terraform-provider-alz/internal/alztypes"
 	"github.com/Azure/terraform-provider-alz/internal/alzvalidators"
+	"github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/datasource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -243,11 +243,11 @@ func ArchitectureDataSourceSchema(ctx context.Context) schema.Schema {
 											listvalidator.UniqueValues(),
 										},
 									},
-									"parameters": schema.StringAttribute{
-										CustomType:          alztypes.PolicyParameterType{},
+									"parameters": schema.MapAttribute{
+										ElementType:         jsontypes.NormalizedType{},
 										Optional:            true,
-										Description:         "The parameters to use for the policy assignment. **Note:** This is a JSON string, and not a map. This is because the parameter values have different types, which confuses the type system used by the provider sdk. Use `jsonencode()` to construct the map. The map keys must be strings, the values are `any` type. Example: `jsonencode({\"param1\": \"value1\", \"param2\": 2})`",
-										MarkdownDescription: "The parameters to use for the policy assignment. **Note:** This is a JSON string, and not a map. This is because the parameter values have different types, which confuses the type system used by the provider sdk. Use `jsonencode()` to construct the map. The map keys must be strings, the values are `any` type. Example: `jsonencode({\"param1\": \"value1\", \"param2\": 2})`",
+										Description:         "The parameters to use for the policy assignment. The map key is the parameter name and the value is an JSON object containing a single `value` attribute with the values to apply. This to mitigate issues with the Terraform type system. E.g. `{ defaultName = jsonencode({ value = \"value\"}) }`",
+										MarkdownDescription: "The parameters to use for the policy assignment. The map key is the parameter name and the value is an JSON object containing a single `value` attribute with the values to apply. This to mitigate issues with the Terraform type system. E.g. `{ defaultName = jsonencode({ value = \"value\"}) }`",
 									},
 									"resource_selectors": schema.ListNestedAttribute{
 										NestedObject: schema.NestedAttributeObject{
@@ -339,6 +339,12 @@ func ArchitectureDataSourceSchema(ctx context.Context) schema.Schema {
 				Description:         "A mested map of policy assignments to modify. The key is the management group id, and the value is an object with a single attribute, `policy_assignments`. This is another map.",
 				MarkdownDescription: "A mested map of policy assignments to modify. The key is the management group id, and the value is an object with a single attribute, `policy_assignments`. This is another map.",
 			},
+			"policy_default_values": schema.MapAttribute{
+				ElementType:         jsontypes.NormalizedType{},
+				Optional:            true,
+				Description:         "A map of default values to apply to policy assignments. The key is the default name as defined in the library, and the value is an JSON object containing a single `value` attribute with the values to apply. This to mitigate issues with the Terraform type system. E.g. `{ defaultName = jsonencode({ value = \"value\"}) }`",
+				MarkdownDescription: "A map of default values to apply to policy assignments. The key is the default name as defined in the library, and the value is an JSON object containing a single `value` attribute with the values to apply. This to mitigate issues with the Terraform type system. E.g. `{ defaultName = jsonencode({ value = \"value\"}) }`",
+			},
 			"policy_role_assignments": schema.SetNestedAttribute{
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -405,6 +411,7 @@ type ArchitectureModel struct {
 	ManagementGroups          types.List     `tfsdk:"management_groups"`
 	Name                      types.String   `tfsdk:"name"`
 	PolicyAssignmentsToModify types.Map      `tfsdk:"policy_assignments_to_modify"`
+	PolicyDefaultValues       types.Map      `tfsdk:"policy_default_values"`
 	PolicyRoleAssignments     types.Set      `tfsdk:"policy_role_assignments"`
 	RootManagementGroupId     types.String   `tfsdk:"root_management_group_id"`
 	Timeouts                  timeouts.Value `tfsdk:"timeouts"`
@@ -1786,12 +1793,12 @@ func (t PolicyAssignmentsType) ValueFromObject(ctx context.Context, in basetypes
 		return nil, diags
 	}
 
-	parametersVal, ok := parametersAttribute.(basetypes.StringValue)
+	parametersVal, ok := parametersAttribute.(basetypes.MapValue)
 
 	if !ok {
 		diags.AddError(
 			"Attribute Wrong Type",
-			fmt.Sprintf(`parameters expected to be basetypes.StringValue, was: %T`, parametersAttribute))
+			fmt.Sprintf(`parameters expected to be basetypes.MapValue, was: %T`, parametersAttribute))
 	}
 
 	resourceSelectorsAttribute, ok := attributes["resource_selectors"]
@@ -1991,12 +1998,12 @@ func NewPolicyAssignmentsValue(attributeTypes map[string]attr.Type, attributes m
 		return NewPolicyAssignmentsValueUnknown(), diags
 	}
 
-	parametersVal, ok := parametersAttribute.(basetypes.StringValue)
+	parametersVal, ok := parametersAttribute.(basetypes.MapValue)
 
 	if !ok {
 		diags.AddError(
 			"Attribute Wrong Type",
-			fmt.Sprintf(`parameters expected to be basetypes.StringValue, was: %T`, parametersAttribute))
+			fmt.Sprintf(`parameters expected to be basetypes.MapValue, was: %T`, parametersAttribute))
 	}
 
 	resourceSelectorsAttribute, ok := attributes["resource_selectors"]
@@ -2106,7 +2113,7 @@ type PolicyAssignmentsValue struct {
 	IdentityIds           basetypes.SetValue    `tfsdk:"identity_ids"`
 	NonComplianceMessages basetypes.SetValue    `tfsdk:"non_compliance_messages"`
 	Overrides             basetypes.ListValue   `tfsdk:"overrides"`
-	Parameters            basetypes.StringValue `tfsdk:"parameters"`
+	Parameters            basetypes.MapValue    `tfsdk:"parameters"`
 	ResourceSelectors     basetypes.ListValue   `tfsdk:"resource_selectors"`
 	state                 attr.ValueState
 }
@@ -2128,7 +2135,9 @@ func (v PolicyAssignmentsValue) ToTerraformValue(ctx context.Context) (tftypes.V
 	attrTypes["overrides"] = basetypes.ListType{
 		ElemType: OverridesValue{}.Type(ctx),
 	}.TerraformType(ctx)
-	attrTypes["parameters"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["parameters"] = basetypes.MapType{
+		ElemType: types.StringType,
+	}.TerraformType(ctx)
 	attrTypes["resource_selectors"] = basetypes.ListType{
 		ElemType: ResourceSelectorsValue{}.Type(ctx),
 	}.TerraformType(ctx)
@@ -2328,7 +2337,35 @@ func (v PolicyAssignmentsValue) ToObjectValue(ctx context.Context) (basetypes.Ob
 			"overrides": basetypes.ListType{
 				ElemType: OverridesValue{}.Type(ctx),
 			},
-			"parameters": basetypes.StringType{},
+			"parameters": basetypes.MapType{
+				ElemType: types.StringType,
+			},
+			"resource_selectors": basetypes.ListType{
+				ElemType: ResourceSelectorsValue{}.Type(ctx),
+			},
+		}), diags
+	}
+
+	parametersVal, d := types.MapValue(types.StringType, v.Parameters.Elements())
+
+	diags.Append(d...)
+
+	if d.HasError() {
+		return types.ObjectUnknown(map[string]attr.Type{
+			"enforcement_mode": basetypes.StringType{},
+			"identity":         basetypes.StringType{},
+			"identity_ids": basetypes.SetType{
+				ElemType: types.StringType,
+			},
+			"non_compliance_messages": basetypes.SetType{
+				ElemType: NonComplianceMessagesValue{}.Type(ctx),
+			},
+			"overrides": basetypes.ListType{
+				ElemType: OverridesValue{}.Type(ctx),
+			},
+			"parameters": basetypes.MapType{
+				ElemType: types.StringType,
+			},
 			"resource_selectors": basetypes.ListType{
 				ElemType: ResourceSelectorsValue{}.Type(ctx),
 			},
@@ -2347,7 +2384,9 @@ func (v PolicyAssignmentsValue) ToObjectValue(ctx context.Context) (basetypes.Ob
 		"overrides": basetypes.ListType{
 			ElemType: OverridesValue{}.Type(ctx),
 		},
-		"parameters": basetypes.StringType{},
+		"parameters": basetypes.MapType{
+			ElemType: types.StringType,
+		},
 		"resource_selectors": basetypes.ListType{
 			ElemType: ResourceSelectorsValue{}.Type(ctx),
 		},
@@ -2369,7 +2408,7 @@ func (v PolicyAssignmentsValue) ToObjectValue(ctx context.Context) (basetypes.Ob
 			"identity_ids":            identityIdsVal,
 			"non_compliance_messages": nonComplianceMessages,
 			"overrides":               overrides,
-			"parameters":              v.Parameters,
+			"parameters":              parametersVal,
 			"resource_selectors":      resourceSelectors,
 		})
 
@@ -2443,7 +2482,9 @@ func (v PolicyAssignmentsValue) AttributeTypes(ctx context.Context) map[string]a
 		"overrides": basetypes.ListType{
 			ElemType: OverridesValue{}.Type(ctx),
 		},
-		"parameters": basetypes.StringType{},
+		"parameters": basetypes.MapType{
+			ElemType: types.StringType,
+		},
 		"resource_selectors": basetypes.ListType{
 			ElemType: ResourceSelectorsValue{}.Type(ctx),
 		},

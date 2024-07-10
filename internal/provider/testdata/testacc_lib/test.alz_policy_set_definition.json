@@ -1,5 +1,5 @@
 {
-  "name": "test",
+  "name": "test-policy-set-definition",
   "type": "Microsoft.Authorization/policySetDefinitions",
   "apiVersion": "2021-06-01",
   "scope": null,

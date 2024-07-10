@@ -54,9 +54,9 @@ data "alz_architecture" "example" {
     alzroot = {
       policy_assignments = {
         mypolicy = {
-          parameters = jsonencode({
-            parameterName = local.foo_resource_id
-          })
+          parameters = {
+            parameterName = jsonencode({Value = local.foo_resource_id})
+          }
         }
       }
     }
@@ -76,6 +76,7 @@ data "alz_architecture" "example" {
 ### Optional
 
 - `policy_assignments_to_modify` (Attributes Map) A mested map of policy assignments to modify. The key is the management group id, and the value is an object with a single attribute, `policy_assignments`. This is another map. (see [below for nested schema](#nestedatt--policy_assignments_to_modify))
+- `policy_default_values` (Map of String) A map of default values to apply to policy assignments. The key is the default name as defined in the library, and the value is an JSON object containing a single `value` attribute with the values to apply. This to mitigate issues with the Terraform type system. E.g. `{ defaultName = jsonencode({ value = "value"}) }`
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only
@@ -101,7 +102,7 @@ Optional:
 - `identity_ids` (Set of String) A set of zero or one identity ids to assign to the policy assignment. Required if `identity` is `UserAssigned`. **Do not** pass in computed values, instead construct the resource id yourself.
 - `non_compliance_messages` (Attributes Set) The non-compliance messages to use for the policy assignment. (see [below for nested schema](#nestedatt--policy_assignments_to_modify--policy_assignments--non_compliance_messages))
 - `overrides` (Attributes List) The overrides for this policy assignment. There are a maximum of 10 overrides allowed per assignment. If specified here the overrides will replace the existing overrides. (see [below for nested schema](#nestedatt--policy_assignments_to_modify--policy_assignments--overrides))
-- `parameters` (String) The parameters to use for the policy assignment. **Note:** This is a JSON string, and not a map. This is because the parameter values have different types, which confuses the type system used by the provider sdk. Use `jsonencode()` to construct the map. The map keys must be strings, the values are `any` type. Example: `jsonencode({"param1": "value1", "param2": 2})`
+- `parameters` (Map of String) The parameters to use for the policy assignment. The map key is the parameter name and the value is an JSON object containing a single `value` attribute with the values to apply. This to mitigate issues with the Terraform type system. E.g. `{ defaultName = jsonencode({ value = "value"}) }`
 - `resource_selectors` (Attributes List) The resource selectors to use for the policy assignment. A maximum of 10 resource selectors are allowed per assignment. If specified here the resource selectors will replace any existing resource selectors. (see [below for nested schema](#nestedatt--policy_assignments_to_modify--policy_assignments--resource_selectors))
 
 <a id="nestedatt--policy_assignments_to_modify--policy_assignments--non_compliance_messages"></a>

@@ -182,5 +182,5 @@
     }
   },
   "type": "Microsoft.Authorization/policyDefinitions",
-  "name": "BlobServicesDiagnosticsLogsToWorkspace"
+  "name": "test-policy-definition"
 }

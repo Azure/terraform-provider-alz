@@ -7,19 +7,20 @@ import (
 	"github.com/Azure/alzlib/deployment"
 	"github.com/Azure/alzlib/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy"
-	"github.com/Azure/terraform-provider-alz/internal/alztypes"
 	"github.com/Azure/terraform-provider-alz/internal/provider/gen"
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/stretchr/testify/assert"
 )
 
-// TestAccAlzArchetypeDataSource tests the data source for alz_archetype.
-// It checks that the policy parameter substitution & location defaults are applied.
-func TestAccAlzArchitectureDataSource(t *testing.T) {
+// TestAccAlzArchitectureDataSourceRemoteLib tests the data source for alz_architecture
+// when using a remote lib.
+func TestAccAlzArchitectureDataSourceRemoteLib(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
@@ -31,28 +32,58 @@ func TestAccAlzArchitectureDataSource(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccArchitectureDataSourceConfig(),
+				Config: testAccArchitectureDataSourceConfigRemoteLib(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.alz_architecture.test", "id", "alz"),
-					// resource.TestCheckOutput("test_location_replacement", "westeurope"),
-					// resource.TestCheckOutput("test_parameter_replacement", "test"),
 				),
 			},
 		},
 	})
 }
 
-// testAccArchitectureDataSourceConfig returns a test configuration for TestAccAlzArchetypeDataSource.
-func testAccArchitectureDataSourceConfig() string {
-	// cwd, _ := os.Getwd()
-	// libPath := filepath.Join(cwd, "testdata/testacc_lib")
+// TestAccAlzArchetypeDataSource tests the data source for alz_archetype.
+// It checks that the policy default values and the modification of policy assignments are correctly applied.
+func TestAccAlzArchitectureDataSourceWithDefaultAndModify(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
+		ExternalProviders: map[string]resource.ExternalProvider{
+			"azapi": {
+				Source:            "azure/azapi",
+				VersionConstraint: "~> 1.14",
+			},
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccArchitectureDataSourceConfigWithDefaultAndModify(),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.alz_architecture.test", "id", "test"),
+					resource.TestCheckOutput("log_analytics_replaced_by_policy_default_values", "replacedByDefaults"),
+					resource.TestCheckOutput("metrics_enabled_modified", "false"),
+					resource.TestCheckOutput("identity_type", "UserAssigned"),
+					resource.TestCheckOutput("identity_id", "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/test-identity"),
+					resource.TestCheckOutput("policy_assignment_override_kind", "policyEffect"),
+					resource.TestCheckOutput("policy_assignment_override_value", "disabled"),
+					resource.TestCheckOutput("policy_assignment_override_selector_kind", "policyDefinitionReferenceId"),
+					resource.TestCheckOutput("policy_assignment_override_selector_in", "test-policy-definition"),
+					resource.TestCheckOutput("policy_assignment_non_compliance_message", "testnoncompliancemessage"),
+					resource.TestCheckOutput("policy_assignment_resource_selector_name", "test-resource-selector"),
+					resource.TestCheckOutput("policy_assignment_resource_selector_kind", "resourceLocation"),
+					resource.TestCheckOutput("policy_assignment_resource_selector_in", "northeurope"),
+				),
+			},
+		},
+	})
+}
 
+// testAccArchitectureDataSourceConfigRemoteLib returns a test configuration for TestAccAlzArchetypeDataSource.
+func testAccArchitectureDataSourceConfigRemoteLib() string {
 	return `
 provider "alz" {
   library_references = [
   {
 	  path = "platform/alz"
-		ref  = "2024.07.01"
+		ref  = "2024.07.02"
 	}
 	]
 }
@@ -71,6 +102,129 @@ data "alz_architecture" "test" {
 `
 }
 
+// testAccArchitectureDataSourceConfigWithDefaultAndModify returns a test configuration for TestAccAlzArchetypeDataSource.
+func testAccArchitectureDataSourceConfigWithDefaultAndModify() string {
+	return `
+provider "alz" {
+  library_references = [
+    {
+	    custom_url = "${path.root}/testdata/testacc_lib"
+	  }
+	]
+}
+
+data "azapi_client_config" "current" {}
+
+data "alz_architecture" "test" {
+  name                     = "test"
+	root_management_group_id = data.azapi_client_config.current.tenant_id
+	location                 = "northeurope"
+	policy_default_values    = {
+	  test = jsonencode({ value = "replacedByDefaults" })
+	}
+	policy_assignments_to_modify = {
+	  test = {
+		  policy_assignments = {
+			  test-policy-assignment = {
+				  identity = "UserAssigned"
+					identity_ids = [
+					  "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/test-identity"
+					]
+					non_compliance_messages = [
+						{
+							message = "testnoncompliancemessage"
+						}
+					]
+					parameters = {
+						metricsEnabled = jsonencode({ value = false })
+					}
+					resource_selectors = [
+						{
+							name = "test-resource-selector"
+							resource_selector_selectors = [
+							  {
+							    kind = "resourceLocation"
+								  in   = ["northeurope"]
+							  }
+							]
+						}
+					]
+					overrides = [
+						{
+							kind = "policyEffect"
+							value = "disabled"
+							override_selectors = [
+								{
+									kind = "policyDefinitionReferenceId"
+									in   = ["test-policy-definition"]
+								}
+							]
+						}
+					]
+				}
+			}
+		}
+	}
+
+	timeouts {
+		read = "5m"
+	}
+}
+
+locals {
+	test_policy_assignment_decoded = jsondecode(data.alz_architecture.test.management_groups[0].policy_assignments["test-policy-assignment"])
+}
+
+output "log_analytics_replaced_by_policy_default_values" {
+	value = local.test_policy_assignment_decoded.properties.parameters.logAnalytics.value
+}
+
+output "metrics_enabled_modified" {
+	value = tostring(local.test_policy_assignment_decoded.properties.parameters.metricsEnabled.value)
+}
+
+output "identity_type" {
+	value = local.test_policy_assignment_decoded.identity.type
+}
+
+output "identity_id" {
+	value = keys(local.test_policy_assignment_decoded.identity.userAssignedIdentities)[0]
+}
+
+output "policy_assignment_override_kind" {
+	value = local.test_policy_assignment_decoded.properties.overrides[0].kind
+}
+
+output "policy_assignment_override_value" {
+	value = local.test_policy_assignment_decoded.properties.overrides[0].value
+}
+
+output "policy_assignment_override_selector_kind" {
+	value = local.test_policy_assignment_decoded.properties.overrides[0].selectors[0].kind
+}
+
+output "policy_assignment_override_selector_in" {
+	value = local.test_policy_assignment_decoded.properties.overrides[0].selectors[0].in[0]
+}
+
+output "policy_assignment_non_compliance_message" {
+	value = local.test_policy_assignment_decoded.properties.nonComplianceMessages[0].message
+}
+
+output "policy_assignment_resource_selector_name" {
+	value = local.test_policy_assignment_decoded.properties.resourceSelectors[0].name
+}
+
+output "policy_assignment_resource_selector_kind" {
+	value = local.test_policy_assignment_decoded.properties.resourceSelectors[0].selectors[0].kind
+}
+
+output "policy_assignment_resource_selector_in" {
+	value = local.test_policy_assignment_decoded.properties.resourceSelectors[0].selectors[0].in[0]
+}
+`
+}
+
 // TestConvertPolicyAssignmentResourceSelectorsToSdkType tests the conversion of policy assignment resource selectors from framework to Azure Go SDK types.
 func TestConvertPolicyAssignmentResourceSelectorsToSdkType(t *testing.T) {
 	ctx := context.Background()
@@ -84,9 +238,11 @@ func TestConvertPolicyAssignmentResourceSelectorsToSdkType(t *testing.T) {
 
 	notSetStringType, _ := basetypes.NewSetValueFrom(ctx, types.BoolType, []bool{true})
 	t.Run("EmptyInput", func(t *testing.T) {
+		resp := new(datasource.ReadResponse)
+		resp.Diagnostics = diag.Diagnostics{}
 		src := []gen.ResourceSelectorsValue{}
-		res, diags := convertPolicyAssignmentResourceSelectorsToSdkType(ctx, src)
-		assert.False(t, diags.HasError())
+		res := convertPolicyAssignmentResourceSelectorsToSdkType(ctx, src, resp)
+		assert.False(t, resp.Diagnostics.HasError())
 		assert.Nil(t, res)
 	})
 
@@ -146,9 +302,10 @@ func TestConvertPolicyAssignmentResourceSelectorsToSdkType(t *testing.T) {
 				},
 			},
 		}
-
-		res, diags := convertPolicyAssignmentResourceSelectorsToSdkType(ctx, src)
-		assert.False(t, diags.HasError())
+		resp := new(datasource.ReadResponse)
+		resp.Diagnostics = diag.Diagnostics{}
+		res := convertPolicyAssignmentResourceSelectorsToSdkType(ctx, src, resp)
+		assert.False(t, resp.Diagnostics.HasError())
 		assert.Equal(t, expected, res)
 	})
 
@@ -166,8 +323,10 @@ func TestConvertPolicyAssignmentResourceSelectorsToSdkType(t *testing.T) {
 		}
 
 		// Simulate an error during conversion
-		res, diags := convertPolicyAssignmentResourceSelectorsToSdkType(ctx, src)
-		assert.True(t, diags.HasError())
+		resp := new(datasource.ReadResponse)
+		resp.Diagnostics = diag.Diagnostics{}
+		res := convertPolicyAssignmentResourceSelectorsToSdkType(ctx, src, resp)
+		assert.True(t, resp.Diagnostics.HasError())
 		assert.Nil(t, res)
 	})
 }
@@ -177,38 +336,43 @@ func TestConvertPolicyAssignmentIdentityToSdkType(t *testing.T) {
 	// Test with unknown identity type
 	typ := types.StringValue("UnknownType")
 	ids := basetypes.NewSetUnknown(types.StringType)
-	identity, diags := convertPolicyAssignmentIdentityToSdkType(typ, ids)
+	resp := new(datasource.ReadResponse)
+	resp.Diagnostics = diag.Diagnostics{}
+	identity := convertPolicyAssignmentIdentityToSdkType(typ, ids, resp)
 	assert.Nil(t, identity)
-	assert.True(t, diags.HasError())
+	assert.True(t, resp.Diagnostics.HasError())
+	resp.Diagnostics = diag.Diagnostics{}
 
 	// Test with SystemAssigned identity type
 	typ = types.StringValue("SystemAssigned")
 	ids = basetypes.NewSetNull(types.StringType)
-	identity, diags = convertPolicyAssignmentIdentityToSdkType(typ, ids)
+	identity = convertPolicyAssignmentIdentityToSdkType(typ, ids, resp)
 	assert.NotNil(t, identity)
-	assert.False(t, diags.HasError())
+	assert.False(t, resp.Diagnostics.HasError())
 	assert.Equal(t, armpolicy.ResourceIdentityTypeSystemAssigned, *identity.Type)
 
 	// Test with UserAssigned identity type and empty ids
 	typ = types.StringValue("UserAssigned")
 	ids = basetypes.NewSetNull(types.StringType)
-	identity, diags = convertPolicyAssignmentIdentityToSdkType(typ, ids)
+	identity = convertPolicyAssignmentIdentityToSdkType(typ, ids, resp)
 	assert.Nil(t, identity)
-	assert.True(t, diags.HasError())
+	assert.True(t, resp.Diagnostics.HasError())
+	resp.Diagnostics = diag.Diagnostics{}
 
 	// Test with UserAssigned identity type and multiple ids
 	typ = types.StringValue("UserAssigned")
 	ids, _ = types.SetValueFrom(context.Background(), types.StringType, []string{"id1", "id2"})
-	identity, diags = convertPolicyAssignmentIdentityToSdkType(typ, ids)
+	identity = convertPolicyAssignmentIdentityToSdkType(typ, ids, resp)
 	assert.Nil(t, identity)
-	assert.True(t, diags.HasError())
+	assert.True(t, resp.Diagnostics.HasError())
+	resp.Diagnostics = diag.Diagnostics{}
 
 	// Test with UserAssigned identity type and valid id
 	typ = types.StringValue("UserAssigned")
 	ids, _ = types.SetValueFrom(context.Background(), types.StringType, []string{"id1"})
-	identity, diags = convertPolicyAssignmentIdentityToSdkType(typ, ids)
+	identity = convertPolicyAssignmentIdentityToSdkType(typ, ids, resp)
 	assert.NotNil(t, identity)
-	assert.False(t, diags.HasError())
+	assert.False(t, resp.Diagnostics.HasError())
 	assert.Equal(t, armpolicy.ResourceIdentityTypeUserAssigned, *identity.Type)
 	assert.Len(t, identity.UserAssignedIdentities, 1)
 	assert.Contains(t, identity.UserAssignedIdentities, "id1")
@@ -263,28 +427,40 @@ func TestConvertPolicyAssignmentEnforcementModeToSdkType(t *testing.T) {
 // TestConvertPolicyAssignmentParametersToSdkType tests the convertPolicyAssignmentParametersToSdkType function.
 func TestConvertPolicyAssignmentParametersToSdkType(t *testing.T) {
 	// Test with nil input
-	var src alztypes.PolicyParameterValue
+	var src types.Map
 	var res map[string]*armpolicy.ParameterValuesValue
-	res, diags := convertPolicyAssignmentParametersToSdkType(src)
-	assert.False(t, diags.HasError())
+	resp := new(datasource.ReadResponse)
+	resp.Diagnostics = diag.Diagnostics{}
+	res = convertPolicyAssignmentParametersMapToSdkType(src, resp)
+	assert.False(t, resp.Diagnostics.HasError())
 	assert.Nil(t, res)
 
 	// Test with empty input
-	src = alztypes.PolicyParameterValue{}
-	res, diags = convertPolicyAssignmentParametersToSdkType(src)
-	assert.False(t, diags.HasError())
+	src = types.MapNull(types.StringType)
+	res = convertPolicyAssignmentParametersMapToSdkType(src, resp)
+	assert.False(t, resp.Diagnostics.HasError())
 	assert.Nil(t, res)
 
-	// Test with non-empty input
-	params, _ := alztypes.PolicyParameterType{}.ValueFromString(context.Background(), types.StringValue(`{
-		"param1": "value1",
-		"param2": 123,
-		"param3": true
-	}`))
-	src = params.(alztypes.PolicyParameterValue) //nolint:forcetypeassert
+	param1 := armpolicy.ParameterValuesValue{
+		Value: to.Ptr("value1"),
+	}
+	param2 := armpolicy.ParameterValuesValue{
+		Value: to.Ptr(123),
+	}
+	param3 := armpolicy.ParameterValuesValue{
+		Value: to.Ptr(true),
+	}
+	param1Json, _ := param1.MarshalJSON()
+	param2Json, _ := param2.MarshalJSON()
+	param3Json, _ := param3.MarshalJSON()
+	src, _ = types.MapValueFrom(context.Background(), types.StringType, map[string]string{
+		"param1": string(param1Json),
+		"param2": string(param2Json),
+		"param3": string(param3Json),
+	})
 
-	res, diags = convertPolicyAssignmentParametersToSdkType(src)
-	assert.False(t, diags.HasError())
+	res = convertPolicyAssignmentParametersMapToSdkType(src, resp)
+	assert.False(t, resp.Diagnostics.HasError())
 	assert.NotNil(t, res)
 	assert.Len(t, res, 3)
 	assert.Equal(t, "value1", res["param1"].Value)
@@ -294,12 +470,23 @@ func TestConvertPolicyAssignmentParametersToSdkType(t *testing.T) {
 
 func TestPolicyAssignmentType2ArmPolicyValues(t *testing.T) {
 	ctx := context.Background()
-	paramsIn, _ := alztypes.PolicyParameterType{}.ValueFromString(ctx, types.StringValue(`{
-		"param1": "value1",
-		"param2": 123,
-		"param3": true
-	}`))
-	paramsInStr, _ := paramsIn.ToStringValue(ctx)
+	param1 := armpolicy.ParameterValuesValue{
+		Value: to.Ptr("value1"),
+	}
+	param2 := armpolicy.ParameterValuesValue{
+		Value: to.Ptr(123),
+	}
+	param3 := armpolicy.ParameterValuesValue{
+		Value: to.Ptr(true),
+	}
+	param1Json, _ := param1.MarshalJSON()
+	param2Json, _ := param2.MarshalJSON()
+	param3Json, _ := param3.MarshalJSON()
+	params, _ := types.MapValueFrom(ctx, types.StringType, map[string]string{
+		"param1": string(param1Json),
+		"param2": string(param2Json),
+		"param3": string(param3Json),
+	})
 	pa := gen.PolicyAssignmentsValue{ //nolint:forcetypeassert
 		EnforcementMode: types.StringValue("DoNotEnforce"),
 		NonComplianceMessages: types.SetValueMust(
@@ -314,12 +501,13 @@ func TestPolicyAssignmentType2ArmPolicyValues(t *testing.T) {
 					PolicyDefinitionReferenceId: types.StringValue("PolicyDefinition2"),
 				},
 			}),
-		Parameters: paramsInStr,
+		Parameters: params,
 	}
+	resp := new(datasource.ReadResponse)
+	resp.Diagnostics = diag.Diagnostics{}
+	enforcementMode, identity, nonComplianceMessages, parameters, _, _ := policyAssignmentType2ArmPolicyValues(ctx, pa, resp)
 
-	enforcementMode, identity, nonComplianceMessages, parameters, _, _, diags := policyAssignmentType2ArmPolicyValues(ctx, pa)
-
-	assert.False(t, diags.HasError())
+	assert.False(t, resp.Diagnostics.HasError())
 	assert.Equal(t, armpolicy.EnforcementModeDoNotEnforce, *enforcementMode)
 	assert.Nil(t, identity)
 	assert.Len(t, nonComplianceMessages, 2)
