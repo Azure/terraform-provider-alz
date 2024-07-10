@@ -341,6 +341,7 @@ func TestConvertPolicyAssignmentIdentityToSdkType(t *testing.T) {
 	identity := convertPolicyAssignmentIdentityToSdkType(typ, ids, resp)
 	assert.Nil(t, identity)
 	assert.True(t, resp.Diagnostics.HasError())
+	resp.Diagnostics = diag.Diagnostics{}
 
 	// Test with SystemAssigned identity type
 	typ = types.StringValue("SystemAssigned")
@@ -356,6 +357,7 @@ func TestConvertPolicyAssignmentIdentityToSdkType(t *testing.T) {
 	identity = convertPolicyAssignmentIdentityToSdkType(typ, ids, resp)
 	assert.Nil(t, identity)
 	assert.True(t, resp.Diagnostics.HasError())
+	resp.Diagnostics = diag.Diagnostics{}
 
 	// Test with UserAssigned identity type and multiple ids
 	typ = types.StringValue("UserAssigned")
@@ -363,6 +365,7 @@ func TestConvertPolicyAssignmentIdentityToSdkType(t *testing.T) {
 	identity = convertPolicyAssignmentIdentityToSdkType(typ, ids, resp)
 	assert.Nil(t, identity)
 	assert.True(t, resp.Diagnostics.HasError())
+	resp.Diagnostics = diag.Diagnostics{}
 
 	// Test with UserAssigned identity type and valid id
 	typ = types.StringValue("UserAssigned")
