@@ -12,7 +12,6 @@ import (
 	"github.com/Azure/terraform-provider-alz/internal/provider/gen"
 	"github.com/Azure/terraform-provider-alz/internal/typehelper"
 	"github.com/Azure/terraform-provider-alz/internal/typehelper/frameworktype"
-	"github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -482,8 +481,13 @@ func convertPolicyAssignmentParametersMapToSdkType(src types.Map, resp *datasour
 	}
 	result := make(map[string]*armpolicy.ParameterValuesValue)
 	for k, v := range src.Elements() {
-		vStr, ok := v.(jsontypes.Normalized)
-		if !ok {
+		// Even thought he schema type is identical, from policy assignments to modify we receive basetypes.String values,
+		// but from policy default values we receive jsontypes.Noprmalized.
+		// We convert to Terraform value to get the string representation.
+		vTf, _ := v.ToTerraformValue(context.Background())
+		var vStr string
+		err := vTf.Copy().As(&vStr)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				"convertPolicyAssignmentParametersMapToSdkType: error",
 				"unable to convert parameter value to jsontypes.Normalized",
@@ -491,9 +495,7 @@ func convertPolicyAssignmentParametersMapToSdkType(src types.Map, resp *datasour
 			return nil
 		}
 		var pv armpolicy.ParameterValuesValue
-		vStrVal, _ := vStr.ToStringValue(context.Background())
-		s := vStrVal.ValueString()
-		if err := pv.UnmarshalJSON([]byte(s)); err != nil {
+		if err := pv.UnmarshalJSON([]byte(vStr)); err != nil {
 			resp.Diagnostics.AddError(
 				"convertPolicyAssignmentParametersMapToSdkType: error",
 				fmt.Sprintf("unable to unmarshal policy parameter value: %s", err.Error()),
