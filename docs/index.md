@@ -20,6 +20,8 @@ Use the navigation to the left to read about the available resources.
 
 ~> **Warning** This provider is still in development but is ready for initial testing and feedback via [GitHub Issues](https://github.com/Azure/terraform-provider-alz/issues).
 
+~> **Important** Make sure to add `.alzlib` to your `.gitignore` file to avoid committing the downloaded ALZ library to your repository.
+
 ## Example Usage
 
 ```terraform
