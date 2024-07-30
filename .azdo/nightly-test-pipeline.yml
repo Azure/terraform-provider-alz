@@ -1,0 +1,19 @@
+schedules:
+  - cron: "0 0 * * *"
+    displayName: "Nightly Build"
+    branches:
+      include:
+        - "master"
+
+jobs:
+  - template: ./ci.yml
+    parameters:
+      maxParallel: 1 # any more and we get throttled by AzDO!
+      accTest: true
+      goVersions:
+        - value: "1.22.5"
+          ymlSafeName: "1_22_5"
+
+      vmImages:
+        - value: "ubuntu-20.04"
+          ymlSafeName: ubuntu_20_04
