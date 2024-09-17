@@ -12,13 +12,11 @@ description: |-
 # ALZ
 
 Use the Azure Landing Zones (ALZ) provider to generate data to allow you to simplify provisioning of your ALZ configuration.
-Its principal use is to generate data to deploy resources with the [AzureRM](https://github.com/Azure/terraform-provider-azurerm) provider.
+Its principal use is to generate data to deploy resources with the [AzApi](https://github.com/Azure/terraform-provider-azapi) provider.
 
 Use the navigation to the left to read about the available resources.
 
 ~> **Important** This provider has been designed to work with the [ALZ Terraform module](https://registry.terraform.io/modules/Azure/avm-ptn-alz/azurerm/latest). We suggest that you consume this provider from within the module, rather than directly in your Terraform configuration.
-
-~> **Warning** This provider is still in development but is ready for initial testing and feedback via [GitHub Issues](https://github.com/Azure/terraform-provider-alz/issues).
 
 ~> **Important** Make sure to add `.alzlib` to your `.gitignore` file to avoid committing the downloaded ALZ library to your repository.
 
@@ -45,12 +43,10 @@ Configuration for the ALZ provider can be derived from several sources, which ar
 1. Parameters in the provider configuration
 1. Environment variables
 
-
 ### Deferred Actions
 
 We are awaiting the results of the upstream Terraform language experiment *deferred actions*. This may provide a solution to this issue.
 See the release notes [here](https://github.com/hashicorp/terraform/releases/tag/v1.10.0-alpha20240619) for more information.
-
 
 ## Versions
 
@@ -83,7 +79,7 @@ Within the library are the following types of asserts:
 - **archetype overrides** - These create new archetypes based off an existing archetype.
 - **architecture definitions** - These files represent a deployed management group hierarchy, with the associated archetypes.
 
-~> **Important** If the provider does not have access to download the library, please download and use the `ibrary_references` to specify a local directory.
+~> **Important** If the provider does not have access to download the library, please download separately and use the `library_references` to specify a local directory.
 
 For more information please visit the [GitHub repository](https://github.com/Azure/Azure-Landing-Zones-Library).
 
@@ -98,7 +94,8 @@ For more information please visit the [GitHub repository](https://github.com/Azu
 - `client_id` (String) The client id which should be used. For use when authenticating as a service principal. If not specified, value will be attempted to be read from the `ARM_CLIENT_ID` environment variable.
 - `client_secret` (String, Sensitive) The client secret which should be used. For use when authenticating as a service principal using a client secret. If not specified, value will be attempted to be read from the `ARM_CLIENT_SECRET` environment variable.
 - `environment` (String)
-- `lib_overwrite_enabled` (Boolean) Whether to allow overwriting of the library by other lib directories. Default is `false`.
+- `library_fetch_dependencies` (Boolean) Whether to automatically fetch dependencies for the library. This option reads the `alz_library_metadata.json` file in any supplied library and will recursively download dependent libraries. Default is `true`.
+- `library_overwrite_enabled` (Boolean) Whether to allow overwriting of the library by other lib directories. Default is `false`.
 - `library_references` (Attributes List) A list of references to the [ALZ library](https://aka.ms/alz/library) to use. Each reference should either contain the `path` (e.g. `platform/alz`) and the `ref` (e.g. `2024.03.03`), or a `custom_url` to be supplied to go-getter.
 If this value is not specified, the default value will be used, which is:
 

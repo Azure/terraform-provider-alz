@@ -56,7 +56,12 @@ func AlzProviderSchema(ctx context.Context) schema.Schema {
 					stringvalidator.OneOf("public", "usgovernment", "china"),
 				},
 			},
-			"lib_overwrite_enabled": schema.BoolAttribute{
+			"library_fetch_dependencies": schema.BoolAttribute{
+				Optional:            true,
+				Description:         "Whether to automatically fetch dependencies for the library. This option reads the `alz_library_metadata.json` file in any supplied library and will recursively download dependent libraries. Default is `true`.",
+				MarkdownDescription: "Whether to automatically fetch dependencies for the library. This option reads the `alz_library_metadata.json` file in any supplied library and will recursively download dependent libraries. Default is `true`.",
+			},
+			"library_overwrite_enabled": schema.BoolAttribute{
 				Optional:            true,
 				Description:         "Whether to allow overwriting of the library by other lib directories. Default is `false`.",
 				MarkdownDescription: "Whether to allow overwriting of the library by other lib directories. Default is `false`.",
@@ -166,7 +171,8 @@ type AlzModel struct {
 	ClientId                  types.String `tfsdk:"client_id"`
 	ClientSecret              types.String `tfsdk:"client_secret"`
 	Environment               types.String `tfsdk:"environment"`
-	LibOverwriteEnabled       types.Bool   `tfsdk:"lib_overwrite_enabled"`
+	LibraryFetchDependencies  types.Bool   `tfsdk:"library_fetch_dependencies"`
+	LibraryOverwriteEnabled   types.Bool   `tfsdk:"library_overwrite_enabled"`
 	LibraryReferences         types.List   `tfsdk:"library_references"`
 	OidcRequestToken          types.String `tfsdk:"oidc_request_token"`
 	OidcRequestUrl            types.String `tfsdk:"oidc_request_url"`

@@ -6,7 +6,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"io/fs"
 	"os"
 	"strconv"
 	"strings"
@@ -134,15 +133,32 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 		return
 	}
 
-	// Configure lib references
-	libDirFs, diags := downloadLibs(ctx, &data)
+	// Convert the supplied libraries to alzlib.LibraryReferences
+	libRefs, diags := generateLibraryDefinitions(ctx, &data)
 	resp.Diagnostics = append(resp.Diagnostics, diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
+	// Fetch the library dependencies if enabled.
+	// If not, the refs passed to alzlib.Init() will be fetched on demand without dependencies.
+	if data.LibraryFetchDependencies.ValueBool() {
+		var err error
+		tflog.Debug(ctx, "Begin fetch library dependencies", map[string]interface{}{
+			"library_references": libRefs,
+		})
+		libRefs, err = libRefs.FetchWithDependencies(ctx)
+		if err != nil {
+			resp.Diagnostics.AddError("Failed to fetch library dependencies", err.Error())
+			return
+		}
+		tflog.Debug(ctx, "End fetch library dependencies", map[string]interface{}{
+			"library_references": libRefs,
+		})
+	}
+
 	// Init alzlib
-	if err := alz.Init(ctx, libDirFs...); err != nil {
+	if err := alz.Init(ctx, libRefs...); err != nil {
 		resp.Diagnostics.AddError("Failed to initialize AlzLib", err.Error())
 		return
 	}
@@ -160,9 +176,7 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 }
 
 func (p *AlzProvider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{
-		NewPolicyRoleAssignmentsResource,
-	}
+	return []func() resource.Resource{}
 }
 
 func (p *AlzProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
@@ -183,7 +197,7 @@ func New(version string) func() provider.Provider {
 	}
 }
 
-func downloadLibs(ctx context.Context, data *gen.AlzModel) ([]fs.FS, diag.Diagnostics) {
+func generateLibraryDefinitions(ctx context.Context, data *gen.AlzModel) (alzlib.LibraryReferences, diag.Diagnostics) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 
@@ -195,25 +209,15 @@ func downloadLibs(ctx context.Context, data *gen.AlzModel) ([]fs.FS, diag.Diagno
 		return nil, diags
 	}
 
-	libDirFs := make([]fs.FS, len(alzLibRefs))
-	for i, ref := range alzLibRefs {
-		if !ref.CustomUrl.IsNull() {
-			ldfs, err := alzlib.FetchLibraryByGetterString(ctx, ref.CustomUrl.ValueString(), strconv.Itoa(i))
-			if err != nil {
-				diags.AddError("Failed to fetch library", err.Error())
-				return nil, diags
-			}
-			libDirFs[i] = ldfs
+	libRefs := make(alzlib.LibraryReferences, len(alzLibRefs))
+	for i, libRef := range alzLibRefs {
+		if libRef.CustomUrl.IsNull() {
+			libRefs[i] = alzlib.NewAlzLibraryReference(libRef.Path.ValueString(), libRef.Ref.ValueString())
 			continue
 		}
-		ldfs, err := alzlib.FetchAzureLandingZonesLibraryMember(ctx, ref.Path.ValueString(), ref.Ref.ValueString(), strconv.Itoa(i))
-		if err != nil {
-			diags.AddError("Failed to fetch library", err.Error())
-			return nil, diags
-		}
-		libDirFs[i] = ldfs
+		libRefs[i] = alzlib.NewCustomLibraryReference(libRef.CustomUrl.ValueString())
 	}
-	return libDirFs, nil
+	return libRefs, nil
 }
 
 func getFirstSetEnvVar(envVars ...string) string {
@@ -362,7 +366,7 @@ func configureAlzLib(token *azidentity.ChainedTokenCredential, data gen.AlzModel
 	popts.PerRetryPolicies = append(popts.PerRetryPolicies, withUserAgent(userAgent))
 
 	opts := &alzlib.AlzLibOptions{
-		AllowOverwrite: data.LibOverwriteEnabled.ValueBool(),
+		AllowOverwrite: data.LibraryOverwriteEnabled.ValueBool(),
 		Parallelism:    10,
 	}
 	alz := alzlib.NewAlzLib(opts)
@@ -457,8 +461,13 @@ func configureDefaults(ctx context.Context, data *gen.AlzModel) {
 	}
 
 	// Do not allow library overwrite by default.
-	if data.LibOverwriteEnabled.IsNull() {
-		data.LibOverwriteEnabled = types.BoolValue(false)
+	if data.LibraryOverwriteEnabled.IsNull() {
+		data.LibraryOverwriteEnabled = types.BoolValue(false)
+	}
+
+	// Automatically download dependencies by default.
+	if data.LibraryFetchDependencies.IsNull() {
+		data.LibraryFetchDependencies = types.BoolValue(true)
 	}
 
 	// Set alz library references to the default value if not already set.

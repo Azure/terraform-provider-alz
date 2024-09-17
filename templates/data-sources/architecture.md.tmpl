@@ -21,7 +21,8 @@ This may cause resources to be unnecessarily recreated.
 
 Such unknown values include resource ids. For example, if you are creating a resource and passing the id of the resource group to the data source, this will cause the issue.
 
-Instead, use string interpolation to pass the values. For example:
+Instead, use the new provider functions with string literalsto generate the resource id.
+For example:
 
 ### Recommended
 
@@ -32,7 +33,7 @@ This is the recommended way to use this provider:
 ```terraform
 
 locals {
-  foo_resource_id = "/subscriptions/${data.azurerm_client_config.current.subscription_id}/resourceGroups/${var.resource_group_name}/providers/Microsoft.FooResourceProvider/${var.foo_resource_name}"
+  foo_resource_id = provider::azapi::resource_group_resource_id("00000000-0000-0000-0000-000000000000", "rg1", "Microsoft.OperationalInsights/workspaces", ["myworkspace"])
 }
 
 
