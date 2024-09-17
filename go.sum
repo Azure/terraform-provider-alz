@@ -1,11 +1,5 @@
 dario.cat/mergo v1.0.0 h1:AGCNq9Evsj31mOgNPcLyXc+4PNABt905YmuqPYYpBWk=
 dario.cat/mergo v1.0.0/go.mod h1:uNxQE+84aUszobStD9th8a29P2fMDhsBdgRYvZOxGmk=
-github.com/Azure/alzlib v0.19.1 h1:3GNDrcLEJplAmClYFLibjJa4lzAkHUbfCsCM28bLWao=
-github.com/Azure/alzlib v0.19.1/go.mod h1:KkgZ4UI7tvzLn5KvaTMJ4+2RD/RIaVhh8x88n/aWZ1s=
-github.com/Azure/alzlib v0.20.0-pre h1:LiyxhOEBU803g3fK0NpopRVHR7VCf8UO1LixlBofy4o=
-github.com/Azure/alzlib v0.20.0-pre/go.mod h1:YfOiLoO/70+ez7rv0G7zmwr0HBn7AHphz4BJvX7Y52Y=
-github.com/Azure/alzlib v0.20.0-pre.0.20240901152238-0aef3ba5fe57 h1:5IHXeXoI1ZoV/A6oa444iX/aXsKfubQ8lOwVmrfGoUQ=
-github.com/Azure/alzlib v0.20.0-pre.0.20240901152238-0aef3ba5fe57/go.mod h1:YfOiLoO/70+ez7rv0G7zmwr0HBn7AHphz4BJvX7Y52Y=
 github.com/Azure/alzlib v0.20.0 h1:nkW5oARxCPUCTX+3tPDmOQ4d/I5pXDPZF5a4hjZFPtc=
 github.com/Azure/alzlib v0.20.0/go.mod h1:9AUD6m8ePsnpMu/olfX8CGsRO6HYvxUpl3KlchM6cS8=
 github.com/Azure/azure-sdk-for-go/sdk/azcore v1.14.0 h1:nyQWyZvwGTvunIMxi1Y9uXkcyr+I7TeNrr/foo4Kpk8=
