@@ -1,5 +1,0 @@
----
-name: test
-policy_assignments:
-  - policy_assignment_name: test-policy-assignment
-    parameter_names: ["logAnalytics"]

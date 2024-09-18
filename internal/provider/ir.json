@@ -8,7 +8,7 @@
       "description": "ALZ provider to generate archetype data for use with the ALZ Terraform module.",
       "attributes": [
         {
-          "name": "lib_overwrite_enabled",
+          "name": "library_overwrite_enabled",
           "bool": {
             "optional_required": "optional",
             "description": "Whether to allow overwriting of the library by other lib directories. Default is `false`."
@@ -114,6 +114,13 @@
           "string": {
             "optional_required": "optional",
             "description": "The Tenant ID which should be used. If not specified, value will be attempted to be read from the `ARM_TENANT_ID` environment variable."
+          }
+        },
+        {
+          "name": "library_fetch_dependencies",
+          "bool": {
+            "optional_required": "optional",
+            "description": "Whether to automatically fetch dependencies for the library. This option reads the `alz_library_metadata.json` file in any supplied library and will recursively download dependent libraries. Default is `true`."
           }
         },
         {

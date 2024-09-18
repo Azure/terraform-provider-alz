@@ -1,0 +1,6 @@
+---
+defaults:
+  - default_name: test
+    policy_assignments:
+      - parameter_names: ["logAnalytics"]
+        policy_assignment_name: test-policy-assignment
