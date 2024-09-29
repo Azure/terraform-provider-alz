@@ -1076,11 +1076,19 @@ func (v ManagementGroupsValue) String() string {
 func (v ManagementGroupsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	policyAssignmentsVal, d := types.MapValue(types.StringType, v.PolicyAssignments.Elements())
+	var policyAssignmentsVal basetypes.MapValue
+	switch {
+	case v.PolicyAssignments.IsUnknown():
+		policyAssignmentsVal = types.MapUnknown(types.StringType)
+	case v.PolicyAssignments.IsNull():
+		policyAssignmentsVal = types.MapNull(types.StringType)
+	default:
+		var d diag.Diagnostics
+		policyAssignmentsVal, d = types.MapValue(types.StringType, v.PolicyAssignments.Elements())
+		diags.Append(d...)
+	}
 
-	diags.Append(d...)
-
-	if d.HasError() {
+	if diags.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
 			"display_name": basetypes.StringType{},
 			"exists":       basetypes.BoolType{},
@@ -1102,11 +1110,19 @@ func (v ManagementGroupsValue) ToObjectValue(ctx context.Context) (basetypes.Obj
 		}), diags
 	}
 
-	policyDefinitionsVal, d := types.MapValue(types.StringType, v.PolicyDefinitions.Elements())
+	var policyDefinitionsVal basetypes.MapValue
+	switch {
+	case v.PolicyDefinitions.IsUnknown():
+		policyDefinitionsVal = types.MapUnknown(types.StringType)
+	case v.PolicyDefinitions.IsNull():
+		policyDefinitionsVal = types.MapNull(types.StringType)
+	default:
+		var d diag.Diagnostics
+		policyDefinitionsVal, d = types.MapValue(types.StringType, v.PolicyDefinitions.Elements())
+		diags.Append(d...)
+	}
 
-	diags.Append(d...)
-
-	if d.HasError() {
+	if diags.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
 			"display_name": basetypes.StringType{},
 			"exists":       basetypes.BoolType{},
@@ -1128,11 +1144,19 @@ func (v ManagementGroupsValue) ToObjectValue(ctx context.Context) (basetypes.Obj
 		}), diags
 	}
 
-	policySetDefinitionsVal, d := types.MapValue(types.StringType, v.PolicySetDefinitions.Elements())
+	var policySetDefinitionsVal basetypes.MapValue
+	switch {
+	case v.PolicySetDefinitions.IsUnknown():
+		policySetDefinitionsVal = types.MapUnknown(types.StringType)
+	case v.PolicySetDefinitions.IsNull():
+		policySetDefinitionsVal = types.MapNull(types.StringType)
+	default:
+		var d diag.Diagnostics
+		policySetDefinitionsVal, d = types.MapValue(types.StringType, v.PolicySetDefinitions.Elements())
+		diags.Append(d...)
+	}
 
-	diags.Append(d...)
-
-	if d.HasError() {
+	if diags.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
 			"display_name": basetypes.StringType{},
 			"exists":       basetypes.BoolType{},
@@ -1154,11 +1178,19 @@ func (v ManagementGroupsValue) ToObjectValue(ctx context.Context) (basetypes.Obj
 		}), diags
 	}
 
-	roleDefinitionsVal, d := types.MapValue(types.StringType, v.RoleDefinitions.Elements())
+	var roleDefinitionsVal basetypes.MapValue
+	switch {
+	case v.RoleDefinitions.IsUnknown():
+		roleDefinitionsVal = types.MapUnknown(types.StringType)
+	case v.RoleDefinitions.IsNull():
+		roleDefinitionsVal = types.MapNull(types.StringType)
+	default:
+		var d diag.Diagnostics
+		roleDefinitionsVal, d = types.MapValue(types.StringType, v.RoleDefinitions.Elements())
+		diags.Append(d...)
+	}
 
-	diags.Append(d...)
-
-	if d.HasError() {
+	if diags.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
 			"display_name": basetypes.StringType{},
 			"exists":       basetypes.BoolType{},
@@ -2320,11 +2352,19 @@ func (v PolicyAssignmentsValue) ToObjectValue(ctx context.Context) (basetypes.Ob
 		)
 	}
 
-	identityIdsVal, d := types.SetValue(types.StringType, v.IdentityIds.Elements())
+	var identityIdsVal basetypes.SetValue
+	switch {
+	case v.IdentityIds.IsUnknown():
+		identityIdsVal = types.SetUnknown(types.StringType)
+	case v.IdentityIds.IsNull():
+		identityIdsVal = types.SetNull(types.StringType)
+	default:
+		var d diag.Diagnostics
+		identityIdsVal, d = types.SetValue(types.StringType, v.IdentityIds.Elements())
+		diags.Append(d...)
+	}
 
-	diags.Append(d...)
-
-	if d.HasError() {
+	if diags.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
 			"enforcement_mode": basetypes.StringType{},
 			"identity":         basetypes.StringType{},
@@ -2346,11 +2386,19 @@ func (v PolicyAssignmentsValue) ToObjectValue(ctx context.Context) (basetypes.Ob
 		}), diags
 	}
 
-	parametersVal, d := types.MapValue(types.StringType, v.Parameters.Elements())
+	var parametersVal basetypes.MapValue
+	switch {
+	case v.Parameters.IsUnknown():
+		parametersVal = types.MapUnknown(types.StringType)
+	case v.Parameters.IsNull():
+		parametersVal = types.MapNull(types.StringType)
+	default:
+		var d diag.Diagnostics
+		parametersVal, d = types.MapValue(types.StringType, v.Parameters.Elements())
+		diags.Append(d...)
+	}
 
-	diags.Append(d...)
-
-	if d.HasError() {
+	if diags.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
 			"enforcement_mode": basetypes.StringType{},
 			"identity":         basetypes.StringType{},
@@ -3706,11 +3754,19 @@ func (v OverrideSelectorsValue) String() string {
 func (v OverrideSelectorsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	inVal, d := types.SetValue(types.StringType, v.In.Elements())
+	var inVal basetypes.SetValue
+	switch {
+	case v.In.IsUnknown():
+		inVal = types.SetUnknown(types.StringType)
+	case v.In.IsNull():
+		inVal = types.SetNull(types.StringType)
+	default:
+		var d diag.Diagnostics
+		inVal, d = types.SetValue(types.StringType, v.In.Elements())
+		diags.Append(d...)
+	}
 
-	diags.Append(d...)
-
-	if d.HasError() {
+	if diags.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
 			"in": basetypes.SetType{
 				ElemType: types.StringType,
@@ -3722,11 +3778,19 @@ func (v OverrideSelectorsValue) ToObjectValue(ctx context.Context) (basetypes.Ob
 		}), diags
 	}
 
-	notInVal, d := types.SetValue(types.StringType, v.NotIn.Elements())
+	var notInVal basetypes.SetValue
+	switch {
+	case v.NotIn.IsUnknown():
+		notInVal = types.SetUnknown(types.StringType)
+	case v.NotIn.IsNull():
+		notInVal = types.SetNull(types.StringType)
+	default:
+		var d diag.Diagnostics
+		notInVal, d = types.SetValue(types.StringType, v.NotIn.Elements())
+		diags.Append(d...)
+	}
 
-	diags.Append(d...)
-
-	if d.HasError() {
+	if diags.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
 			"in": basetypes.SetType{
 				ElemType: types.StringType,
@@ -4598,11 +4662,19 @@ func (v ResourceSelectorSelectorsValue) String() string {
 func (v ResourceSelectorSelectorsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	inVal, d := types.SetValue(types.StringType, v.In.Elements())
+	var inVal basetypes.SetValue
+	switch {
+	case v.In.IsUnknown():
+		inVal = types.SetUnknown(types.StringType)
+	case v.In.IsNull():
+		inVal = types.SetNull(types.StringType)
+	default:
+		var d diag.Diagnostics
+		inVal, d = types.SetValue(types.StringType, v.In.Elements())
+		diags.Append(d...)
+	}
 
-	diags.Append(d...)
-
-	if d.HasError() {
+	if diags.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
 			"in": basetypes.SetType{
 				ElemType: types.StringType,
@@ -4614,11 +4686,19 @@ func (v ResourceSelectorSelectorsValue) ToObjectValue(ctx context.Context) (base
 		}), diags
 	}
 
-	notInVal, d := types.SetValue(types.StringType, v.NotIn.Elements())
+	var notInVal basetypes.SetValue
+	switch {
+	case v.NotIn.IsUnknown():
+		notInVal = types.SetUnknown(types.StringType)
+	case v.NotIn.IsNull():
+		notInVal = types.SetNull(types.StringType)
+	default:
+		var d diag.Diagnostics
+		notInVal, d = types.SetValue(types.StringType, v.NotIn.Elements())
+		diags.Append(d...)
+	}
 
-	diags.Append(d...)
-
-	if d.HasError() {
+	if diags.HasError() {
 		return types.ObjectUnknown(map[string]attr.Type{
 			"in": basetypes.SetType{
 				ElemType: types.StringType,
