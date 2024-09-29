@@ -11,8 +11,6 @@ It simplifies the task of creating Azure Management Group hierarchies, together 
 
 *This provider is built on the [Terraform Plugin Framework](https://github.com/hashicorp/terraform-plugin-framework).*
 
-Please see the [GitHub template repository documentation](https://help.github.com/en/github/creating-cloning-and-archiving-repositories/creating-a-repository-from-a-template) for how to create a new repository from this template on GitHub.
-
 ## Using the provider
 
 See the associated [module documentation](https://github.com/Azure/terraform-azurerm-alz) and examples for how to use the provider.
