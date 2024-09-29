@@ -15,6 +15,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -70,6 +72,32 @@ func TestAccAlzArchitectureDataSourceWithDefaultAndModify(t *testing.T) {
 					resource.TestCheckOutput("policy_assignment_resource_selector_name", "test-resource-selector"),
 					resource.TestCheckOutput("policy_assignment_resource_selector_kind", "resourceLocation"),
 					resource.TestCheckOutput("policy_assignment_resource_selector_in", "northeurope"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccAlzArchetypeDataSource tests the data source for alz_archetype.
+// It checks that the policy default values and the modification of policy assignments are correctly applied.
+func TestAccAlzArchitectureDataSourceExistingMg(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
+		ExternalProviders: map[string]resource.ExternalProvider{
+			"azapi": {
+				Source:            "azure/azapi",
+				VersionConstraint: "~> 1.14",
+			},
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccArchitectureDataSourceConfigExistingMg(),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownOutputValue("management_group_exists", knownvalue.Bool(true)),
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.alz_architecture.test", "id", "existingmg"),
 				),
 			},
 		},
@@ -221,6 +249,30 @@ output "policy_assignment_resource_selector_kind" {
 
 output "policy_assignment_resource_selector_in" {
 	value = local.test_policy_assignment_decoded.properties.resourceSelectors[0].selectors[0].in[0]
+}
+`
+}
+
+func testAccArchitectureDataSourceConfigExistingMg() string {
+	return `
+provider "alz" {
+	library_references = [
+		{
+			custom_url = "${path.root}/testdata/existingmg"
+    }
+	]
+}
+
+data "azapi_client_config" "current" {}
+
+data "alz_architecture" "test" {
+	name                     = "existingmg"
+	root_management_group_id = data.azapi_client_config.current.tenant_id
+	location                 = "northeurope"
+}
+
+output "management_group_exists" {
+	value = data.alz_architecture.test.management_groups[0].exists
 }
 `
 }

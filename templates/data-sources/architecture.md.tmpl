@@ -21,7 +21,7 @@ This may cause resources to be unnecessarily recreated.
 
 Such unknown values include resource ids. For example, if you are creating a resource and passing the id of the resource group to the data source, this will cause the issue.
 
-Instead, use the new provider functions with string literalsto generate the resource id.
+Instead, use the new provider functions with string literals to generate the resource id.
 For example:
 
 ### Recommended
@@ -53,5 +53,10 @@ data "alz_architecture" "example" {
   }
 }
 ```
+
+### Deferred Actions
+
+We are awaiting the results of the upstream Terraform language experiment *deferred actions*. This may provide a solution to this issue.
+See the release notes [here](https://github.com/hashicorp/terraform/releases/tag/v1.10.0-alpha20240619) for more information.
 
 {{ .SchemaMarkdown | trimspace }}
