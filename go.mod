@@ -3,12 +3,13 @@ module github.com/Azure/terraform-provider-alz
 go 1.23.1
 
 require (
-	github.com/Azure/alzlib v0.20.1
+	github.com/Azure/alzlib v0.21.0
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.14.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.7.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization v1.0.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy v0.9.0
 	github.com/deckarep/golang-set/v2 v2.6.0
+	github.com/hashicorp/go-uuid v1.0.3
 	github.com/hashicorp/terraform-plugin-docs v0.19.4
 	github.com/hashicorp/terraform-plugin-framework v1.11.0
 	github.com/hashicorp/terraform-plugin-framework-jsontypes v0.2.0
@@ -54,7 +55,6 @@ require (
 	github.com/hashicorp/go-plugin v1.6.1 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
 	github.com/hashicorp/go-safetemp v1.0.0 // indirect
-	github.com/hashicorp/go-uuid v1.0.3 // indirect
 	github.com/hashicorp/go-version v1.7.0 // indirect
 	github.com/hashicorp/hc-install v0.8.0 // indirect
 	github.com/hashicorp/hcl/v2 v2.21.0 // indirect

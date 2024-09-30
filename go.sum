@@ -1,9 +1,7 @@
 dario.cat/mergo v1.0.0 h1:AGCNq9Evsj31mOgNPcLyXc+4PNABt905YmuqPYYpBWk=
 dario.cat/mergo v1.0.0/go.mod h1:uNxQE+84aUszobStD9th8a29P2fMDhsBdgRYvZOxGmk=
-github.com/Azure/alzlib v0.20.0 h1:nkW5oARxCPUCTX+3tPDmOQ4d/I5pXDPZF5a4hjZFPtc=
-github.com/Azure/alzlib v0.20.0/go.mod h1:9AUD6m8ePsnpMu/olfX8CGsRO6HYvxUpl3KlchM6cS8=
-github.com/Azure/alzlib v0.20.1 h1:nXxEC/k9MJmYwUQ2+MAVKH7gpkMO0JmwOjkk/3fVDLY=
-github.com/Azure/alzlib v0.20.1/go.mod h1:9AUD6m8ePsnpMu/olfX8CGsRO6HYvxUpl3KlchM6cS8=
+github.com/Azure/alzlib v0.21.0 h1:q80EDB47HUfDmqKuOU8jTjP2j1a35OrGskwLF/Gn51c=
+github.com/Azure/alzlib v0.21.0/go.mod h1:9AUD6m8ePsnpMu/olfX8CGsRO6HYvxUpl3KlchM6cS8=
 github.com/Azure/azure-sdk-for-go/sdk/azcore v1.14.0 h1:nyQWyZvwGTvunIMxi1Y9uXkcyr+I7TeNrr/foo4Kpk8=
 github.com/Azure/azure-sdk-for-go/sdk/azcore v1.14.0/go.mod h1:l38EPgmsp71HHLq9j7De57JcKOWPyhrsW1Awm1JS6K0=
 github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.7.0 h1:tfLQ34V6F7tVSwoTf/4lH5sE0o6eCJuNDTmH09nDpbc=
@@ -136,8 +134,6 @@ github.com/hashicorp/terraform-plugin-docs v0.19.4 h1:G3Bgo7J22OMtegIgn8Cd/CaSey
 github.com/hashicorp/terraform-plugin-docs v0.19.4/go.mod h1:4pLASsatTmRynVzsjEhbXZ6s7xBlUw/2Kt0zfrq8HxA=
 github.com/hashicorp/terraform-plugin-framework v1.11.0 h1:M7+9zBArexHFXDx/pKTxjE6n/2UCXY6b8FIq9ZYhwfE=
 github.com/hashicorp/terraform-plugin-framework v1.11.0/go.mod h1:qBXLDn69kM97NNVi/MQ9qgd1uWWsVftGSnygYG1tImM=
-github.com/hashicorp/terraform-plugin-framework-jsontypes v0.1.0 h1:b8vZYB/SkXJT4YPbT3trzE6oJ7dPyMy68+9dEDKsJjE=
-github.com/hashicorp/terraform-plugin-framework-jsontypes v0.1.0/go.mod h1:tP9BC3icoXBz72evMS5UTFvi98CiKhPdXF6yLs1wS8A=
 github.com/hashicorp/terraform-plugin-framework-jsontypes v0.2.0 h1:SJXL5FfJJm17554Kpt9jFXngdM6fXbnUnZ6iT2IeiYA=
 github.com/hashicorp/terraform-plugin-framework-jsontypes v0.2.0/go.mod h1:p0phD0IYhsu9bR4+6OetVvvH59I6LwjXGnTVEr8ox6E=
 github.com/hashicorp/terraform-plugin-framework-timeouts v0.4.1 h1:gm5b1kHgFFhaKFhm4h2TgvMUlNzFAtUqlcOWnWPm+9E=
