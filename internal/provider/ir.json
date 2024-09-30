@@ -266,6 +266,31 @@
   },
   "datasources": [
     {
+      "name": "metadata",
+      "schema": {
+        "markdown_description": "The metadata data source provides metadata information from ALZ library.",
+        "attributes": [
+          {
+            "name": "id",
+            "string": {
+              "description": "A computed value representing the unique identifier for the architecture. Mandatory for acceptance testing.",
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "alz_library_references",
+            "list": {
+              "computed_optional_required": "computed",
+              "element_type": {
+                "string": {}
+              },
+              "description": "A list of all loaded ALZ library references."
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "architecture",
       "schema": {
         "markdown_description": "The architecture data source provides the information required to deploy an ALZ management group hierarchy, including policy and additional role assignment detail.",
@@ -979,71 +1004,5 @@
       }
     }
   ],
-  "resources": [
-    {
-      "name": "policy_role_assignments",
-      "schema": {
-        "deprecation_message": "The functionality provided by this meta resource now exists in the module, where it is more appropriate. Please do not use this.",
-        "attributes": [
-          {
-            "name": "id",
-            "string": {
-              "description": "The id architecture.",
-              "computed_optional_required": "computed"
-            }
-          },
-          {
-            "name": "assignments",
-            "set_nested": {
-              "computed_optional_required": "required",
-              "nested_object": {
-                "attributes": [
-                  {
-                    "name": "principal_id",
-                    "string": {
-                      "description": "The principal id to assign the role to.",
-                      "computed_optional_required": "required"
-                    }
-                  },
-                  {
-                    "name": "role_definition_id",
-                    "string": {
-                      "description": "The role definition id to assign.",
-                      "computed_optional_required": "required"
-                    }
-                  },
-                  {
-                    "name": "scope",
-                    "string": {
-                      "description": "The scope of the assignment.",
-                      "computed_optional_required": "required",
-                      "validators": [
-                        {
-                          "custom": {
-                            "imports": [
-                              {
-                                "path": "github.com/Azure/terraform-provider-alz/internal/alzvalidators"
-                              }
-                            ],
-                            "schema_definition": "alzvalidators.ArmResourceId()"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "name": "resource_id",
-                    "string": {
-                      "description": "The resource id of the role assignment.",
-                      "computed_optional_required": "computed"
-                    }
-                  }
-                ]
-              }
-            }
-          }
-        ]
-      }
-    }
-  ]
+  "resources": []
 }

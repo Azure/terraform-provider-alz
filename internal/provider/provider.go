@@ -182,6 +182,7 @@ func (p *AlzProvider) Resources(ctx context.Context) []func() resource.Resource 
 func (p *AlzProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewArchitectureDataSource,
+		NewMetadataDataSource,
 	}
 }
 
