@@ -63,6 +63,13 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
+	if req.ClientCapabilities.DeferralAllowed && isArchitectureDataUnknown(ctx, data) {
+		resp.Deferred = &datasource.Deferred{
+			Reason: datasource.DeferredReasonDataSourceConfigUnknown,
+		}
+		return
+	}
+
 	readTimeout, diags := data.Timeouts.Read(ctx, 10*time.Minute)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -146,6 +153,21 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func isArchitectureDataUnknown(ctx context.Context, data gen.ArchitectureModel) bool {
+	if data.Name.IsUnknown() || data.RootManagementGroupId.IsUnknown() || data.Location.IsUnknown() {
+		return true
+	}
+	pam, _ := data.PolicyAssignmentsToModify.ToTerraformValue(ctx)
+	if !pam.IsFullyKnown() {
+		return true
+	}
+	pdv, _ := data.PolicyDefaultValues.ToTerraformValue(ctx)
+	if !pdv.IsFullyKnown() {
+		return true
+	}
+	return false
 }
 
 func modifyPolicyAssignments(ctx context.Context, depl *deployment.Hierarchy, data gen.ArchitectureModel, resp *datasource.ReadResponse) {

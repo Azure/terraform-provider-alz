@@ -97,6 +97,14 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	if req.ClientCapabilities.DeferralAllowed && isProviderDataUnknown(ctx, data) {
+		resp.Deferred = &provider.Deferred{
+			Reason: provider.DeferredReasonProviderConfigUnknown,
+		}
+		return
+	}
+
 	// Read the environment variables and set in data
 	// if the data is not already set and the environment variable is set.
 	configureFromEnvironment(&data)
@@ -311,6 +319,32 @@ func str2Bool(val string) bool {
 		b = false
 	}
 	return b
+}
+
+func isProviderDataUnknown(ctx context.Context, data gen.AlzModel) bool {
+	if data.TenantId.IsUnknown() ||
+		data.ClientCertificatePassword.IsUnknown() ||
+		data.ClientCertificatePath.IsUnknown() ||
+		data.ClientId.IsUnknown() ||
+		data.ClientSecret.IsUnknown() ||
+		data.Environment.IsUnknown() ||
+		data.LibraryFetchDependencies.IsUnknown() ||
+		data.LibraryOverwriteEnabled.IsUnknown() ||
+		data.OidcRequestToken.IsUnknown() ||
+		data.OidcRequestUrl.IsUnknown() ||
+		data.OidcToken.IsUnknown() ||
+		data.OidcTokenFilePath.IsUnknown() ||
+		data.SkipProviderRegistration.IsUnknown() ||
+		data.UseCli.IsUnknown() ||
+		data.UseMsi.IsUnknown() ||
+		data.UseOidc.IsUnknown() {
+		return true
+	}
+	lr, _ := data.LibraryReferences.ToTerraformValue(ctx)
+	if !lr.IsFullyKnown() {
+		return true
+	}
+	return false
 }
 
 // configureAzIdentityEnvironment sets the environment variables used by go Azure sdk's azidentity package.
