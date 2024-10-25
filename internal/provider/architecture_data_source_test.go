@@ -29,7 +29,7 @@ func TestAccAlzArchitectureDataSourceRemoteLib(t *testing.T) {
 		ExternalProviders: map[string]resource.ExternalProvider{
 			"azapi": {
 				Source:            "azure/azapi",
-				VersionConstraint: "~> 1.14",
+				VersionConstraint: "~> 2.0",
 			},
 		},
 		Steps: []resource.TestStep{
@@ -52,7 +52,7 @@ func TestAccAlzArchitectureDataSourceWithDefaultAndModify(t *testing.T) {
 		ExternalProviders: map[string]resource.ExternalProvider{
 			"azapi": {
 				Source:            "azure/azapi",
-				VersionConstraint: "~> 1.14",
+				VersionConstraint: "~> 2.0",
 			},
 		},
 		Steps: []resource.TestStep{
@@ -87,7 +87,7 @@ func TestAccAlzArchitectureDataSourceExistingMg(t *testing.T) {
 		ExternalProviders: map[string]resource.ExternalProvider{
 			"azapi": {
 				Source:            "azure/azapi",
-				VersionConstraint: "~> 1.14",
+				VersionConstraint: "~> 2.0",
 			},
 		},
 		Steps: []resource.TestStep{
@@ -99,6 +99,24 @@ func TestAccAlzArchitectureDataSourceExistingMg(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.alz_architecture.test", "id", "existingmg"),
 				),
+			},
+		},
+	})
+}
+
+func TestAccAlzArchitectureDataSourceModifyPolicyAssignmentNonExistent(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
+		ExternalProviders: map[string]resource.ExternalProvider{
+			"azapi": {
+				Source:            "azure/azapi",
+				VersionConstraint: "~> 2.0",
+			},
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccArchitectureDataSourceConfigModifyPolicyAssignmentNonExistent(),
 			},
 		},
 	})
@@ -273,6 +291,35 @@ data "alz_architecture" "test" {
 
 output "management_group_exists" {
 	value = data.alz_architecture.test.management_groups[0].exists
+}
+`
+}
+
+func testAccArchitectureDataSourceConfigModifyPolicyAssignmentNonExistent() string {
+	return `
+provider "alz" {
+  library_references = [
+    {
+	    custom_url = "${path.root}/testdata/testacc_lib"
+	  }
+	]
+}
+
+data "azapi_client_config" "current" {}
+
+data "alz_architecture" "test" {
+  name                     = "test"
+  root_management_group_id = data.azapi_client_config.current.tenant_id
+  location                 = "swedencentral"
+  policy_assignments_to_modify = {
+    not_exist = {
+      policy_assignments = {
+        Deploy-MDEndpoints = {
+          enforcement_mode = "DoNotEnforce"
+        }
+      }
+    }
+  }
 }
 `
 }
