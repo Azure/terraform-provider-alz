@@ -150,6 +150,14 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 func modifyPolicyAssignments(ctx context.Context, depl *deployment.Hierarchy, data gen.ArchitectureModel, resp *datasource.ReadResponse) {
 	for mgName, pa2modValue := range data.PolicyAssignmentsToModify.Elements() {
+		mg := depl.ManagementGroup(mgName)
+		if mg == nil {
+			resp.Diagnostics.AddWarning(
+				"architectureDataSource.Read() Warning modifying policy assignments",
+				fmt.Sprintf("Management group `%s` not found in hierarchy", mgName),
+			)
+			return
+		}
 		pa2mod, ok := pa2modValue.(gen.PolicyAssignmentsToModifyValue)
 		if !ok {
 			resp.Diagnostics.AddError(
@@ -175,7 +183,7 @@ func modifyPolicyAssignments(ctx context.Context, depl *deployment.Hierarchy, da
 				)
 				return
 			}
-			if err := depl.ManagementGroup(mgName).ModifyPolicyAssignment(paName, params, enf, noncompl, ident, resourceSel, overrides); err != nil {
+			if err := mg.ModifyPolicyAssignment(paName, params, enf, noncompl, ident, resourceSel, overrides); err != nil {
 				resp.Diagnostics.AddError(
 					"architectureDataSource.Read() Error modifying policy assignment values in alzlib",
 					fmt.Sprintf("Error modifying policy assignment values for `%s` at mg `%s`: %s", paName, mgName, err.Error()),
