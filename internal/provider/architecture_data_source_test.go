@@ -72,6 +72,7 @@ func TestAccAlzArchitectureDataSourceWithDefaultAndModify(t *testing.T) {
 					resource.TestCheckOutput("policy_assignment_resource_selector_name", "test-resource-selector"),
 					resource.TestCheckOutput("policy_assignment_resource_selector_kind", "resourceLocation"),
 					resource.TestCheckOutput("policy_assignment_resource_selector_in", "northeurope"),
+					resource.TestCheckOutput("policy_assignment_resource_selector_notin_should_be_null", "true"),
 				),
 			},
 		},
@@ -184,7 +185,7 @@ data "alz_architecture" "test" {
 					parameters = {
 						metricsEnabled = jsonencode({ value = false })
 					}
-					resource_selectors = [
+					resource_selectors	 = [
 						{
 							name = "test-resource-selector"
 							resource_selector_selectors = [
@@ -267,6 +268,10 @@ output "policy_assignment_resource_selector_kind" {
 
 output "policy_assignment_resource_selector_in" {
 	value = local.test_policy_assignment_decoded.properties.resourceSelectors[0].selectors[0].in[0]
+}
+
+output "policy_assignment_resource_selector_notin_should_be_null" {
+	value = lookup(local.test_policy_assignment_decoded.properties.resourceSelectors[0].selectors[0], "notIn", null) == null
 }
 `
 }

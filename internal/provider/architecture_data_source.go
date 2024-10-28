@@ -330,22 +330,35 @@ func convertPolicyAssignmentOverridesToSdkType(ctx context.Context, input []gen.
 					"unable to convert override selectors attr.Value to concrete type",
 				)
 			}
-			in, err := frameworktype.SliceOfPrimitiveToGo[string](ctx, osv.In.Elements())
-			if err != nil {
-				resp.Diagnostics.AddError(
-					"convertPolicyAssignmentOverridesToSdkType: error",
-					fmt.Sprintf("unable to convert OverrideSelctorsValue.In elements to Go slice: %s", err.Error()),
-				)
-				return nil
+
+			// Convert In to a go slice, start off from an uninitialized slice so that the value is nil if the input is empty.
+			var in []*string
+			if len(osv.In.Elements()) != 0 {
+				var err error
+				in, err = frameworktype.SliceOfPrimitiveToGo[string](ctx, osv.In.Elements())
+				if err != nil {
+					resp.Diagnostics.AddError(
+						"convertPolicyAssignmentOverridesToSdkType: error",
+						fmt.Sprintf("unable to convert OverrideSelctorsValue.In elements to Go slice: %s", err.Error()),
+					)
+					return nil
+				}
 			}
-			notIn, err := frameworktype.SliceOfPrimitiveToGo[string](ctx, osv.NotIn.Elements())
-			if err != nil {
-				resp.Diagnostics.AddError(
-					"convertPolicyAssignmentOverridesToSdkType: error",
-					fmt.Sprintf("unable to convert OverrideSelctorsValue.NotIn elements to Go slice: %s", err.Error()),
-				)
-				return nil
+
+			// Convert NotIn to a go slice, start off from an uninitialized slice so that the value is nil if the input is empty.
+			var notIn []*string
+			if len(osv.NotIn.Elements()) != 0 {
+				var err error
+				notIn, err = frameworktype.SliceOfPrimitiveToGo[string](ctx, osv.NotIn.Elements())
+				if err != nil {
+					resp.Diagnostics.AddError(
+						"convertPolicyAssignmentOverridesToSdkType: error",
+						fmt.Sprintf("unable to convert OverrideSelctorsValue.NotIn elements to Go slice: %s", err.Error()),
+					)
+					return nil
+				}
 			}
+
 			selectors[j] = &armpolicy.Selector{
 				Kind:  to.Ptr(armpolicy.SelectorKind(osv.Kind.ValueString())),
 				In:    in,
@@ -376,22 +389,35 @@ func convertPolicyAssignmentResourceSelectorsToSdkType(ctx context.Context, inpu
 					"unable to convert resource selector selectors attr.Value to concrete type",
 				)
 			}
-			in, err := frameworktype.SliceOfPrimitiveToGo[string](ctx, rssv.In.Elements())
-			if err != nil {
-				resp.Diagnostics.AddError(
-					"convertPolicyAssignmentResourceSelectorsToSdkType: error",
-					fmt.Sprintf("unable to convert ResourceSelectorSelectorsValue.In elements to Go slice: %s", err.Error()),
-				)
-				return nil
+
+			// Convert In to a go slice, start off from an uninitialized slice so that the value is nil if the input is empty.
+			var in []*string
+			if len(rssv.In.Elements()) != 0 {
+				var err error
+				in, err = frameworktype.SliceOfPrimitiveToGo[string](ctx, rssv.In.Elements())
+				if err != nil {
+					resp.Diagnostics.AddError(
+						"convertPolicyAssignmentResourceSelectorsToSdkType: error",
+						fmt.Sprintf("unable to convert ResourceSelectorSelectorsValue.In elements to Go slice: %s", err.Error()),
+					)
+					return nil
+				}
 			}
-			notIn, err := frameworktype.SliceOfPrimitiveToGo[string](ctx, rssv.NotIn.Elements())
-			if err != nil {
-				resp.Diagnostics.AddError(
-					"convertPolicyAssignmentResourceSelectorsToSdkType: error",
-					fmt.Sprintf("unable to convert ResourceSelectorSelectorsValue.NotIn elements to Go slice: %s", err.Error()),
-				)
-				return nil
+
+			// Convert NotIn to a go slice, start off from an uninitialized slice so that the value is nil if the input is empty.
+			var notIn []*string
+			if len(rssv.NotIn.Elements()) != 0 {
+				var err error
+				notIn, err = frameworktype.SliceOfPrimitiveToGo[string](ctx, rssv.NotIn.Elements())
+				if err != nil {
+					resp.Diagnostics.AddError(
+						"convertPolicyAssignmentResourceSelectorsToSdkType: error",
+						fmt.Sprintf("unable to convert ResourceSelectorSelectorsValue.NotIn elements to Go slice: %s", err.Error()),
+					)
+					return nil
+				}
 			}
+
 			selectors[j] = &armpolicy.Selector{
 				Kind:  to.Ptr(armpolicy.SelectorKind(rssv.Kind.ValueString())),
 				In:    in,
