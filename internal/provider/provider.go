@@ -40,7 +40,7 @@ import (
 const (
 	userAgentBase = "AzureTerraformAlzProvider"
 	alzLibDirBase = ".alzlib"
-	alzLibRef     = "2024.07.5"
+	alzLibRef     = "2024.10.1"
 	alzLibPath    = "platform/alz"
 )
 
