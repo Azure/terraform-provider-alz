@@ -96,7 +96,7 @@ If this value is not specified, the default value will be used, which is:
 
 ```terraform
 alz_library_references = [
-  { path = "platform/alz", tag = "2024.07.5" },
+  { path = "platform/alz", tag = "2024.10.1" },
 ]
 ``` (see [below for nested schema](#nestedatt--library_references))
 - `oidc_request_token` (String, Sensitive) The bearer token for the request to the OIDC provider. For use when authenticating using OpenID Connect. If not specified, value will be attempted to be read from the first non-empty value of the `ARM_OIDC_REQUEST_TOKEN` and `ACTIONS_ID_TOKEN_REQUEST_TOKEN` environment variables.
