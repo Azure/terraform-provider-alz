@@ -63,16 +63,16 @@ changelog:
   use: github
   groups:
     - title: Features
-      regexp: '^.*?feat:?(\([[:word:]]+\))??!?:.+$'
+      regexp: '^.*?feat!?(\([[:word:]]+\))??!?:.+$'
       order: 0
     - title: "Bug fixes"
-      regexp: '^.*?fix:?(\([[:word:]]+\))??!?:.+$'
+      regexp: '^.*?fix!?(\([[:word:]]+\))??!?:.+$'
       order: 1
     - title: "Doc updates"
       regexp: '^.*?docs(\([[:word:]]+\))??!?:.+$'
       order: 999
   filters:
     include:
-      - "^feat:"
-      - "^fix:"
+      - "^feat!?:"
+      - "^fix:!?"
       - "^docs:"
