@@ -65,9 +65,9 @@ type AlzProviderClients struct {
 
 type alzProviderData struct {
 	*alzlib.AlzLib
-	mu                               *sync.Mutex
-	clients                          *AlzProviderClients
-	skipWarningPolicyRoleAssignments bool
+	mu                                   *sync.Mutex
+	clients                              *AlzProviderClients
+	suppressWarningPolicyRoleAssignments bool
 }
 
 func (p *AlzProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -167,10 +167,10 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 	// Store the alz pointer in the provider struct so we don't have to do all this work every time `.Configure` is called.
 	// Due to fetch from Azure, it takes approx 30 seconds each time and is called 4-5 time during a single acceptance test.
 	p.data = &alzProviderData{
-		AlzLib:                           alz,
-		mu:                               &sync.Mutex{},
-		clients:                          clients,
-		skipWarningPolicyRoleAssignments: data.SkipWarningPolicyRoleAssignments.ValueBool(),
+		AlzLib:                               alz,
+		mu:                                   &sync.Mutex{},
+		clients:                              clients,
+		suppressWarningPolicyRoleAssignments: data.SuppressWarningPolicyRoleAssignments.ValueBool(),
 	}
 	resp.DataSourceData = p.data
 	resp.ResourceData = p.data
@@ -305,8 +305,8 @@ func configureFromEnvironment(data *gen.AlzModel) {
 		data.SkipProviderRegistration = types.BoolValue(str2Bool(val))
 	}
 
-	if val := getFirstSetEnvVar("ALZ_PROVIDER_SKIP_WARNING_POLICY_ROLE_ASSIGNMENTS"); val != "" && data.SkipWarningPolicyRoleAssignments.IsNull() {
-		data.SkipWarningPolicyRoleAssignments = types.BoolValue(str2Bool(val))
+	if val := getFirstSetEnvVar("ALZ_PROVIDER_SUPPRESS_WARNING_POLICY_ROLE_ASSIGNMENTS"); val != "" && data.SuppressWarningPolicyRoleAssignments.IsNull() {
+		data.SuppressWarningPolicyRoleAssignments = types.BoolValue(str2Bool(val))
 	}
 }
 
@@ -491,8 +491,8 @@ func configureDefaults(ctx context.Context, data *gen.AlzModel) {
 	}
 
 	// Do not skip warning policy role assignments by default.
-	if data.SkipWarningPolicyRoleAssignments.IsNull() {
-		data.SkipWarningPolicyRoleAssignments = types.BoolValue(false)
+	if data.SuppressWarningPolicyRoleAssignments.IsNull() {
+		data.SuppressWarningPolicyRoleAssignments = types.BoolValue(false)
 	}
 }
 

@@ -123,10 +123,10 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 			)
 			return
 		}
-		if !d.data.skipWarningPolicyRoleAssignments {
+		if !d.data.suppressWarningPolicyRoleAssignments {
 			resp.Diagnostics.AddWarning(
 				"architectureDataSource.Read() External role assignment creation required for Azure Policy assignments.",
-				fmt.Sprintf("This is a known limitation, please do not raise GitHub issues!\nSee `https://github.com/Azure/alzlib/issues/189`\n\n%s", praErr.Error()),
+				fmt.Sprintf("This is a known limitation, please do not raise GitHub issues!\nTo suppress this message see the provider flag: `suppress_warning_policy_role_assignments`\n\nSee `https://github.com/Azure/alzlib/issues/189`\n\n%s", praErr.Error()),
 			)
 		}
 	}
