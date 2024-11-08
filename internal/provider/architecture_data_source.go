@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"time"
@@ -113,12 +114,22 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 	// Generate policy role assignments
 	policyRoleAssignments, err := depl.PolicyRoleAssignments(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"architectureDataSource.Read() Error generating policy role assignments",
-			err.Error(),
-		)
-		return
+		var praErr *deployment.PolicyRoleAssignmentErrors
+		if !errors.As(err, &praErr) {
+			resp.Diagnostics.AddError(
+				"architectureDataSource.Read() Error generating policy role assignments",
+				err.Error(),
+			)
+			return
+		}
+		for _, e := range praErr.Errors() {
+			resp.Diagnostics.AddWarning(
+				"architectureDataSource.Read() Manual policy role assignment creation required.",
+				fmt.Sprintf("This is a known limitation, please do not raise GitHub issues!\nSee `https://github.com/Azure/alzlib/issues/189`\n\n%s", e.Error()),
+			)
+		}
 	}
+
 	policyRoleAssignmentsVal, diags := policyRoleAssignmentsSetToProviderType(ctx, policyRoleAssignments.ToSlice())
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
