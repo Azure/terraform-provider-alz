@@ -138,6 +138,11 @@ func AlzProviderSchema(ctx context.Context) schema.Schema {
 				Description:         "Should the provider skip registering all of the resource providers that it supports, if they're not already registered? Default is `false`. If not specified, value will be attempted to be read from the `ARM_SKIP_PROVIDER_REGISTRATION` environment variable.",
 				MarkdownDescription: "Should the provider skip registering all of the resource providers that it supports, if they're not already registered? Default is `false`. If not specified, value will be attempted to be read from the `ARM_SKIP_PROVIDER_REGISTRATION` environment variable.",
 			},
+			"suppress_warning_policy_role_assignments": schema.BoolAttribute{
+				Optional:            true,
+				Description:         "Should the provider omit the warning if it cannot create the full list of policy role assignments? Default is `false`. If not specified, value will be attempted to be read from the `ALZ_PROVIDER_SUPPRESS_WARNING_POLICY_ROLE_ASSIGNMENTS` environment variable.",
+				MarkdownDescription: "Should the provider omit the warning if it cannot create the full list of policy role assignments? Default is `false`. If not specified, value will be attempted to be read from the `ALZ_PROVIDER_SUPPRESS_WARNING_POLICY_ROLE_ASSIGNMENTS` environment variable.",
+			},
 			"tenant_id": schema.StringAttribute{
 				Optional:            true,
 				Description:         "The Tenant ID which should be used. If not specified, value will be attempted to be read from the `ARM_TENANT_ID` environment variable.",
@@ -165,24 +170,25 @@ func AlzProviderSchema(ctx context.Context) schema.Schema {
 }
 
 type AlzModel struct {
-	AuxiliaryTenantIds        types.List   `tfsdk:"auxiliary_tenant_ids"`
-	ClientCertificatePassword types.String `tfsdk:"client_certificate_password"`
-	ClientCertificatePath     types.String `tfsdk:"client_certificate_path"`
-	ClientId                  types.String `tfsdk:"client_id"`
-	ClientSecret              types.String `tfsdk:"client_secret"`
-	Environment               types.String `tfsdk:"environment"`
-	LibraryFetchDependencies  types.Bool   `tfsdk:"library_fetch_dependencies"`
-	LibraryOverwriteEnabled   types.Bool   `tfsdk:"library_overwrite_enabled"`
-	LibraryReferences         types.List   `tfsdk:"library_references"`
-	OidcRequestToken          types.String `tfsdk:"oidc_request_token"`
-	OidcRequestUrl            types.String `tfsdk:"oidc_request_url"`
-	OidcToken                 types.String `tfsdk:"oidc_token"`
-	OidcTokenFilePath         types.String `tfsdk:"oidc_token_file_path"`
-	SkipProviderRegistration  types.Bool   `tfsdk:"skip_provider_registration"`
-	TenantId                  types.String `tfsdk:"tenant_id"`
-	UseCli                    types.Bool   `tfsdk:"use_cli"`
-	UseMsi                    types.Bool   `tfsdk:"use_msi"`
-	UseOidc                   types.Bool   `tfsdk:"use_oidc"`
+	AuxiliaryTenantIds                   types.List   `tfsdk:"auxiliary_tenant_ids"`
+	ClientCertificatePassword            types.String `tfsdk:"client_certificate_password"`
+	ClientCertificatePath                types.String `tfsdk:"client_certificate_path"`
+	ClientId                             types.String `tfsdk:"client_id"`
+	ClientSecret                         types.String `tfsdk:"client_secret"`
+	Environment                          types.String `tfsdk:"environment"`
+	LibraryFetchDependencies             types.Bool   `tfsdk:"library_fetch_dependencies"`
+	LibraryOverwriteEnabled              types.Bool   `tfsdk:"library_overwrite_enabled"`
+	LibraryReferences                    types.List   `tfsdk:"library_references"`
+	OidcRequestToken                     types.String `tfsdk:"oidc_request_token"`
+	OidcRequestUrl                       types.String `tfsdk:"oidc_request_url"`
+	OidcToken                            types.String `tfsdk:"oidc_token"`
+	OidcTokenFilePath                    types.String `tfsdk:"oidc_token_file_path"`
+	SkipProviderRegistration             types.Bool   `tfsdk:"skip_provider_registration"`
+	SuppressWarningPolicyRoleAssignments types.Bool   `tfsdk:"suppress_warning_policy_role_assignments"`
+	TenantId                             types.String `tfsdk:"tenant_id"`
+	UseCli                               types.Bool   `tfsdk:"use_cli"`
+	UseMsi                               types.Bool   `tfsdk:"use_msi"`
+	UseOidc                              types.Bool   `tfsdk:"use_oidc"`
 }
 
 var _ basetypes.ObjectTypable = LibraryReferencesType{}

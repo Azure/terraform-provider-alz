@@ -110,6 +110,13 @@
           }
         },
         {
+          "name": "suppress_warning_policy_role_assignments",
+          "bool": {
+            "optional_required": "optional",
+            "description": "Should the provider omit the warning if it cannot create the full list of policy role assignments? Default is `false`. If not specified, value will be attempted to be read from the `ALZ_PROVIDER_SUPPRESS_WARNING_POLICY_ROLE_ASSIGNMENTS` environment variable."
+          }
+        },
+        {
           "name": "tenant_id",
           "string": {
             "optional_required": "optional",

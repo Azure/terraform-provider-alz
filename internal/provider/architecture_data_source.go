@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"time"
@@ -27,7 +28,7 @@ func NewArchitectureDataSource() datasource.DataSource {
 }
 
 type architectureDataSource struct {
-	alz *alzProviderData
+	data *alzProviderData
 }
 
 func (d *architectureDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -51,7 +52,7 @@ func (d *architectureDataSource) Configure(ctx context.Context, req datasource.C
 		)
 		return
 	}
-	d.alz = data
+	d.data = data
 }
 
 func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
@@ -71,7 +72,7 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
 	defer cancel()
 
-	if d.alz == nil {
+	if d.data == nil {
 		resp.Diagnostics.AddError(
 			"architectureDataSource.Read() Provider not configured",
 			"The provider has not been configured. Please see the provider documentation for configuration instructions.",
@@ -80,7 +81,7 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	// Use alzlib to create the hierarchy from the supplied architecture
-	depl := deployment.NewHierarchy(d.alz.AlzLib)
+	depl := deployment.NewHierarchy(d.data.AlzLib)
 	if err := depl.FromArchitecture(ctx, data.Name.ValueString(), data.RootManagementGroupId.ValueString(), data.Location.ValueString()); err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("architectureDataSource.Read() Error creating architecture %s", data.Name.ValueString()),
@@ -113,12 +114,23 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 	// Generate policy role assignments
 	policyRoleAssignments, err := depl.PolicyRoleAssignments(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"architectureDataSource.Read() Error generating policy role assignments",
-			err.Error(),
-		)
-		return
+		var praErr *deployment.PolicyRoleAssignmentErrors
+		as := errors.As(err, &praErr)
+		if !as {
+			resp.Diagnostics.AddError(
+				"architectureDataSource.Read() Error generating policy role assignments",
+				err.Error(),
+			)
+			return
+		}
+		if !d.data.suppressWarningPolicyRoleAssignments {
+			resp.Diagnostics.AddWarning(
+				"architectureDataSource.Read() External role assignment creation required for Azure Policy assignments.",
+				fmt.Sprintf("This is a known limitation, please do not raise GitHub issues!\nTo suppress this message see the provider flag: `suppress_warning_policy_role_assignments`\n\nSee `https://github.com/Azure/alzlib/issues/189`\n\n%s", praErr.Error()),
+			)
+		}
 	}
+
 	policyRoleAssignmentsVal, diags := policyRoleAssignmentsSetToProviderType(ctx, policyRoleAssignments.ToSlice())
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
