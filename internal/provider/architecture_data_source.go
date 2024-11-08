@@ -115,7 +115,8 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 	policyRoleAssignments, err := depl.PolicyRoleAssignments(ctx)
 	if err != nil {
 		var praErr *deployment.PolicyRoleAssignmentErrors
-		if !errors.As(err, &praErr) {
+		as := errors.As(err, &praErr)
+		if !as {
 			resp.Diagnostics.AddError(
 				"architectureDataSource.Read() Error generating policy role assignments",
 				err.Error(),
