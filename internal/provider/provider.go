@@ -56,7 +56,7 @@ type AlzProvider struct {
 	// provider is built and ran locally, and "test" when running acceptance
 	// testing.
 	version string
-	alz     *alzProviderData
+	data    *alzProviderData
 }
 
 type AlzProviderClients struct {
@@ -65,8 +65,9 @@ type AlzProviderClients struct {
 
 type alzProviderData struct {
 	*alzlib.AlzLib
-	mu      *sync.Mutex
-	clients *AlzProviderClients
+	mu                               *sync.Mutex
+	clients                          *AlzProviderClients
+	skipWarningPolicyRoleAssignments bool
 }
 
 func (p *AlzProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -81,10 +82,10 @@ func (p *AlzProvider) Schema(ctx context.Context, req provider.SchemaRequest, re
 func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	tflog.Debug(ctx, "Provider configuration started")
 
-	if p.alz != nil {
+	if p.data != nil {
 		tflog.Debug(ctx, "Provider AlzLib already present, skipping configuration")
-		resp.DataSourceData = p.alz
-		resp.ResourceData = p.alz
+		resp.DataSourceData = p.data
+		resp.ResourceData = p.data
 		return
 	}
 
@@ -165,13 +166,14 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 
 	// Store the alz pointer in the provider struct so we don't have to do all this work every time `.Configure` is called.
 	// Due to fetch from Azure, it takes approx 30 seconds each time and is called 4-5 time during a single acceptance test.
-	p.alz = &alzProviderData{
-		AlzLib:  alz,
-		mu:      &sync.Mutex{},
-		clients: clients,
+	p.data = &alzProviderData{
+		AlzLib:                           alz,
+		mu:                               &sync.Mutex{},
+		clients:                          clients,
+		skipWarningPolicyRoleAssignments: data.SkipWarningPolicyRoleAssignments.ValueBool(),
 	}
-	resp.DataSourceData = p.alz
-	resp.ResourceData = p.alz
+	resp.DataSourceData = p.data
+	resp.ResourceData = p.data
 	tflog.Debug(ctx, "Provider configuration finished")
 }
 
@@ -301,6 +303,10 @@ func configureFromEnvironment(data *gen.AlzModel) {
 
 	if val := getFirstSetEnvVar("ARM_SKIP_PROVIDER_REGISTRATION"); val != "" && data.SkipProviderRegistration.IsNull() {
 		data.SkipProviderRegistration = types.BoolValue(str2Bool(val))
+	}
+
+	if val := getFirstSetEnvVar("ALZ_PROVIDER_SKIP_WARNING_POLICY_ROLE_ASSIGNMENTS"); val != "" && data.SkipWarningPolicyRoleAssignments.IsNull() {
+		data.SkipWarningPolicyRoleAssignments = types.BoolValue(str2Bool(val))
 	}
 }
 
@@ -482,6 +488,11 @@ func configureDefaults(ctx context.Context, data *gen.AlzModel) {
 			},
 		)
 		data.LibraryReferences = types.ListValueMust(element.Type(ctx), []attr.Value{element})
+	}
+
+	// Do not skip warning policy role assignments by default.
+	if data.SkipWarningPolicyRoleAssignments.IsNull() {
+		data.SkipWarningPolicyRoleAssignments = types.BoolValue(false)
 	}
 }
 
