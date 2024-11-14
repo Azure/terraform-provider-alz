@@ -71,8 +71,3 @@ changelog:
     - title: "Doc updates"
       regexp: '^.*?docs(\([[:word:]]+\))??!?:.+$'
       order: 999
-  filters:
-    include:
-      - "^feat:"
-      - "^fix:"
-      - "^docs:"
