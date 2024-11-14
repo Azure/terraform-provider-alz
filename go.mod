@@ -1,9 +1,9 @@
 module github.com/Azure/terraform-provider-alz
 
-go 1.23.1
+go 1.23.3
 
 require (
-	github.com/Azure/alzlib v0.23.1
+	github.com/Azure/alzlib v0.24.0
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.16.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.8.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization v1.0.0
@@ -31,6 +31,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.3 // indirect
 	github.com/ProtonMail/go-crypto v1.1.0-alpha.3-proton // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
+	github.com/alecthomas/participle/v2 v2.1.1 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
@@ -69,6 +70,7 @@ require (
 	github.com/imdario/mergo v0.3.15 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
+	github.com/matt-FFFFFF/goarmfunctions v0.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
