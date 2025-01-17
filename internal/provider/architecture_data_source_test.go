@@ -366,7 +366,7 @@ data "alz_architecture" "test" {
 	name                     = "test"
 	root_management_group_id = data.azapi_client_config.current.tenant_id
 	location                 = "northeurope"
-	override_policy_definition_parameter_assignpermissions_set = [
+	override_policy_definition_parameter_assign_permissions_set = [
 		{
 			definition_name = "test-policy-definition"
 			parameter_name  = "logAnalytics"
