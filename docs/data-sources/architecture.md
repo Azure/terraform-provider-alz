@@ -81,8 +81,8 @@ See the release notes [here](https://github.com/hashicorp/terraform/releases/tag
 
 ### Optional
 
-- `override_policy_definition_parameter_assignpermissions_set` (Attributes Set) This list of objects allows you to set the [`assignPermissions` metadata property](https://learn.microsoft.com/azure/governance/policy/concepts/definition-structure-parameters#parameter-properties) of the supplied definition and parameter names. This allows you to correct policies that haven't been authored correctly and means that the provider can generate the correct policy role assignments. (see [below for nested schema](#nestedatt--override_policy_definition_parameter_assignpermissions_set))
-- `override_policy_definition_parameter_assignpermissions_unset` (Attributes Set) This list of objects allows you to unset set the [`assignPermissions` metadata property](https://learn.microsoft.com/azure/governance/policy/concepts/definition-structure-parameters#parameter-properties) of the supplied definition and parameter names. This allows you to correct policies that haven't been authored correctly, or prevent permissions being assigned for policies that are disabled in a policy set. The provider can then generate the correct policy role assignments. (see [below for nested schema](#nestedatt--override_policy_definition_parameter_assignpermissions_unset))
+- `override_policy_definition_parameter_assign_permissions_set` (Attributes Set) This list of objects allows you to set the [`assignPermissions` metadata property](https://learn.microsoft.com/azure/governance/policy/concepts/definition-structure-parameters#parameter-properties) of the supplied definition and parameter names. This allows you to correct policies that haven't been authored correctly and means that the provider can generate the correct policy role assignments. (see [below for nested schema](#nestedatt--override_policy_definition_parameter_assign_permissions_set))
+- `override_policy_definition_parameter_assign_permissions_unset` (Attributes Set) This list of objects allows you to unset set the [`assignPermissions` metadata property](https://learn.microsoft.com/azure/governance/policy/concepts/definition-structure-parameters#parameter-properties) of the supplied definition and parameter names. This allows you to correct policies that haven't been authored correctly, or prevent permissions being assigned for policies that are disabled in a policy set. The provider can then generate the correct policy role assignments. (see [below for nested schema](#nestedatt--override_policy_definition_parameter_assign_permissions_unset))
 - `policy_assignments_to_modify` (Attributes Map) A mested map of policy assignments to modify. The key is the management group id, and the value is an object with a single attribute, `policy_assignments`. This is another map. (see [below for nested schema](#nestedatt--policy_assignments_to_modify))
 - `policy_default_values` (Map of String) A map of default values to apply to policy assignments. The key is the default name as defined in the library, and the value is an JSON object containing a single `value` attribute with the values to apply. This to mitigate issues with the Terraform type system. E.g. `{ defaultName = jsonencode({ value = "value"}) }`
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
@@ -93,8 +93,8 @@ See the release notes [here](https://github.com/hashicorp/terraform/releases/tag
 - `management_groups` (Attributes List) This is a list of objects pertaining to the tier of management groups to be deployed (relative to the supplied root management group id). Use the `level` attribute to specify the tier of management groups to deploy. (see [below for nested schema](#nestedatt--management_groups))
 - `policy_role_assignments` (Attributes Set) A set of role assignments that need to be created for the policies that have been assigned in the hierarchy. Since we will likely be using system assigned identities, we don't know the principal ID until after the deployment. Therefore this data can be used to create the role assignments after the deployment. (see [below for nested schema](#nestedatt--policy_role_assignments))
 
-<a id="nestedatt--override_policy_definition_parameter_assignpermissions_set"></a>
-### Nested Schema for `override_policy_definition_parameter_assignpermissions_set`
+<a id="nestedatt--override_policy_definition_parameter_assign_permissions_set"></a>
+### Nested Schema for `override_policy_definition_parameter_assign_permissions_set`
 
 Required:
 
@@ -102,8 +102,8 @@ Required:
 - `parameter_name` (String) The name of the parameter to override.
 
 
-<a id="nestedatt--override_policy_definition_parameter_assignpermissions_unset"></a>
-### Nested Schema for `override_policy_definition_parameter_assignpermissions_unset`
+<a id="nestedatt--override_policy_definition_parameter_assign_permissions_unset"></a>
+### Nested Schema for `override_policy_definition_parameter_assign_permissions_unset`
 
 Required:
 
