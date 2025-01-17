@@ -91,8 +91,8 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	// Process assignPermissions overrides setting the values in the alzlib
-	assignPermissionsSetValues := []gen.OverridePolicyDefinitionParameterAssignpermissionsSetValue{}
-	resp.Diagnostics.Append(data.OverridePolicyDefinitionParameterAssignpermissionsSet.ElementsAs(
+	assignPermissionsSetValues := []gen.OverridePolicyDefinitionParameterAssignPermissionsSetValue{}
+	resp.Diagnostics.Append(data.OverridePolicyDefinitionParameterAssignPermissionsSet.ElementsAs(
 		ctx,
 		&assignPermissionsSetValues,
 		false,
@@ -113,8 +113,8 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	// Process assignPermissions overrides unsetting the values in the alzlib
-	assignPermissionsUnsetValues := []gen.OverridePolicyDefinitionParameterAssignpermissionsUnsetValue{}
-	resp.Diagnostics.Append(data.OverridePolicyDefinitionParameterAssignpermissionsUnset.ElementsAs(
+	assignPermissionsUnsetValues := []gen.OverridePolicyDefinitionParameterAssignPermissionsUnsetValue{}
+	resp.Diagnostics.Append(data.OverridePolicyDefinitionParameterAssignPermissionsUnset.ElementsAs(
 		ctx,
 		&assignPermissionsUnsetValues,
 		false,

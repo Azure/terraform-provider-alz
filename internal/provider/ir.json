@@ -985,7 +985,7 @@
             }
           },
           {
-            "name": "override_policy_definition_parameter_assignpermissions_set",
+            "name": "override_policy_definition_parameter_assign_permissions_set",
             "set_nested": {
               "computed_optional_required": "optional",
               "description": "This list of objects allows you to set the [`assignPermissions` metadata property](https://learn.microsoft.com/azure/governance/policy/concepts/definition-structure-parameters#parameter-properties) of the supplied definition and parameter names. This allows you to correct policies that haven't been authored correctly and means that the provider can generate the correct policy role assignments.",
@@ -1054,7 +1054,7 @@
             }
           },
           {
-            "name": "override_policy_definition_parameter_assignpermissions_unset",
+            "name": "override_policy_definition_parameter_assign_permissions_unset",
             "set_nested": {
               "computed_optional_required": "optional",
               "description": "This list of objects allows you to unset set the [`assignPermissions` metadata property](https://learn.microsoft.com/azure/governance/policy/concepts/definition-structure-parameters#parameter-properties) of the supplied definition and parameter names. This allows you to correct policies that haven't been authored correctly, or prevent permissions being assigned for policies that are disabled in a policy set. The provider can then generate the correct policy role assignments.",
