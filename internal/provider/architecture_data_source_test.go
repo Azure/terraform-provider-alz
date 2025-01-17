@@ -123,6 +123,27 @@ func TestAccAlzArchitectureDataSourceModifyPolicyAssignmentNonExistent(t *testin
 	})
 }
 
+func TestAccAlzArchitectureDataSourceAssignPermissionsOverride(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
+		ExternalProviders: map[string]resource.ExternalProvider{
+			"azapi": {
+				Source:            "azure/azapi",
+				VersionConstraint: "~> 2.0",
+			},
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccArchitectureDataSourceConfigOverrideAssignPermissions(),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownOutputValue("pra", knownvalue.Bool(true)),
+				},
+			},
+		},
+	})
+}
+
 // testAccArchitectureDataSourceConfigRemoteLib returns a test configuration for TestAccAlzArchetypeDataSource.
 func testAccArchitectureDataSourceConfigRemoteLib() string {
 	return `
@@ -325,6 +346,42 @@ data "alz_architecture" "test" {
       }
     }
   }
+}
+`
+}
+
+func testAccArchitectureDataSourceConfigOverrideAssignPermissions() string {
+	return `
+provider "alz" {
+	library_references = [
+		{
+			custom_url = "${path.root}/testdata/overrideAssignPermissions"
+    }
+	]
+}
+
+data "azapi_client_config" "current" {}
+
+data "alz_architecture" "test" {
+	name                     = "test"
+	root_management_group_id = data.azapi_client_config.current.tenant_id
+	location                 = "northeurope"
+	override_policy_definition_parameter_assign_permissions_set = [
+		{
+			definition_name = "test-policy-definition"
+			parameter_name  = "logAnalytics"
+		}
+	]
+}
+
+locals {
+	test = anytrue([
+	  for val in data.alz_architecture.test.policy_role_assignments : strcontains(val.scope, "Microsoft.OperationalInsights/workspaces/PLACEHOLDER")
+	])
+}
+
+output "pra" {
+	value = local.test
 }
 `
 }

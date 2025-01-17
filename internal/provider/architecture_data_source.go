@@ -90,6 +90,50 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
+	// Process assignPermissions overrides setting the values in the alzlib
+	assignPermissionsSetValues := []gen.OverridePolicyDefinitionParameterAssignPermissionsSetValue{}
+	resp.Diagnostics.Append(data.OverridePolicyDefinitionParameterAssignPermissionsSet.ElementsAs(
+		ctx,
+		&assignPermissionsSetValues,
+		false,
+	)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	for _, assignPermissionsSetValue := range assignPermissionsSetValues {
+		if assignPermissionsSetValue.DefinitionName.IsUnknown() || assignPermissionsSetValue.ParameterName.IsUnknown() {
+			continue
+		}
+		d.data.AlzLib.SetAssignPermissionsOnDefinitionParameter(
+			assignPermissionsSetValue.DefinitionName.ValueString(),
+			assignPermissionsSetValue.ParameterName.ValueString(),
+		)
+	}
+
+	// Process assignPermissions overrides unsetting the values in the alzlib
+	assignPermissionsUnsetValues := []gen.OverridePolicyDefinitionParameterAssignPermissionsUnsetValue{}
+	resp.Diagnostics.Append(data.OverridePolicyDefinitionParameterAssignPermissionsUnset.ElementsAs(
+		ctx,
+		&assignPermissionsUnsetValues,
+		false,
+	)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	for _, assignPermissionsUnsetValue := range assignPermissionsUnsetValues {
+		if assignPermissionsUnsetValue.DefinitionName.IsUnknown() || assignPermissionsUnsetValue.ParameterName.IsUnknown() {
+			continue
+		}
+		d.data.AlzLib.UnsetAssignPermissionsOnDefinitionParameter(
+			assignPermissionsUnsetValue.DefinitionName.ValueString(),
+			assignPermissionsUnsetValue.ParameterName.ValueString(),
+		)
+	}
+
 	// Set policy assignment defaults
 	defaultsMap := convertPolicyAssignmentParametersMapToSdkType(data.PolicyDefaultValues, resp)
 	if resp.Diagnostics.HasError() {

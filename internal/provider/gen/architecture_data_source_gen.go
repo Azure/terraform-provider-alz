@@ -110,6 +110,70 @@ func ArchitectureDataSourceSchema(ctx context.Context) schema.Schema {
 					stringvalidator.LengthAtLeast(1),
 				},
 			},
+			"override_policy_definition_parameter_assign_permissions_set": schema.SetNestedAttribute{
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"definition_name": schema.StringAttribute{
+							Required:            true,
+							Description:         "The name of the policy definition to override.",
+							MarkdownDescription: "The name of the policy definition to override.",
+							Validators: []validator.String{
+								stringvalidator.LengthAtLeast(1),
+								stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("parameter_name")),
+							},
+						},
+						"parameter_name": schema.StringAttribute{
+							Required:            true,
+							Description:         "The name of the parameter to override.",
+							MarkdownDescription: "The name of the parameter to override.",
+							Validators: []validator.String{
+								stringvalidator.LengthAtLeast(1),
+								stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("definition_name")),
+							},
+						},
+					},
+					CustomType: OverridePolicyDefinitionParameterAssignPermissionsSetType{
+						ObjectType: types.ObjectType{
+							AttrTypes: OverridePolicyDefinitionParameterAssignPermissionsSetValue{}.AttributeTypes(ctx),
+						},
+					},
+				},
+				Optional:            true,
+				Description:         "This list of objects allows you to set the [`assignPermissions` metadata property](https://learn.microsoft.com/azure/governance/policy/concepts/definition-structure-parameters#parameter-properties) of the supplied definition and parameter names. This allows you to correct policies that haven't been authored correctly and means that the provider can generate the correct policy role assignments.",
+				MarkdownDescription: "This list of objects allows you to set the [`assignPermissions` metadata property](https://learn.microsoft.com/azure/governance/policy/concepts/definition-structure-parameters#parameter-properties) of the supplied definition and parameter names. This allows you to correct policies that haven't been authored correctly and means that the provider can generate the correct policy role assignments.",
+			},
+			"override_policy_definition_parameter_assign_permissions_unset": schema.SetNestedAttribute{
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"definition_name": schema.StringAttribute{
+							Required:            true,
+							Description:         "The name of the policy definition to override.",
+							MarkdownDescription: "The name of the policy definition to override.",
+							Validators: []validator.String{
+								stringvalidator.LengthAtLeast(1),
+								stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("parameter_name")),
+							},
+						},
+						"parameter_name": schema.StringAttribute{
+							Required:            true,
+							Description:         "The name of the parameter to override.",
+							MarkdownDescription: "The name of the parameter to override.",
+							Validators: []validator.String{
+								stringvalidator.LengthAtLeast(1),
+								stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("definition_name")),
+							},
+						},
+					},
+					CustomType: OverridePolicyDefinitionParameterAssignPermissionsUnsetType{
+						ObjectType: types.ObjectType{
+							AttrTypes: OverridePolicyDefinitionParameterAssignPermissionsUnsetValue{}.AttributeTypes(ctx),
+						},
+					},
+				},
+				Optional:            true,
+				Description:         "This list of objects allows you to unset set the [`assignPermissions` metadata property](https://learn.microsoft.com/azure/governance/policy/concepts/definition-structure-parameters#parameter-properties) of the supplied definition and parameter names. This allows you to correct policies that haven't been authored correctly, or prevent permissions being assigned for policies that are disabled in a policy set. The provider can then generate the correct policy role assignments.",
+				MarkdownDescription: "This list of objects allows you to unset set the [`assignPermissions` metadata property](https://learn.microsoft.com/azure/governance/policy/concepts/definition-structure-parameters#parameter-properties) of the supplied definition and parameter names. This allows you to correct policies that haven't been authored correctly, or prevent permissions being assigned for policies that are disabled in a policy set. The provider can then generate the correct policy role assignments.",
+			},
 			"policy_assignments_to_modify": schema.MapNestedAttribute{
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -406,15 +470,17 @@ func ArchitectureDataSourceSchema(ctx context.Context) schema.Schema {
 }
 
 type ArchitectureModel struct {
-	Id                        types.String   `tfsdk:"id"`
-	Location                  types.String   `tfsdk:"location"`
-	ManagementGroups          types.List     `tfsdk:"management_groups"`
-	Name                      types.String   `tfsdk:"name"`
-	PolicyAssignmentsToModify types.Map      `tfsdk:"policy_assignments_to_modify"`
-	PolicyDefaultValues       types.Map      `tfsdk:"policy_default_values"`
-	PolicyRoleAssignments     types.Set      `tfsdk:"policy_role_assignments"`
-	RootManagementGroupId     types.String   `tfsdk:"root_management_group_id"`
-	Timeouts                  timeouts.Value `tfsdk:"timeouts"`
+	Id                                                      types.String   `tfsdk:"id"`
+	Location                                                types.String   `tfsdk:"location"`
+	ManagementGroups                                        types.List     `tfsdk:"management_groups"`
+	Name                                                    types.String   `tfsdk:"name"`
+	OverridePolicyDefinitionParameterAssignPermissionsSet   types.Set      `tfsdk:"override_policy_definition_parameter_assign_permissions_set"`
+	OverridePolicyDefinitionParameterAssignPermissionsUnset types.Set      `tfsdk:"override_policy_definition_parameter_assign_permissions_unset"`
+	PolicyAssignmentsToModify                               types.Map      `tfsdk:"policy_assignments_to_modify"`
+	PolicyDefaultValues                                     types.Map      `tfsdk:"policy_default_values"`
+	PolicyRoleAssignments                                   types.Set      `tfsdk:"policy_role_assignments"`
+	RootManagementGroupId                                   types.String   `tfsdk:"root_management_group_id"`
+	Timeouts                                                timeouts.Value `tfsdk:"timeouts"`
 }
 
 var _ basetypes.ObjectTypable = ManagementGroupsType{}
@@ -1338,6 +1404,764 @@ func (v ManagementGroupsValue) AttributeTypes(ctx context.Context) map[string]at
 		"role_definitions": basetypes.MapType{
 			ElemType: types.StringType,
 		},
+	}
+}
+
+var _ basetypes.ObjectTypable = OverridePolicyDefinitionParameterAssignPermissionsSetType{}
+
+type OverridePolicyDefinitionParameterAssignPermissionsSetType struct {
+	basetypes.ObjectType
+}
+
+func (t OverridePolicyDefinitionParameterAssignPermissionsSetType) Equal(o attr.Type) bool {
+	other, ok := o.(OverridePolicyDefinitionParameterAssignPermissionsSetType)
+
+	if !ok {
+		return false
+	}
+
+	return t.ObjectType.Equal(other.ObjectType)
+}
+
+func (t OverridePolicyDefinitionParameterAssignPermissionsSetType) String() string {
+	return "OverridePolicyDefinitionParameterAssignPermissionsSetType"
+}
+
+func (t OverridePolicyDefinitionParameterAssignPermissionsSetType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributes := in.Attributes()
+
+	definitionNameAttribute, ok := attributes["definition_name"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`definition_name is missing from object`)
+
+		return nil, diags
+	}
+
+	definitionNameVal, ok := definitionNameAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`definition_name expected to be basetypes.StringValue, was: %T`, definitionNameAttribute))
+	}
+
+	parameterNameAttribute, ok := attributes["parameter_name"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`parameter_name is missing from object`)
+
+		return nil, diags
+	}
+
+	parameterNameVal, ok := parameterNameAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`parameter_name expected to be basetypes.StringValue, was: %T`, parameterNameAttribute))
+	}
+
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	return OverridePolicyDefinitionParameterAssignPermissionsSetValue{
+		DefinitionName: definitionNameVal,
+		ParameterName:  parameterNameVal,
+		state:          attr.ValueStateKnown,
+	}, diags
+}
+
+func NewOverridePolicyDefinitionParameterAssignPermissionsSetValueNull() OverridePolicyDefinitionParameterAssignPermissionsSetValue {
+	return OverridePolicyDefinitionParameterAssignPermissionsSetValue{
+		state: attr.ValueStateNull,
+	}
+}
+
+func NewOverridePolicyDefinitionParameterAssignPermissionsSetValueUnknown() OverridePolicyDefinitionParameterAssignPermissionsSetValue {
+	return OverridePolicyDefinitionParameterAssignPermissionsSetValue{
+		state: attr.ValueStateUnknown,
+	}
+}
+
+func NewOverridePolicyDefinitionParameterAssignPermissionsSetValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (OverridePolicyDefinitionParameterAssignPermissionsSetValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	// Reference: https://github.com/hashicorp/terraform-plugin-framework/issues/521
+	ctx := context.Background()
+
+	for name, attributeType := range attributeTypes {
+		attribute, ok := attributes[name]
+
+		if !ok {
+			diags.AddError(
+				"Missing OverridePolicyDefinitionParameterAssignPermissionsSetValue Attribute Value",
+				"While creating a OverridePolicyDefinitionParameterAssignPermissionsSetValue value, a missing attribute value was detected. "+
+					"A OverridePolicyDefinitionParameterAssignPermissionsSetValue must contain values for all attributes, even if null or unknown. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("OverridePolicyDefinitionParameterAssignPermissionsSetValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
+			)
+
+			continue
+		}
+
+		if !attributeType.Equal(attribute.Type(ctx)) {
+			diags.AddError(
+				"Invalid OverridePolicyDefinitionParameterAssignPermissionsSetValue Attribute Type",
+				"While creating a OverridePolicyDefinitionParameterAssignPermissionsSetValue value, an invalid attribute value was detected. "+
+					"A OverridePolicyDefinitionParameterAssignPermissionsSetValue must use a matching attribute type for the value. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("OverridePolicyDefinitionParameterAssignPermissionsSetValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
+					fmt.Sprintf("OverridePolicyDefinitionParameterAssignPermissionsSetValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
+			)
+		}
+	}
+
+	for name := range attributes {
+		_, ok := attributeTypes[name]
+
+		if !ok {
+			diags.AddError(
+				"Extra OverridePolicyDefinitionParameterAssignPermissionsSetValue Attribute Value",
+				"While creating a OverridePolicyDefinitionParameterAssignPermissionsSetValue value, an extra attribute value was detected. "+
+					"A OverridePolicyDefinitionParameterAssignPermissionsSetValue must not contain values beyond the expected attribute types. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("Extra OverridePolicyDefinitionParameterAssignPermissionsSetValue Attribute Name: %s", name),
+			)
+		}
+	}
+
+	if diags.HasError() {
+		return NewOverridePolicyDefinitionParameterAssignPermissionsSetValueUnknown(), diags
+	}
+
+	definitionNameAttribute, ok := attributes["definition_name"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`definition_name is missing from object`)
+
+		return NewOverridePolicyDefinitionParameterAssignPermissionsSetValueUnknown(), diags
+	}
+
+	definitionNameVal, ok := definitionNameAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`definition_name expected to be basetypes.StringValue, was: %T`, definitionNameAttribute))
+	}
+
+	parameterNameAttribute, ok := attributes["parameter_name"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`parameter_name is missing from object`)
+
+		return NewOverridePolicyDefinitionParameterAssignPermissionsSetValueUnknown(), diags
+	}
+
+	parameterNameVal, ok := parameterNameAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`parameter_name expected to be basetypes.StringValue, was: %T`, parameterNameAttribute))
+	}
+
+	if diags.HasError() {
+		return NewOverridePolicyDefinitionParameterAssignPermissionsSetValueUnknown(), diags
+	}
+
+	return OverridePolicyDefinitionParameterAssignPermissionsSetValue{
+		DefinitionName: definitionNameVal,
+		ParameterName:  parameterNameVal,
+		state:          attr.ValueStateKnown,
+	}, diags
+}
+
+func NewOverridePolicyDefinitionParameterAssignPermissionsSetValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) OverridePolicyDefinitionParameterAssignPermissionsSetValue {
+	object, diags := NewOverridePolicyDefinitionParameterAssignPermissionsSetValue(attributeTypes, attributes)
+
+	if diags.HasError() {
+		// This could potentially be added to the diag package.
+		diagsStrings := make([]string, 0, len(diags))
+
+		for _, diagnostic := range diags {
+			diagsStrings = append(diagsStrings, fmt.Sprintf(
+				"%s | %s | %s",
+				diagnostic.Severity(),
+				diagnostic.Summary(),
+				diagnostic.Detail()))
+		}
+
+		panic("NewOverridePolicyDefinitionParameterAssignPermissionsSetValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
+	}
+
+	return object
+}
+
+func (t OverridePolicyDefinitionParameterAssignPermissionsSetType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
+	if in.Type() == nil {
+		return NewOverridePolicyDefinitionParameterAssignPermissionsSetValueNull(), nil
+	}
+
+	if !in.Type().Equal(t.TerraformType(ctx)) {
+		return nil, fmt.Errorf("expected %s, got %s", t.TerraformType(ctx), in.Type())
+	}
+
+	if !in.IsKnown() {
+		return NewOverridePolicyDefinitionParameterAssignPermissionsSetValueUnknown(), nil
+	}
+
+	if in.IsNull() {
+		return NewOverridePolicyDefinitionParameterAssignPermissionsSetValueNull(), nil
+	}
+
+	attributes := map[string]attr.Value{}
+
+	val := map[string]tftypes.Value{}
+
+	err := in.As(&val)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range val {
+		a, err := t.AttrTypes[k].ValueFromTerraform(ctx, v)
+
+		if err != nil {
+			return nil, err
+		}
+
+		attributes[k] = a
+	}
+
+	return NewOverridePolicyDefinitionParameterAssignPermissionsSetValueMust(OverridePolicyDefinitionParameterAssignPermissionsSetValue{}.AttributeTypes(ctx), attributes), nil
+}
+
+func (t OverridePolicyDefinitionParameterAssignPermissionsSetType) ValueType(ctx context.Context) attr.Value {
+	return OverridePolicyDefinitionParameterAssignPermissionsSetValue{}
+}
+
+var _ basetypes.ObjectValuable = OverridePolicyDefinitionParameterAssignPermissionsSetValue{}
+
+type OverridePolicyDefinitionParameterAssignPermissionsSetValue struct {
+	DefinitionName basetypes.StringValue `tfsdk:"definition_name"`
+	ParameterName  basetypes.StringValue `tfsdk:"parameter_name"`
+	state          attr.ValueState
+}
+
+func (v OverridePolicyDefinitionParameterAssignPermissionsSetValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
+	attrTypes := make(map[string]tftypes.Type, 2)
+
+	var val tftypes.Value
+	var err error
+
+	attrTypes["definition_name"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["parameter_name"] = basetypes.StringType{}.TerraformType(ctx)
+
+	objectType := tftypes.Object{AttributeTypes: attrTypes}
+
+	switch v.state {
+	case attr.ValueStateKnown:
+		vals := make(map[string]tftypes.Value, 2)
+
+		val, err = v.DefinitionName.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["definition_name"] = val
+
+		val, err = v.ParameterName.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["parameter_name"] = val
+
+		if err := tftypes.ValidateValue(objectType, vals); err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		return tftypes.NewValue(objectType, vals), nil
+	case attr.ValueStateNull:
+		return tftypes.NewValue(objectType, nil), nil
+	case attr.ValueStateUnknown:
+		return tftypes.NewValue(objectType, tftypes.UnknownValue), nil
+	default:
+		panic(fmt.Sprintf("unhandled Object state in ToTerraformValue: %s", v.state))
+	}
+}
+
+func (v OverridePolicyDefinitionParameterAssignPermissionsSetValue) IsNull() bool {
+	return v.state == attr.ValueStateNull
+}
+
+func (v OverridePolicyDefinitionParameterAssignPermissionsSetValue) IsUnknown() bool {
+	return v.state == attr.ValueStateUnknown
+}
+
+func (v OverridePolicyDefinitionParameterAssignPermissionsSetValue) String() string {
+	return "OverridePolicyDefinitionParameterAssignPermissionsSetValue"
+}
+
+func (v OverridePolicyDefinitionParameterAssignPermissionsSetValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributeTypes := map[string]attr.Type{
+		"definition_name": basetypes.StringType{},
+		"parameter_name":  basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
+		map[string]attr.Value{
+			"definition_name": v.DefinitionName,
+			"parameter_name":  v.ParameterName,
+		})
+
+	return objVal, diags
+}
+
+func (v OverridePolicyDefinitionParameterAssignPermissionsSetValue) Equal(o attr.Value) bool {
+	other, ok := o.(OverridePolicyDefinitionParameterAssignPermissionsSetValue)
+
+	if !ok {
+		return false
+	}
+
+	if v.state != other.state {
+		return false
+	}
+
+	if v.state != attr.ValueStateKnown {
+		return true
+	}
+
+	if !v.DefinitionName.Equal(other.DefinitionName) {
+		return false
+	}
+
+	if !v.ParameterName.Equal(other.ParameterName) {
+		return false
+	}
+
+	return true
+}
+
+func (v OverridePolicyDefinitionParameterAssignPermissionsSetValue) Type(ctx context.Context) attr.Type {
+	return OverridePolicyDefinitionParameterAssignPermissionsSetType{
+		basetypes.ObjectType{
+			AttrTypes: v.AttributeTypes(ctx),
+		},
+	}
+}
+
+func (v OverridePolicyDefinitionParameterAssignPermissionsSetValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
+	return map[string]attr.Type{
+		"definition_name": basetypes.StringType{},
+		"parameter_name":  basetypes.StringType{},
+	}
+}
+
+var _ basetypes.ObjectTypable = OverridePolicyDefinitionParameterAssignPermissionsUnsetType{}
+
+type OverridePolicyDefinitionParameterAssignPermissionsUnsetType struct {
+	basetypes.ObjectType
+}
+
+func (t OverridePolicyDefinitionParameterAssignPermissionsUnsetType) Equal(o attr.Type) bool {
+	other, ok := o.(OverridePolicyDefinitionParameterAssignPermissionsUnsetType)
+
+	if !ok {
+		return false
+	}
+
+	return t.ObjectType.Equal(other.ObjectType)
+}
+
+func (t OverridePolicyDefinitionParameterAssignPermissionsUnsetType) String() string {
+	return "OverridePolicyDefinitionParameterAssignPermissionsUnsetType"
+}
+
+func (t OverridePolicyDefinitionParameterAssignPermissionsUnsetType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributes := in.Attributes()
+
+	definitionNameAttribute, ok := attributes["definition_name"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`definition_name is missing from object`)
+
+		return nil, diags
+	}
+
+	definitionNameVal, ok := definitionNameAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`definition_name expected to be basetypes.StringValue, was: %T`, definitionNameAttribute))
+	}
+
+	parameterNameAttribute, ok := attributes["parameter_name"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`parameter_name is missing from object`)
+
+		return nil, diags
+	}
+
+	parameterNameVal, ok := parameterNameAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`parameter_name expected to be basetypes.StringValue, was: %T`, parameterNameAttribute))
+	}
+
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	return OverridePolicyDefinitionParameterAssignPermissionsUnsetValue{
+		DefinitionName: definitionNameVal,
+		ParameterName:  parameterNameVal,
+		state:          attr.ValueStateKnown,
+	}, diags
+}
+
+func NewOverridePolicyDefinitionParameterAssignPermissionsUnsetValueNull() OverridePolicyDefinitionParameterAssignPermissionsUnsetValue {
+	return OverridePolicyDefinitionParameterAssignPermissionsUnsetValue{
+		state: attr.ValueStateNull,
+	}
+}
+
+func NewOverridePolicyDefinitionParameterAssignPermissionsUnsetValueUnknown() OverridePolicyDefinitionParameterAssignPermissionsUnsetValue {
+	return OverridePolicyDefinitionParameterAssignPermissionsUnsetValue{
+		state: attr.ValueStateUnknown,
+	}
+}
+
+func NewOverridePolicyDefinitionParameterAssignPermissionsUnsetValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (OverridePolicyDefinitionParameterAssignPermissionsUnsetValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	// Reference: https://github.com/hashicorp/terraform-plugin-framework/issues/521
+	ctx := context.Background()
+
+	for name, attributeType := range attributeTypes {
+		attribute, ok := attributes[name]
+
+		if !ok {
+			diags.AddError(
+				"Missing OverridePolicyDefinitionParameterAssignPermissionsUnsetValue Attribute Value",
+				"While creating a OverridePolicyDefinitionParameterAssignPermissionsUnsetValue value, a missing attribute value was detected. "+
+					"A OverridePolicyDefinitionParameterAssignPermissionsUnsetValue must contain values for all attributes, even if null or unknown. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("OverridePolicyDefinitionParameterAssignPermissionsUnsetValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
+			)
+
+			continue
+		}
+
+		if !attributeType.Equal(attribute.Type(ctx)) {
+			diags.AddError(
+				"Invalid OverridePolicyDefinitionParameterAssignPermissionsUnsetValue Attribute Type",
+				"While creating a OverridePolicyDefinitionParameterAssignPermissionsUnsetValue value, an invalid attribute value was detected. "+
+					"A OverridePolicyDefinitionParameterAssignPermissionsUnsetValue must use a matching attribute type for the value. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("OverridePolicyDefinitionParameterAssignPermissionsUnsetValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
+					fmt.Sprintf("OverridePolicyDefinitionParameterAssignPermissionsUnsetValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
+			)
+		}
+	}
+
+	for name := range attributes {
+		_, ok := attributeTypes[name]
+
+		if !ok {
+			diags.AddError(
+				"Extra OverridePolicyDefinitionParameterAssignPermissionsUnsetValue Attribute Value",
+				"While creating a OverridePolicyDefinitionParameterAssignPermissionsUnsetValue value, an extra attribute value was detected. "+
+					"A OverridePolicyDefinitionParameterAssignPermissionsUnsetValue must not contain values beyond the expected attribute types. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("Extra OverridePolicyDefinitionParameterAssignPermissionsUnsetValue Attribute Name: %s", name),
+			)
+		}
+	}
+
+	if diags.HasError() {
+		return NewOverridePolicyDefinitionParameterAssignPermissionsUnsetValueUnknown(), diags
+	}
+
+	definitionNameAttribute, ok := attributes["definition_name"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`definition_name is missing from object`)
+
+		return NewOverridePolicyDefinitionParameterAssignPermissionsUnsetValueUnknown(), diags
+	}
+
+	definitionNameVal, ok := definitionNameAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`definition_name expected to be basetypes.StringValue, was: %T`, definitionNameAttribute))
+	}
+
+	parameterNameAttribute, ok := attributes["parameter_name"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`parameter_name is missing from object`)
+
+		return NewOverridePolicyDefinitionParameterAssignPermissionsUnsetValueUnknown(), diags
+	}
+
+	parameterNameVal, ok := parameterNameAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`parameter_name expected to be basetypes.StringValue, was: %T`, parameterNameAttribute))
+	}
+
+	if diags.HasError() {
+		return NewOverridePolicyDefinitionParameterAssignPermissionsUnsetValueUnknown(), diags
+	}
+
+	return OverridePolicyDefinitionParameterAssignPermissionsUnsetValue{
+		DefinitionName: definitionNameVal,
+		ParameterName:  parameterNameVal,
+		state:          attr.ValueStateKnown,
+	}, diags
+}
+
+func NewOverridePolicyDefinitionParameterAssignPermissionsUnsetValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) OverridePolicyDefinitionParameterAssignPermissionsUnsetValue {
+	object, diags := NewOverridePolicyDefinitionParameterAssignPermissionsUnsetValue(attributeTypes, attributes)
+
+	if diags.HasError() {
+		// This could potentially be added to the diag package.
+		diagsStrings := make([]string, 0, len(diags))
+
+		for _, diagnostic := range diags {
+			diagsStrings = append(diagsStrings, fmt.Sprintf(
+				"%s | %s | %s",
+				diagnostic.Severity(),
+				diagnostic.Summary(),
+				diagnostic.Detail()))
+		}
+
+		panic("NewOverridePolicyDefinitionParameterAssignPermissionsUnsetValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
+	}
+
+	return object
+}
+
+func (t OverridePolicyDefinitionParameterAssignPermissionsUnsetType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
+	if in.Type() == nil {
+		return NewOverridePolicyDefinitionParameterAssignPermissionsUnsetValueNull(), nil
+	}
+
+	if !in.Type().Equal(t.TerraformType(ctx)) {
+		return nil, fmt.Errorf("expected %s, got %s", t.TerraformType(ctx), in.Type())
+	}
+
+	if !in.IsKnown() {
+		return NewOverridePolicyDefinitionParameterAssignPermissionsUnsetValueUnknown(), nil
+	}
+
+	if in.IsNull() {
+		return NewOverridePolicyDefinitionParameterAssignPermissionsUnsetValueNull(), nil
+	}
+
+	attributes := map[string]attr.Value{}
+
+	val := map[string]tftypes.Value{}
+
+	err := in.As(&val)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range val {
+		a, err := t.AttrTypes[k].ValueFromTerraform(ctx, v)
+
+		if err != nil {
+			return nil, err
+		}
+
+		attributes[k] = a
+	}
+
+	return NewOverridePolicyDefinitionParameterAssignPermissionsUnsetValueMust(OverridePolicyDefinitionParameterAssignPermissionsUnsetValue{}.AttributeTypes(ctx), attributes), nil
+}
+
+func (t OverridePolicyDefinitionParameterAssignPermissionsUnsetType) ValueType(ctx context.Context) attr.Value {
+	return OverridePolicyDefinitionParameterAssignPermissionsUnsetValue{}
+}
+
+var _ basetypes.ObjectValuable = OverridePolicyDefinitionParameterAssignPermissionsUnsetValue{}
+
+type OverridePolicyDefinitionParameterAssignPermissionsUnsetValue struct {
+	DefinitionName basetypes.StringValue `tfsdk:"definition_name"`
+	ParameterName  basetypes.StringValue `tfsdk:"parameter_name"`
+	state          attr.ValueState
+}
+
+func (v OverridePolicyDefinitionParameterAssignPermissionsUnsetValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
+	attrTypes := make(map[string]tftypes.Type, 2)
+
+	var val tftypes.Value
+	var err error
+
+	attrTypes["definition_name"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["parameter_name"] = basetypes.StringType{}.TerraformType(ctx)
+
+	objectType := tftypes.Object{AttributeTypes: attrTypes}
+
+	switch v.state {
+	case attr.ValueStateKnown:
+		vals := make(map[string]tftypes.Value, 2)
+
+		val, err = v.DefinitionName.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["definition_name"] = val
+
+		val, err = v.ParameterName.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["parameter_name"] = val
+
+		if err := tftypes.ValidateValue(objectType, vals); err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		return tftypes.NewValue(objectType, vals), nil
+	case attr.ValueStateNull:
+		return tftypes.NewValue(objectType, nil), nil
+	case attr.ValueStateUnknown:
+		return tftypes.NewValue(objectType, tftypes.UnknownValue), nil
+	default:
+		panic(fmt.Sprintf("unhandled Object state in ToTerraformValue: %s", v.state))
+	}
+}
+
+func (v OverridePolicyDefinitionParameterAssignPermissionsUnsetValue) IsNull() bool {
+	return v.state == attr.ValueStateNull
+}
+
+func (v OverridePolicyDefinitionParameterAssignPermissionsUnsetValue) IsUnknown() bool {
+	return v.state == attr.ValueStateUnknown
+}
+
+func (v OverridePolicyDefinitionParameterAssignPermissionsUnsetValue) String() string {
+	return "OverridePolicyDefinitionParameterAssignPermissionsUnsetValue"
+}
+
+func (v OverridePolicyDefinitionParameterAssignPermissionsUnsetValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributeTypes := map[string]attr.Type{
+		"definition_name": basetypes.StringType{},
+		"parameter_name":  basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
+		map[string]attr.Value{
+			"definition_name": v.DefinitionName,
+			"parameter_name":  v.ParameterName,
+		})
+
+	return objVal, diags
+}
+
+func (v OverridePolicyDefinitionParameterAssignPermissionsUnsetValue) Equal(o attr.Value) bool {
+	other, ok := o.(OverridePolicyDefinitionParameterAssignPermissionsUnsetValue)
+
+	if !ok {
+		return false
+	}
+
+	if v.state != other.state {
+		return false
+	}
+
+	if v.state != attr.ValueStateKnown {
+		return true
+	}
+
+	if !v.DefinitionName.Equal(other.DefinitionName) {
+		return false
+	}
+
+	if !v.ParameterName.Equal(other.ParameterName) {
+		return false
+	}
+
+	return true
+}
+
+func (v OverridePolicyDefinitionParameterAssignPermissionsUnsetValue) Type(ctx context.Context) attr.Type {
+	return OverridePolicyDefinitionParameterAssignPermissionsUnsetType{
+		basetypes.ObjectType{
+			AttrTypes: v.AttributeTypes(ctx),
+		},
+	}
+}
+
+func (v OverridePolicyDefinitionParameterAssignPermissionsUnsetValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
+	return map[string]attr.Type{
+		"definition_name": basetypes.StringType{},
+		"parameter_name":  basetypes.StringType{},
 	}
 }
 
