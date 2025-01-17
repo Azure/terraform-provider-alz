@@ -983,6 +983,144 @@
                 }
               }
             }
+          },
+          {
+            "name": "override_policy_definition_parameter_assignpermissions_set",
+            "set_nested": {
+              "computed_optional_required": "optional",
+              "description": "This list of objects allows you to set the [`assignPermissions` metadata property](https://learn.microsoft.com/azure/governance/policy/concepts/definition-structure-parameters#parameter-properties) of the supplied definition and parameter names. This allows you to correct policies that haven't been authored correctly and means that the provider can generate the correct policy role assignments.",
+              "nested_object": {
+                "attributes": [
+                  {
+                    "name": "definition_name",
+                    "string": {
+                      "computed_optional_required": "required",
+                      "description": "The name of the policy definition to override.",
+                      "validators": [
+                        {
+                          "custom": {
+                            "imports": [
+                              {
+                                "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                              }
+                            ],
+                            "schema_definition": "stringvalidator.LengthAtLeast(1)"
+                          }
+                        },
+                        {
+                          "custom": {
+                            "imports": [
+                              {
+                                "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                              }
+                            ],
+                            "schema_definition": "stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName(\"parameter_name\"))"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "name": "parameter_name",
+                    "string": {
+                      "computed_optional_required": "required",
+                      "description": "The name of the parameter to override.",
+                      "validators": [
+                        {
+                          "custom": {
+                            "imports": [
+                              {
+                                "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                              }
+                            ],
+                            "schema_definition": "stringvalidator.LengthAtLeast(1)"
+                          }
+                        },
+                        {
+                          "custom": {
+                            "imports": [
+                              {
+                                "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                              }
+                            ],
+                            "schema_definition": "stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName(\"definition_name\"))"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "override_policy_definition_parameter_assignpermissions_unset",
+            "set_nested": {
+              "computed_optional_required": "optional",
+              "description": "This list of objects allows you to unset set the [`assignPermissions` metadata property](https://learn.microsoft.com/azure/governance/policy/concepts/definition-structure-parameters#parameter-properties) of the supplied definition and parameter names. This allows you to correct policies that haven't been authored correctly, or prevent permissions being assigned for policies that are disabled in a policy set. The provider can then generate the correct policy role assignments.",
+              "nested_object": {
+                "attributes": [
+                  {
+                    "name": "definition_name",
+                    "string": {
+                      "computed_optional_required": "required",
+                      "description": "The name of the policy definition to override.",
+                      "validators": [
+                        {
+                          "custom": {
+                            "imports": [
+                              {
+                                "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                              }
+                            ],
+                            "schema_definition": "stringvalidator.LengthAtLeast(1)"
+                          }
+                        },
+                        {
+                          "custom": {
+                            "imports": [
+                              {
+                                "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                              }
+                            ],
+                            "schema_definition": "stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName(\"parameter_name\"))"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "name": "parameter_name",
+                    "string": {
+                      "computed_optional_required": "required",
+                      "description": "The name of the parameter to override.",
+                      "validators": [
+                        {
+                          "custom": {
+                            "imports": [
+                              {
+                                "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                              }
+                            ],
+                            "schema_definition": "stringvalidator.LengthAtLeast(1)"
+                          }
+                        },
+                        {
+                          "custom": {
+                            "imports": [
+                              {
+                                "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                              }
+                            ],
+                            "schema_definition": "stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName(\"definition_name\"))"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
           }
         ],
         "blocks": [
