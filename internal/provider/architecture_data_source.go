@@ -212,7 +212,7 @@ func modifyPolicyAssignments(ctx context.Context, depl *deployment.Hierarchy, da
 				"architectureDataSource.Read() Warning modifying policy assignments",
 				fmt.Sprintf("Management group `%s` not found in hierarchy", mgName),
 			)
-			return
+			continue
 		}
 		pa2mod, ok := pa2modValue.(gen.PolicyAssignmentsToModifyValue)
 		if !ok {
