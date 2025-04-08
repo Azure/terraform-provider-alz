@@ -4,7 +4,6 @@
 package provider
 
 import (
-	"context"
 	"math/big"
 	"os"
 	"testing"
@@ -190,7 +189,7 @@ func TestConfigureFromEnvironment(t *testing.T) {
 
 func TestConfigureAuxTenants(t *testing.T) {
 	// Test when no environment variable is set and data.AuxiliaryTenantIds is null
-	ctx := context.Background()
+	ctx := t.Context()
 	data := &gen.AlzModel{}
 	diags := configureAuxTenants(ctx, data)
 	assert.True(t, data.AuxiliaryTenantIds.IsNull())
@@ -200,14 +199,14 @@ func TestConfigureAuxTenants(t *testing.T) {
 	auxTenants := []string{"tenant1", "tenant2"}
 	lv, _ := types.ListValueFrom(ctx, types.StringType, auxTenants)
 	data = &gen.AlzModel{AuxiliaryTenantIds: lv}
-	diags = configureAuxTenants(context.Background(), data)
+	diags = configureAuxTenants(t.Context(), data)
 	assert.Truef(t, data.AuxiliaryTenantIds.Equal(lv), "Expected %v, got %v", lv, data.AuxiliaryTenantIds)
 	assert.Empty(t, diags)
 
 	// Test when ARM_AUXILIARY_TENANT_IDS environment variable is set and data.AuxiliaryTenantIds is null
 	t.Setenv("ARM_AUXILIARY_TENANT_IDS", "tenant1;tenant2")
 	data = &gen.AlzModel{}
-	diags = configureAuxTenants(context.Background(), data)
+	diags = configureAuxTenants(t.Context(), data)
 	assert.True(t, data.AuxiliaryTenantIds.Equal(lv))
 	assert.Empty(t, diags)
 	_ = os.Unsetenv("ARM_AUXILIARY_TENANT_IDS")
@@ -215,7 +214,7 @@ func TestConfigureAuxTenants(t *testing.T) {
 	// Test when ARM_AUXILIARY_TENANT_IDS environment variable is set and data.AuxiliaryTenantIds is not null
 	t.Setenv("ARM_AUXILIARY_TENANT_IDS", "tenant3;tenant4")
 	data = &gen.AlzModel{AuxiliaryTenantIds: lv}
-	diags = configureAuxTenants(context.Background(), data)
+	diags = configureAuxTenants(t.Context(), data)
 	assert.True(t, data.AuxiliaryTenantIds.Equal(lv))
 	assert.Empty(t, diags)
 	_ = os.Unsetenv("ARM_AUXILIARY_TENANT_IDS")

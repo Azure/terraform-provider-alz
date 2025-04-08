@@ -17,8 +17,8 @@ type ToGoPrimitive interface {
 func PrimitiveToGo[T ToGoPrimitive](ctx context.Context, input attr.Value) (*T, error) {
 	ty := input.Type(ctx)
 
-	switch {
-	case ty == types.BoolType:
+	switch ty {
+	case types.BoolType:
 		val, ok := input.(types.Bool)
 		if !ok {
 			return nil, fmt.Errorf("PrimitiveToGo: unexpected type conversion, %s to %T", ty.String(), new(T))
@@ -30,7 +30,7 @@ func PrimitiveToGo[T ToGoPrimitive](ctx context.Context, input attr.Value) (*T, 
 
 		}
 		return ret, nil
-	case ty == types.StringType:
+	case types.StringType:
 		val, ok := input.(types.String)
 		if !ok {
 			return nil, fmt.Errorf("PrimitiveToGo: unexpected type conversion, %s to %T", ty.String(), new(T))
@@ -40,7 +40,7 @@ func PrimitiveToGo[T ToGoPrimitive](ctx context.Context, input attr.Value) (*T, 
 			return nil, fmt.Errorf("PrimitiveToGo: unexpected type conversion, %s to %T", ty.String(), new(T))
 		}
 		return ret, nil
-	case ty == types.NumberType:
+	case types.NumberType:
 		if input.IsUnknown() {
 			if reflect.TypeOf(new(T)) == reflect.TypeOf(new(int64)) {
 				zero := int64(0)

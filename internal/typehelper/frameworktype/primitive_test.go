@@ -1,7 +1,6 @@
 package frameworktype
 
 import (
-	"context"
 	"math/big"
 	"testing"
 
@@ -12,7 +11,7 @@ import (
 )
 
 func TestToGo(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	t.Run("NumberTypeFloat64", func(t *testing.T) {
 		testCases := []struct {

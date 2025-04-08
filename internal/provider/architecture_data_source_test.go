@@ -1,7 +1,6 @@
 package provider
 
 import (
-	"context"
 	"testing"
 
 	"github.com/Azure/alzlib/deployment"
@@ -388,7 +387,7 @@ output "pra" {
 
 // TestConvertPolicyAssignmentResourceSelectorsToSdkType tests the conversion of policy assignment resource selectors from framework to Azure Go SDK types.
 func TestConvertPolicyAssignmentResourceSelectorsToSdkType(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	rs1s1in, _ := basetypes.NewSetValueFrom(ctx, types.StringType, []string{"in1", "in2"})
 	rs1s1notIn, _ := basetypes.NewSetValueFrom(ctx, types.StringType, []string{"notin1", "notin2"})
@@ -522,7 +521,7 @@ func TestConvertPolicyAssignmentIdentityToSdkType(t *testing.T) {
 
 	// Test with UserAssigned identity type and multiple ids
 	typ = types.StringValue("UserAssigned")
-	ids, _ = types.SetValueFrom(context.Background(), types.StringType, []string{"id1", "id2"})
+	ids, _ = types.SetValueFrom(t.Context(), types.StringType, []string{"id1", "id2"})
 	identity = convertPolicyAssignmentIdentityToSdkType(typ, ids, resp)
 	assert.Nil(t, identity)
 	assert.True(t, resp.Diagnostics.HasError())
@@ -530,7 +529,7 @@ func TestConvertPolicyAssignmentIdentityToSdkType(t *testing.T) {
 
 	// Test with UserAssigned identity type and valid id
 	typ = types.StringValue("UserAssigned")
-	ids, _ = types.SetValueFrom(context.Background(), types.StringType, []string{"id1"})
+	ids, _ = types.SetValueFrom(t.Context(), types.StringType, []string{"id1"})
 	identity = convertPolicyAssignmentIdentityToSdkType(typ, ids, resp)
 	assert.NotNil(t, identity)
 	assert.False(t, resp.Diagnostics.HasError())
@@ -614,7 +613,7 @@ func TestConvertPolicyAssignmentParametersToSdkType(t *testing.T) {
 	param1Json, _ := param1.MarshalJSON()
 	param2Json, _ := param2.MarshalJSON()
 	param3Json, _ := param3.MarshalJSON()
-	src, _ = types.MapValueFrom(context.Background(), types.StringType, map[string]string{
+	src, _ = types.MapValueFrom(t.Context(), types.StringType, map[string]string{
 		"param1": string(param1Json),
 		"param2": string(param2Json),
 		"param3": string(param3Json),
@@ -630,7 +629,7 @@ func TestConvertPolicyAssignmentParametersToSdkType(t *testing.T) {
 }
 
 func TestPolicyAssignmentType2ArmPolicyValues(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	param1 := armpolicy.ParameterValuesValue{
 		Value: to.Ptr("value1"),
 	}
@@ -683,7 +682,7 @@ func TestPolicyAssignmentType2ArmPolicyValues(t *testing.T) {
 }
 
 func TestPolicyRoleAssignmentsSetToProviderType(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	// Test with nil input
 	res, diags := policyRoleAssignmentsSetToProviderType(ctx, nil)
 	assert.False(t, diags.HasError())

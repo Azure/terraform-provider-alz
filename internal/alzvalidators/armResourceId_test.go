@@ -4,7 +4,6 @@
 package alzvalidators_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/Azure/terraform-provider-alz/internal/alzvalidators"
@@ -51,7 +50,7 @@ func TestArmResourceId(t *testing.T) {
 				ConfigValue: test.rid,
 			}
 			res := validator.StringResponse{}
-			test.validator.ValidateString(context.TODO(), req, &res)
+			test.validator.ValidateString(t.Context(), req, &res)
 
 			if test.expErrors > 0 && !res.Diagnostics.HasError() {
 				t.Fatalf("expected %d error(s), got none", test.expErrors)

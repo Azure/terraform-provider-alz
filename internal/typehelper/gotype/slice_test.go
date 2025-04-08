@@ -1,7 +1,6 @@
 package gotype
 
 import (
-	"context"
 	"testing"
 
 	"github.com/Azure/alzlib/to"
@@ -11,7 +10,7 @@ import (
 )
 
 func TestSliceOfPrimitiveToFramework(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	t.Run("EmptySlice", func(t *testing.T) {
 		input := []*string{}
