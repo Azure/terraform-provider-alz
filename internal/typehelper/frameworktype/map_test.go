@@ -1,7 +1,6 @@
 package frameworktype
 
 import (
-	"context"
 	"testing"
 
 	"github.com/Azure/alzlib/to"
@@ -11,7 +10,7 @@ import (
 )
 
 func TestMapOfPrimitiveToGo(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	t.Run("EmptyInput", func(t *testing.T) {
 		input := make(map[string]attr.Value)

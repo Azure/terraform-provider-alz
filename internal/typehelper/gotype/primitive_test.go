@@ -1,7 +1,6 @@
 package gotype
 
 import (
-	"context"
 	"math/big"
 	"testing"
 
@@ -9,7 +8,7 @@ import (
 )
 
 func TestToFramework(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	// Test int64 input
 	var i int64 = 42
@@ -20,7 +19,7 @@ func TestToFramework(t *testing.T) {
 	}
 
 	// Test float64 input
-	var f float64 = 3.14
+	var f = 3.14
 	float64Result := PrimitiveToFramework(ctx, &f)
 	expectedFloat64Result := types.NumberValue(big.NewFloat(f))
 	if !float64Result.Equal(expectedFloat64Result) {

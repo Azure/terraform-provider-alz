@@ -106,7 +106,7 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 		if assignPermissionsSetValue.DefinitionName.IsUnknown() || assignPermissionsSetValue.ParameterName.IsUnknown() {
 			continue
 		}
-		d.data.AlzLib.SetAssignPermissionsOnDefinitionParameter(
+		d.data.SetAssignPermissionsOnDefinitionParameter(
 			assignPermissionsSetValue.DefinitionName.ValueString(),
 			assignPermissionsSetValue.ParameterName.ValueString(),
 		)
@@ -128,7 +128,7 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 		if assignPermissionsUnsetValue.DefinitionName.IsUnknown() || assignPermissionsUnsetValue.ParameterName.IsUnknown() {
 			continue
 		}
-		d.data.AlzLib.UnsetAssignPermissionsOnDefinitionParameter(
+		d.data.UnsetAssignPermissionsOnDefinitionParameter(
 			assignPermissionsUnsetValue.DefinitionName.ValueString(),
 			assignPermissionsUnsetValue.ParameterName.ValueString(),
 		)
