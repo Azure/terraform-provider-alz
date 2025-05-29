@@ -15,6 +15,13 @@
           }
         },
         {
+          "name": "role_definitions_use_supplied_names_enabled",
+          "bool": {
+            "optional_required": "optional",
+            "description": "Whether to allow using the Name and RoleName supplied in the library directly for a predictable ID. Default behaviour is to update them to unique values per management group. Default is `false`."
+          }
+        },
+        {
           "name": "auxiliary_tenant_ids",
           "list": {
             "element_type": {

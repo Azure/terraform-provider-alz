@@ -375,6 +375,7 @@ func configureAlzLib(token *azidentity.ChainedTokenCredential, data gen.AlzModel
 	opts := &alzlib.AlzLibOptions{
 		AllowOverwrite: data.LibraryOverwriteEnabled.ValueBool(),
 		Parallelism:    10,
+		UniqueRoleDefinitions: !data.RoleDefinitionsUseSuppliedNamesEnabled.ValueBool(),
 	}
 	alz := alzlib.NewAlzLib(opts)
 	cf, err := armpolicy.NewClientFactory("", token, popts)
