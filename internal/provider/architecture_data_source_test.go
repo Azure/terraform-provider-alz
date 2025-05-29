@@ -42,6 +42,30 @@ func TestAccAlzArchitectureDataSourceRemoteLib(t *testing.T) {
 	})
 }
 
+// TestAccAlzArchitectureDataSourceRemoteLib tests the data source for alz_architecture
+// when using a remote lib.
+func TestAccAlzArchitectureDataSourceRetainRoleDefinitionNames(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
+		ExternalProviders: map[string]resource.ExternalProvider{
+			"azapi": {
+				Source:            "azure/azapi",
+				VersionConstraint: "~> 2.0",
+			},
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccArchitectureDataSourceConfigWithStaticRoleDefinitionNames(),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckOutput("role_definition_name", "c9a07a05-a1fc-53fe-a565-5eed25597c03"),
+					resource.TestCheckOutput("role_definition_role_name", "Application-Owners"),
+				),
+			},
+		},
+	})
+}
+
 // TestAccAlzArchetypeDataSource tests the data source for alz_archetype.
 // It checks that the policy default values and the modification of policy assignments are correctly applied.
 func TestAccAlzArchitectureDataSourceWithDefaultAndModify(t *testing.T) {
@@ -165,6 +189,41 @@ data "alz_architecture" "test" {
 	timeouts {
 		read = "5m"
 	}
+}
+`
+}
+
+// testAccArchitectureDataSourceConfigRemoteLib returns a test configuration for TestAccAlzArchetypeDataSource.
+func testAccArchitectureDataSourceConfigWithStaticRoleDefinitionNames() string {
+	return `
+provider "alz" {
+  role_definitions_use_supplied_names_enabled = true
+  library_references = [
+  {
+	  path = "platform/alz"
+		ref  = "2024.07.02"
+	}
+	]
+}
+
+data "azapi_client_config" "current" {}
+
+data "alz_architecture" "test" {
+  name                     = "alz"
+	root_management_group_id = data.azapi_client_config.current.tenant_id
+	location                 = "northeurope"
+
+	timeouts {
+		read = "5m"
+	}
+}
+
+output "role_definition_name" {
+  value = jsondecode(data.alz_architecture.test.management_groups[0].role_definitions["Application-Owners"]).name
+}
+
+output "role_definition_role_name" {
+  value = jsondecode(data.alz_architecture.test.management_groups[0].role_definitions["Application-Owners"]).properties.roleName
 }
 `
 }

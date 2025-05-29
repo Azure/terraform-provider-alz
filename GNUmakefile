@@ -30,3 +30,9 @@ genprovider:
 	cd internal/provider
 	go generate
 	cd ../..
+
+.PHONY: generateprovider
+generateprovider:
+	go install
+	go install github.com/hashicorp/terraform-plugin-codegen-framework/cmd/tfplugingen-framework@latest
+	tfplugingen-framework generate all --input ./internal/provider/ir.json --output ./internal/provider/gen --package gen

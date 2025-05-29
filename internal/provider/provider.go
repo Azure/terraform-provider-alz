@@ -373,8 +373,9 @@ func configureAlzLib(token *azidentity.ChainedTokenCredential, data gen.AlzModel
 	popts.PerRetryPolicies = append(popts.PerRetryPolicies, withUserAgent(userAgent))
 
 	opts := &alzlib.AlzLibOptions{
-		AllowOverwrite: data.LibraryOverwriteEnabled.ValueBool(),
-		Parallelism:    10,
+		AllowOverwrite:        data.LibraryOverwriteEnabled.ValueBool(),
+		Parallelism:           10,
+		UniqueRoleDefinitions: !data.RoleDefinitionsUseSuppliedNamesEnabled.ValueBool(),
 	}
 	alz := alzlib.NewAlzLib(opts)
 	cf, err := armpolicy.NewClientFactory("", token, popts)

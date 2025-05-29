@@ -68,6 +68,14 @@ make testacc
 
 **Note:** Acceptance tests read data from Azure and need a valid authorization context. You can log in using `az cli` to do this.
 
+## Generating the Provider Code
+
+The provider uses a JSON scheme to generate the provider code. This can be found in the [ir.json](/internal/provider/ir.json) file. If you make changes to this file, you can regenerate the provider code by running:
+
+```sh
+make generateprovider
+```
+
 ## Building The Provider
 
 1. Clone the repository

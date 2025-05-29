@@ -133,6 +133,11 @@ func AlzProviderSchema(ctx context.Context) schema.Schema {
 				Description:         "The path to a file containing an OIDC id token for use when authenticating using OpenID Connect. If not specified, value will be attempted to be read from the `ARM_OIDC_TOKEN_FILE_PATH` environment variable.",
 				MarkdownDescription: "The path to a file containing an OIDC id token for use when authenticating using OpenID Connect. If not specified, value will be attempted to be read from the `ARM_OIDC_TOKEN_FILE_PATH` environment variable.",
 			},
+			"role_definitions_use_supplied_names_enabled": schema.BoolAttribute{
+				Optional:            true,
+				Description:         "Whether to allow using the Name and RoleName supplied in the library directly for a predictable ID. Default behaviour is to update them to unique values per management group. Default is `false`.",
+				MarkdownDescription: "Whether to allow using the Name and RoleName supplied in the library directly for a predictable ID. Default behaviour is to update them to unique values per management group. Default is `false`.",
+			},
 			"skip_provider_registration": schema.BoolAttribute{
 				Optional:            true,
 				Description:         "Should the provider skip registering all of the resource providers that it supports, if they're not already registered? Default is `false`. If not specified, value will be attempted to be read from the `ARM_SKIP_PROVIDER_REGISTRATION` environment variable.",
@@ -170,25 +175,26 @@ func AlzProviderSchema(ctx context.Context) schema.Schema {
 }
 
 type AlzModel struct {
-	AuxiliaryTenantIds                   types.List   `tfsdk:"auxiliary_tenant_ids"`
-	ClientCertificatePassword            types.String `tfsdk:"client_certificate_password"`
-	ClientCertificatePath                types.String `tfsdk:"client_certificate_path"`
-	ClientId                             types.String `tfsdk:"client_id"`
-	ClientSecret                         types.String `tfsdk:"client_secret"`
-	Environment                          types.String `tfsdk:"environment"`
-	LibraryFetchDependencies             types.Bool   `tfsdk:"library_fetch_dependencies"`
-	LibraryOverwriteEnabled              types.Bool   `tfsdk:"library_overwrite_enabled"`
-	LibraryReferences                    types.List   `tfsdk:"library_references"`
-	OidcRequestToken                     types.String `tfsdk:"oidc_request_token"`
-	OidcRequestUrl                       types.String `tfsdk:"oidc_request_url"`
-	OidcToken                            types.String `tfsdk:"oidc_token"`
-	OidcTokenFilePath                    types.String `tfsdk:"oidc_token_file_path"`
-	SkipProviderRegistration             types.Bool   `tfsdk:"skip_provider_registration"`
-	SuppressWarningPolicyRoleAssignments types.Bool   `tfsdk:"suppress_warning_policy_role_assignments"`
-	TenantId                             types.String `tfsdk:"tenant_id"`
-	UseCli                               types.Bool   `tfsdk:"use_cli"`
-	UseMsi                               types.Bool   `tfsdk:"use_msi"`
-	UseOidc                              types.Bool   `tfsdk:"use_oidc"`
+	AuxiliaryTenantIds                     types.List   `tfsdk:"auxiliary_tenant_ids"`
+	ClientCertificatePassword              types.String `tfsdk:"client_certificate_password"`
+	ClientCertificatePath                  types.String `tfsdk:"client_certificate_path"`
+	ClientId                               types.String `tfsdk:"client_id"`
+	ClientSecret                           types.String `tfsdk:"client_secret"`
+	Environment                            types.String `tfsdk:"environment"`
+	LibraryFetchDependencies               types.Bool   `tfsdk:"library_fetch_dependencies"`
+	LibraryOverwriteEnabled                types.Bool   `tfsdk:"library_overwrite_enabled"`
+	LibraryReferences                      types.List   `tfsdk:"library_references"`
+	OidcRequestToken                       types.String `tfsdk:"oidc_request_token"`
+	OidcRequestUrl                         types.String `tfsdk:"oidc_request_url"`
+	OidcToken                              types.String `tfsdk:"oidc_token"`
+	OidcTokenFilePath                      types.String `tfsdk:"oidc_token_file_path"`
+	RoleDefinitionsUseSuppliedNamesEnabled types.Bool   `tfsdk:"role_definitions_use_supplied_names_enabled"`
+	SkipProviderRegistration               types.Bool   `tfsdk:"skip_provider_registration"`
+	SuppressWarningPolicyRoleAssignments   types.Bool   `tfsdk:"suppress_warning_policy_role_assignments"`
+	TenantId                               types.String `tfsdk:"tenant_id"`
+	UseCli                                 types.Bool   `tfsdk:"use_cli"`
+	UseMsi                                 types.Bool   `tfsdk:"use_msi"`
+	UseOidc                                types.Bool   `tfsdk:"use_oidc"`
 }
 
 var _ basetypes.ObjectTypable = LibraryReferencesType{}
