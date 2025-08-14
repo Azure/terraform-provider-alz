@@ -23,16 +23,14 @@ lint:
 
 .PHONY: docs
 docs:
-	go generate
+	go generate ./...
 
 .PHONY: genprovider
 genprovider:
-	cd internal/provider
-	go generate
-	cd ../..
-
-.PHONY: generateprovider
-generateprovider:
 	go install
 	go install github.com/hashicorp/terraform-plugin-codegen-framework/cmd/tfplugingen-framework@latest
-	tfplugingen-framework generate all --input ./internal/provider/ir.json --output ./internal/provider/gen --package gen
+	tfplugingen-framework generate all --input ./internal/gen/ir.json --output ./internal/gen --package gen
+
+.PHONY: tools
+tools:
+	go install github.com/hashicorp/terraform-plugin-codegen-framework/cmd/tfplugingen-framework@latest

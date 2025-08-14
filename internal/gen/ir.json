@@ -155,6 +155,16 @@
                   ],
                   "schema_definition": "listvalidator.UniqueValues()"
                 }
+              },
+              {
+                "custom": {
+                  "imports": [
+                    {
+                      "path": "github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+                    }
+                  ],
+                  "schema_definition": "listvalidator.SizeAtLeast(1)"
+                }
               }
             ]
           }

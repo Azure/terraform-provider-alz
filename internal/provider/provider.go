@@ -19,7 +19,7 @@ import (
 	"github.com/Azure/entrauth/aztfauth"
 	"github.com/Azure/terraform-provider-alz/internal/aztfschema"
 	"github.com/Azure/terraform-provider-alz/internal/clients"
-	"github.com/Azure/terraform-provider-alz/internal/provider/gen"
+	"github.com/Azure/terraform-provider-alz/internal/gen"
 	"github.com/Azure/terraform-provider-alz/internal/services"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -31,12 +31,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
-
-// Run go generate to automatically generate provider, data source and resource types
-// from the intermediate representation JSON file `ir.json`.
-//go:generate tfplugingen-framework generate provider --package gen --output ./gen
-//go:generate tfplugingen-framework generate data-sources --package gen --output ./gen
-//go:generate tfplugingen-framework generate resources --package gen --output ./gen
 
 const (
 	userAgentBase = "AzureTerraformAlzProvider"

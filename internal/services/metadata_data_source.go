@@ -6,7 +6,7 @@ import (
 
 	"github.com/Azure/alzlib/to"
 	"github.com/Azure/terraform-provider-alz/internal/clients"
-	"github.com/Azure/terraform-provider-alz/internal/provider/gen"
+	"github.com/Azure/terraform-provider-alz/internal/gen"
 	"github.com/Azure/terraform-provider-alz/internal/typehelper/gotype"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"

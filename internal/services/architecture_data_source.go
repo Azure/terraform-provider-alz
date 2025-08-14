@@ -11,7 +11,7 @@ import (
 	"github.com/Azure/alzlib/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy"
 	"github.com/Azure/terraform-provider-alz/internal/clients"
-	"github.com/Azure/terraform-provider-alz/internal/provider/gen"
+	"github.com/Azure/terraform-provider-alz/internal/gen"
 	"github.com/Azure/terraform-provider-alz/internal/typehelper"
 	"github.com/Azure/terraform-provider-alz/internal/typehelper/frameworktype"
 	"github.com/hashicorp/terraform-plugin-framework/attr"

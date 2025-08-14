@@ -50,10 +50,10 @@ make testacc
 
 ## Generating the Provider Code
 
-The provider uses a JSON schema to generate the provider code. This can be found in the [ir.json](/internal/provider/ir.json) file. If you make changes to this file, you can regenerate the provider code by running:
+The provider uses a JSON schema to generate the provider code. This can be found in the [ir.json](/internal/gen/ir.json) file. If you make changes to this file, you can regenerate the provider code by running:
 
 ```sh
-make generateprovider
+make genprovider
 ```
 
 ## Building The Provider
