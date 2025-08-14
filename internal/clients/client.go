@@ -6,7 +6,7 @@ import (
 	"github.com/Azure/alzlib"
 )
 
-// Client is the data struct passed to services via Configure
+// Client is the data struct passed to services via Configure.
 type Client struct {
 	*alzlib.AlzLib
 	mu                                   *sync.Mutex

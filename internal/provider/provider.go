@@ -92,16 +92,16 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 
 	// Read the environment variables and set in data
 	// if the data is not already set and the environment variable is set.
-	data.AuthModelWithSubscriptionID.ConfigureFromEnv()
+	data.ConfigureFromEnv()
 
 	// Set the go sdk's azidentity specific environment variables
 	configureAzIdentityEnvironment(&data)
 
 	// For remaining null values, set opinionated defaults
-	data.AuthModelWithSubscriptionID.SetOpinionatedDefaults()
+	data.SetOpinionatedDefaults()
 	configureDefaults(ctx, &data)
 
-	authOptions := data.AuthModelWithSubscriptionID.AuthOption(azcore.ClientOptions{})
+	authOptions := data.AuthOption(azcore.ClientOptions{})
 	cred, err := aztfauth.NewCredential(authOptions)
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to create Azure token credential", err.Error())
@@ -309,23 +309,8 @@ func configureAlzLib(token azcore.TokenCredential, data AlzModel, cloudConfig cl
 	return alz, diags
 }
 
-func getCloudConfiguration(environment string) (cloud.Configuration, error) {
-	var cloudConfig cloud.Configuration
-	switch strings.ToLower(environment) {
-	case "public":
-		cloudConfig = cloud.AzurePublic
-	case "usgovernment":
-		cloudConfig = cloud.AzureGovernment
-	case "china":
-		cloudConfig = cloud.AzureChina
-	default:
-		return cloudConfig, fmt.Errorf("invalid environment: %s, valid values are 'public', 'usgovernment', or 'china'", environment)
-	}
-	return cloudConfig, nil
-}
-
 // configureDefaults sets default values if they aren't already set.
-func configureDefaults(ctx context.Context, data *AlzModel) {
+func configureDefaults(_ context.Context, data *AlzModel) {
 
 	// Do not skip provider registration by default.
 	if data.SkipProviderRegistration.IsNull() {

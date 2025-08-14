@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// Test setFieldDefaultsFromEnv using a custom struct with a single string field and fromenv tag
+// Test setFieldDefaultsFromEnv using a custom struct with a single string field and fromenv tag.
 func Test_setFieldDefaultsFromEnv_SingleStringField(t *testing.T) {
 	tests := []struct {
 		name              string
@@ -82,7 +82,7 @@ func Test_setFieldDefaultsFromEnv_SingleStringField(t *testing.T) {
 	}
 }
 
-// Test precedence and fallback across multiple env vars listed in tag
+// Test precedence and fallback across multiple env vars listed in tag.
 func Test_setFieldDefaultsFromEnv_SubscriptionIDPrecedence(t *testing.T) {
 	type Sub struct {
 		SubscriptionID types.String `fromenv:"ARM_SUBSCRIPTION_ID,AZURE_SUBSCRIPTION_ID"`
@@ -112,7 +112,7 @@ func Test_setFieldDefaultsFromEnv_SubscriptionIDPrecedence(t *testing.T) {
 	}
 }
 
-// Test that bool fields are now properly supported
+// Test that bool fields are now properly supported.
 func Test_setFieldDefaultsFromEnv_MixedTypesAndNoTag(t *testing.T) {
 	type Mixed struct {
 		A types.String `fromenv:"A_VAR"`
@@ -144,7 +144,7 @@ func Test_setFieldDefaultsFromEnv_MixedTypesAndNoTag(t *testing.T) {
 	}
 }
 
-// Test setFieldDefaultsFromEnv with bool fields
+// Test setFieldDefaultsFromEnv with bool fields.
 func Test_setFieldDefaultsFromEnv_BoolField(t *testing.T) {
 	tests := []struct {
 		name              string
@@ -269,7 +269,7 @@ func listToStrings(t *testing.T, l types.List) []string {
 	return out
 }
 
-// Tests for list-typed fields populated from env
+// Tests for list-typed fields populated from env.
 func Test_setFieldDefaultsFromEnv_ListField(t *testing.T) {
 	type L struct {
 		IDs types.List `fromenv:"A_IDS"`
@@ -357,7 +357,7 @@ func Test_setFieldDefaultsFromEnv_ListField(t *testing.T) {
 	}
 }
 
-// Test precedence across multiple env vars for a list field
+// Test precedence across multiple env vars for a list field.
 func Test_setFieldDefaultsFromEnv_ListFieldPrecedence(t *testing.T) {
 	type L2 struct {
 		IDs types.List `fromenv:"A_IDS,B_IDS"`
