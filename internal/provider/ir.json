@@ -22,94 +22,6 @@
           }
         },
         {
-          "name": "auxiliary_tenant_ids",
-          "list": {
-            "element_type": {
-              "string": {}
-            },
-            "optional_required": "optional",
-            "description": "A list of auxiliary tenant ids which should be used. If not specified, value will be attempted to be read from the `ARM_AUXILIARY_TENANT_IDS` environment variable. When configuring from the environment, use a semicolon as a delimiter."
-          }
-        },
-        {
-          "name": "client_certificate_password",
-          "string": {
-            "optional_required": "optional",
-            "sensitive": true,
-            "description": "The password associated with the client certificate. For use when authenticating as a service principal using a client certificate. If not specified, value will be attempted to be read from the `ARM_CLIENT_CERTIFICATE_PASSWORD` environment variable."
-          }
-        },
-        {
-          "name": "client_certificate_path",
-          "string": {
-            "optional_required": "optional",
-            "description": "The path to the client certificate associated with the service principal for use when authenticating as a service principal using a client certificate. If not specified, value will be attempted to be read from the `ARM_CLIENT_CERTIFICATE_PATH` environment variable."
-          }
-        },
-        {
-          "name": "client_id",
-          "string": {
-            "optional_required": "optional",
-            "description": "The client id which should be used. For use when authenticating as a service principal. If not specified, value will be attempted to be read from the `ARM_CLIENT_ID` environment variable."
-          }
-        },
-        {
-          "name": "client_secret",
-          "string": {
-            "optional_required": "optional",
-            "sensitive": true,
-            "description": "The client secret which should be used. For use when authenticating as a service principal using a client secret. If not specified, value will be attempted to be read from the `ARM_CLIENT_SECRET` environment variable."
-          }
-        },
-        {
-          "name": "environment",
-          "string": {
-            "optional_required": "optional",
-            "validators": [
-              {
-                "custom": {
-                  "imports": [
-                    {
-                      "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-                    }
-                  ],
-                  "schema_definition": "stringvalidator.OneOf(\"public\", \"usgovernment\", \"china\")"
-                }
-              }
-            ]
-          }
-        },
-        {
-          "name": "oidc_request_token",
-          "string": {
-            "optional_required": "optional",
-            "sensitive": true,
-            "description": "The bearer token for the request to the OIDC provider. For use when authenticating using OpenID Connect. If not specified, value will be attempted to be read from the first non-empty value of the `ARM_OIDC_REQUEST_TOKEN` and `ACTIONS_ID_TOKEN_REQUEST_TOKEN` environment variables."
-          }
-        },
-        {
-          "name": "oidc_request_url",
-          "string": {
-            "optional_required": "optional",
-            "description": "The URL for the OIDC provider from which to request an id token. For use when authenticating as a service principal using OpenID Connect. If not specified, value will be attempted to be read from the first non-empty value of the `ARM_OIDC_REQUEST_URL` and `ACTIONS_ID_TOKEN_REQUEST_URL` environment variables."
-          }
-        },
-        {
-          "name": "oidc_token",
-          "string": {
-            "optional_required": "optional",
-            "sensitive": true,
-            "description": "The OIDC id token for use when authenticating as a service principal using OpenID Connect. If not specified, value will be attempted to be read from the `ARM_OIDC_TOKEN` environment variable."
-          }
-        },
-        {
-          "name": "oidc_token_file_path",
-          "string": {
-            "optional_required": "optional",
-            "description": "The path to a file containing an OIDC id token for use when authenticating using OpenID Connect. If not specified, value will be attempted to be read from the `ARM_OIDC_TOKEN_FILE_PATH` environment variable."
-          }
-        },
-        {
           "name": "skip_provider_registration",
           "bool": {
             "optional_required": "optional",
@@ -124,13 +36,6 @@
           }
         },
         {
-          "name": "tenant_id",
-          "string": {
-            "optional_required": "optional",
-            "description": "The Tenant ID which should be used. If not specified, value will be attempted to be read from the `ARM_TENANT_ID` environment variable."
-          }
-        },
-        {
           "name": "library_fetch_dependencies",
           "bool": {
             "optional_required": "optional",
@@ -140,8 +45,8 @@
         {
           "name": "library_references",
           "list_nested": {
-            "optional_required": "optional",
-            "description": "A list of references to the [ALZ library](https://aka.ms/alz/library) to use. Each reference should either contain the `path` (e.g. `platform/alz`) and the `ref` (e.g. `2024.03.5`), or a `custom_url` to be supplied to go-getter.\nIf this value is not specified, the default value will be used, which is:\n\n```terraform\nalz_library_references = [\n  { path = \"platform/alz\", tag = \"2024.10.1\" },\n]\n```\n\n",
+            "optional_required": "required",
+            "description": "A list of references to the [ALZ library](https://aka.ms/alz/library) to use. Each reference should either contain the `path` (e.g. `platform/alz`) and the `ref` (e.g. `2024.03.5`), or a `custom_url` to be supplied to go-getter.",
             "nested_object": {
               "attributes": [
                 {
@@ -252,27 +157,6 @@
                 }
               }
             ]
-          }
-        },
-        {
-          "name": "use_cli",
-          "bool": {
-            "optional_required": "optional",
-            "description": "Allow Azure CLI to be used for authentication. Default is `true`. If not specified, value will be attempted to be read from the `ARM_USE_CLI` environment variable."
-          }
-        },
-        {
-          "name": "use_msi",
-          "bool": {
-            "optional_required": "optional",
-            "description": "Allow managed service identity to be used for authentication. Default is `false`. If not specified, value will be attempted to be read from the `ARM_USE_MSI` environment variable."
-          }
-        },
-        {
-          "name": "use_oidc",
-          "bool": {
-            "optional_required": "optional",
-            "description": "Allow OpenID Connect to be used for authentication. Default is `false`. If not specified, value will be attempted to be read from the `ARM_USE_OIDC` environment variable."
           }
         }
       ]

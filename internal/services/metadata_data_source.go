@@ -1,10 +1,11 @@
-package provider
+package services
 
 import (
 	"context"
 	"fmt"
 
 	"github.com/Azure/alzlib/to"
+	"github.com/Azure/terraform-provider-alz/internal/clients"
 	"github.com/Azure/terraform-provider-alz/internal/provider/gen"
 	"github.com/Azure/terraform-provider-alz/internal/typehelper/gotype"
 	"github.com/hashicorp/go-uuid"
@@ -20,7 +21,7 @@ func NewMetadataDataSource() datasource.DataSource {
 }
 
 type metadataDataSource struct {
-	alz *alzProviderData
+	alz *clients.Client
 }
 
 func (d *metadataDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -36,11 +37,11 @@ func (d *metadataDataSource) Configure(ctx context.Context, req datasource.Confi
 	if req.ProviderData == nil {
 		return
 	}
-	data, ok := req.ProviderData.(*alzProviderData)
+	data, ok := req.ProviderData.(*clients.Client)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"metadataDataSource.Configure() Unexpected type",
-			fmt.Sprintf("Expected *alzProviderData, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *clients.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 		return
 	}

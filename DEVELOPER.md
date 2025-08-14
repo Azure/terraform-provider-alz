@@ -1,7 +1,7 @@
 # Developer Requirements
 
 * [Terraform (Core)](https://www.terraform.io/downloads.html) - version 1.x or above
-* [Go](https://golang.org/doc/install) version 1.20.x (to build the provider plugin)
+* [Go](https://golang.org/doc/install) see `go.mod` for version requirement.
 
 ## Contributor Guides
 
@@ -9,27 +9,7 @@ A Collection of guides geared towards contributors can be found in the [`/contri
 
 ### On Windows
 
-If you're on Windows you'll also need:
-
-* [Git Bash for Windows](https://git-scm.com/download/win)
-* [Make for Windows](http://gnuwin32.sourceforge.net/packages/make.htm)
-
-For *GNU32 Make*, make sure its bin path is added to PATH environment variable.*
-
-For *Git Bash for Windows*, at the step of "Adjusting your PATH environment", please choose "Use Git and optional Unix tools from Windows Command Prompt".*
-
-Or install via [Chocolatey](https://chocolatey.org/install) (`Git Bash for Windows` must be installed per steps above)
-
-```powershell
-choco install make golang terraform -y
-refreshenv
-```
-
-You must run `Developing the Provider` commands in `bash` because `sh` scrips are invoked as part of these.
-
-You may hit issues with `make build` telling you every file needs to be formatted as a result of line endings. To avoid this issue set your git config using `git config --global core.autocrlf false`. This will tell git to use the source `LF` rather than the Windows default of `CRLF`.
-
-You may get errors when cloning the repository on Windows that end with `Filename too long`. To avoid this issue set your git config using `git config --system core.longpaths true`. This will tell git to allow file names longer than 260 characters which is the default on Windows.
+We strongly recommend you install Windows Subsystem for Linux (WSL) for a better development experience.
 
 ## Developing the Provider
 
@@ -70,7 +50,7 @@ make testacc
 
 ## Generating the Provider Code
 
-The provider uses a JSON scheme to generate the provider code. This can be found in the [ir.json](/internal/provider/ir.json) file. If you make changes to this file, you can regenerate the provider code by running:
+The provider uses a JSON schema to generate the provider code. This can be found in the [ir.json](/internal/provider/ir.json) file. If you make changes to this file, you can regenerate the provider code by running:
 
 ```sh
 make generateprovider

@@ -1,16 +1,17 @@
-package provider
+package services_test
 
 import (
 	"testing"
 
+	"github.com/Azure/terraform-provider-alz/internal/acceptance"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
 // TestAccAlzMetadataDataSource tests the data source for alz_metadata.
 func TestAccAlzMetadataDataSource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
+		PreCheck:                 func() { acceptance.AccTestPreCheck(t) },
+		ProtoV6ProviderFactories: acceptance.AccTestProtoV6ProviderFactoriesUnique(),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccMetadataDataSourceConfig(),
@@ -26,8 +27,8 @@ func TestAccAlzMetadataDataSource(t *testing.T) {
 // when using a remote lib.
 func TestAccAlzMetadataDataSourceCustomLib(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesUnique(),
+		PreCheck:                 func() { acceptance.AccTestPreCheck(t) },
+		ProtoV6ProviderFactories: acceptance.AccTestProtoV6ProviderFactoriesUnique(),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccMetadataDataSourceConfigCustomUrl(),
