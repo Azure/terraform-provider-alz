@@ -182,7 +182,7 @@ func testAccArchitectureDataSourceConfigRemoteLib() string {
 provider "alz" {
   library_references = [
   {
-	  path = "platform/alz"
+    path = "platform/alz"
 		ref  = "2024.07.02"
 	}
 	]
