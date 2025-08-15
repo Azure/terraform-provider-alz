@@ -269,10 +269,10 @@ func policyRoleAssignmentToProviderType(ctx context.Context, input deployment.Po
 	return gen.NewPolicyRoleAssignmentsValue(
 		gen.NewPolicyRoleAssignmentsValueNull().AttributeTypes(ctx),
 		map[string]attr.Value{
-			"role_definition_id":     types.StringValue(input.RoleDefinitionId),
+			"role_definition_id":     types.StringValue(input.RoleDefinitionID),
 			"scope":                  types.StringValue(input.Scope),
 			"policy_assignment_name": types.StringValue(input.AssignmentName),
-			"management_group_id":    types.StringValue(input.ManagementGroupId),
+			"management_group_id":    types.StringValue(input.ManagementGroupID),
 		},
 	)
 }
@@ -294,7 +294,7 @@ func alzMgToProviderType(ctx context.Context, mg *deployment.HierarchyManagement
 		gen.NewManagementGroupsValueNull().AttributeTypes(ctx),
 		map[string]attr.Value{
 			"id":                     types.StringValue(mg.Name()),
-			"parent_id":              types.StringValue(mg.ParentId()),
+			"parent_id":              types.StringValue(mg.ParentID()),
 			"display_name":           types.StringValue(mg.DisplayName()),
 			"exists":                 types.BoolValue(mg.Exists()),
 			"level":                  types.NumberValue(big.NewFloat(float64(mg.Level()))),

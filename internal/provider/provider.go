@@ -6,6 +6,8 @@ package provider
 import (
 	"context"
 	"fmt"
+	"math"
+	"math/rand"
 	"os"
 	"strconv"
 	"strings"
@@ -128,6 +130,12 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	r := rand.Intn(math.MaxUint32)
+	alzlib.Instance.Store(uint32(r))
+	tflog.Debug(ctx, "Stored random ID for AlzLib instance", map[string]interface{}{
+		"instance": r,
+	})
 
 	// Fetch the library dependencies if enabled.
 	// If not, the refs passed to alzlib.Init() will be fetched on demand without dependencies.
@@ -292,7 +300,7 @@ func configureAlzLib(token azcore.TokenCredential, data AlzModel, cloudConfig cl
 	popts.PerRetryPolicies = append(popts.PerRetryPolicies, withUserAgent(userAgent))
 	popts.Cloud = cloudConfig
 
-	opts := &alzlib.AlzLibOptions{
+	opts := &alzlib.Options{
 		AllowOverwrite:        data.LibraryOverwriteEnabled.ValueBool(),
 		Parallelism:           10,
 		UniqueRoleDefinitions: !data.RoleDefinitionsUseSuppliedNamesEnabled.ValueBool(),

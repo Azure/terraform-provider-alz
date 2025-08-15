@@ -327,7 +327,7 @@ func TestPolicyRoleAssignmentsSetToProviderType(t *testing.T) {
 	// Test with non-empty input
 	src := mapset.NewThreadUnsafeSet[deployment.PolicyRoleAssignment](
 		deployment.PolicyRoleAssignment{
-			RoleDefinitionId: "test1",
+			RoleDefinitionID: "test1",
 			Scope:            "test1",
 			AssignmentName:   "test1",
 		},
@@ -338,7 +338,7 @@ func TestPolicyRoleAssignmentsSetToProviderType(t *testing.T) {
 	for _, v := range res.Elements() {
 		praval := v.(gen.PolicyRoleAssignmentsValue) //nolint:forcetypeassert
 		setMember := deployment.PolicyRoleAssignment{
-			RoleDefinitionId: praval.RoleDefinitionId.ValueString(),
+			RoleDefinitionID: praval.RoleDefinitionId.ValueString(),
 			Scope:            praval.Scope.ValueString(),
 			AssignmentName:   praval.PolicyAssignmentName.ValueString(),
 		}

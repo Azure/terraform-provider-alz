@@ -157,6 +157,25 @@ func TestAccAlzArchitectureDataSourceAssignPermissionsOverride(t *testing.T) {
 	})
 }
 
+func TestAccArchitectureDataSourceMultipleProviders(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acceptance.AccTestPreCheck(t) },
+		ProtoV6ProviderFactories: acceptance.AccTestProtoV6ProviderFactoriesUnique(),
+		ExternalProviders: map[string]resource.ExternalProvider{
+			"azapi": {
+				Source:            "azure/azapi",
+				VersionConstraint: "~> 2.0",
+			},
+		},
+		Steps: []resource.TestStep{
+			{
+				Config:            testAccArchitectureDataSourceMultipleProviders(),
+				ConfigStateChecks: []statecheck.StateCheck{},
+			},
+		},
+	})
+}
+
 // testAccArchitectureDataSourceConfigRemoteLib returns a test configuration for TestAccAlzArchetypeDataSource.
 func testAccArchitectureDataSourceConfigRemoteLib() string {
 	return `
@@ -430,6 +449,53 @@ locals {
 
 output "pra" {
 	value = local.test
+}
+`
+}
+
+// testAccArchitectureDataSourceMultipleProviders returns a test configuration for TestAccArchitectureDataSourceMultipleProviders.
+func testAccArchitectureDataSourceMultipleProviders() string {
+	return `
+provider "alz" {
+  library_references = [
+  {
+		custom_url = "${path.root}/testdata/testacc_lib"
+	}
+	]
+}
+
+provider "alz" {
+  alias = "secondary"
+	library_references = [
+		{
+			custom_url = "${path.root}/testdata/testacc_lib"
+		}
+	]
+}
+
+data "azapi_client_config" "current" {}
+
+data "alz_architecture" "test" {
+  name                     = "test"
+	root_management_group_id = data.azapi_client_config.current.tenant_id
+	location                 = "northeurope"
+
+
+	timeouts {
+		read = "5m"
+	}
+}
+
+data "alz_architecture" "test2" {
+	provider                 = alz.secondary
+  name                     = "test"
+	root_management_group_id = data.azapi_client_config.current.tenant_id
+	location                 = "northeurope"
+
+
+	timeouts {
+		read = "5m"
+	}
 }
 `
 }

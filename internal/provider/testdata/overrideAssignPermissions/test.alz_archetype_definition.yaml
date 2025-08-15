@@ -1,6 +1,0 @@
----
-name: test
-policy_assignments:
-  - test-policy-assignment
-policy_definitions:
-  - test-policy-definition
