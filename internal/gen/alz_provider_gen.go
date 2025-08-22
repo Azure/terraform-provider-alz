@@ -22,40 +22,6 @@ import (
 func AlzProviderSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"auxiliary_tenant_ids": schema.ListAttribute{
-				ElementType:         types.StringType,
-				Optional:            true,
-				Description:         "A list of auxiliary tenant ids which should be used. If not specified, value will be attempted to be read from the `ARM_AUXILIARY_TENANT_IDS` environment variable. When configuring from the environment, use a semicolon as a delimiter.",
-				MarkdownDescription: "A list of auxiliary tenant ids which should be used. If not specified, value will be attempted to be read from the `ARM_AUXILIARY_TENANT_IDS` environment variable. When configuring from the environment, use a semicolon as a delimiter.",
-			},
-			"client_certificate_password": schema.StringAttribute{
-				Optional:            true,
-				Sensitive:           true,
-				Description:         "The password associated with the client certificate. For use when authenticating as a service principal using a client certificate. If not specified, value will be attempted to be read from the `ARM_CLIENT_CERTIFICATE_PASSWORD` environment variable.",
-				MarkdownDescription: "The password associated with the client certificate. For use when authenticating as a service principal using a client certificate. If not specified, value will be attempted to be read from the `ARM_CLIENT_CERTIFICATE_PASSWORD` environment variable.",
-			},
-			"client_certificate_path": schema.StringAttribute{
-				Optional:            true,
-				Description:         "The path to the client certificate associated with the service principal for use when authenticating as a service principal using a client certificate. If not specified, value will be attempted to be read from the `ARM_CLIENT_CERTIFICATE_PATH` environment variable.",
-				MarkdownDescription: "The path to the client certificate associated with the service principal for use when authenticating as a service principal using a client certificate. If not specified, value will be attempted to be read from the `ARM_CLIENT_CERTIFICATE_PATH` environment variable.",
-			},
-			"client_id": schema.StringAttribute{
-				Optional:            true,
-				Description:         "The client id which should be used. For use when authenticating as a service principal. If not specified, value will be attempted to be read from the `ARM_CLIENT_ID` environment variable.",
-				MarkdownDescription: "The client id which should be used. For use when authenticating as a service principal. If not specified, value will be attempted to be read from the `ARM_CLIENT_ID` environment variable.",
-			},
-			"client_secret": schema.StringAttribute{
-				Optional:            true,
-				Sensitive:           true,
-				Description:         "The client secret which should be used. For use when authenticating as a service principal using a client secret. If not specified, value will be attempted to be read from the `ARM_CLIENT_SECRET` environment variable.",
-				MarkdownDescription: "The client secret which should be used. For use when authenticating as a service principal using a client secret. If not specified, value will be attempted to be read from the `ARM_CLIENT_SECRET` environment variable.",
-			},
-			"environment": schema.StringAttribute{
-				Optional: true,
-				Validators: []validator.String{
-					stringvalidator.OneOf("public", "usgovernment", "china"),
-				},
-			},
 			"library_fetch_dependencies": schema.BoolAttribute{
 				Optional:            true,
 				Description:         "Whether to automatically fetch dependencies for the library. This option reads the `alz_library_metadata.json` file in any supplied library and will recursively download dependent libraries. Default is `true`.",
@@ -104,34 +70,13 @@ func AlzProviderSchema(ctx context.Context) schema.Schema {
 						},
 					},
 				},
-				Optional:            true,
-				Description:         "A list of references to the [ALZ library](https://aka.ms/alz/library) to use. Each reference should either contain the `path` (e.g. `platform/alz`) and the `ref` (e.g. `2024.03.5`), or a `custom_url` to be supplied to go-getter.\nIf this value is not specified, the default value will be used, which is:\n\n```terraform\nalz_library_references = [\n  { path = \"platform/alz\", tag = \"2024.10.1\" },\n]\n```\n\n",
-				MarkdownDescription: "A list of references to the [ALZ library](https://aka.ms/alz/library) to use. Each reference should either contain the `path` (e.g. `platform/alz`) and the `ref` (e.g. `2024.03.5`), or a `custom_url` to be supplied to go-getter.\nIf this value is not specified, the default value will be used, which is:\n\n```terraform\nalz_library_references = [\n  { path = \"platform/alz\", tag = \"2024.10.1\" },\n]\n```\n\n",
+				Required:            true,
+				Description:         "A list of references to the [ALZ library](https://aka.ms/alz/library) to use. Each reference should either contain the `path` (e.g. `platform/alz`) and the `ref` (e.g. `2024.03.5`), or a `custom_url` to be supplied to go-getter.",
+				MarkdownDescription: "A list of references to the [ALZ library](https://aka.ms/alz/library) to use. Each reference should either contain the `path` (e.g. `platform/alz`) and the `ref` (e.g. `2024.03.5`), or a `custom_url` to be supplied to go-getter.",
 				Validators: []validator.List{
 					listvalidator.UniqueValues(),
+					listvalidator.SizeAtLeast(1),
 				},
-			},
-			"oidc_request_token": schema.StringAttribute{
-				Optional:            true,
-				Sensitive:           true,
-				Description:         "The bearer token for the request to the OIDC provider. For use when authenticating using OpenID Connect. If not specified, value will be attempted to be read from the first non-empty value of the `ARM_OIDC_REQUEST_TOKEN` and `ACTIONS_ID_TOKEN_REQUEST_TOKEN` environment variables.",
-				MarkdownDescription: "The bearer token for the request to the OIDC provider. For use when authenticating using OpenID Connect. If not specified, value will be attempted to be read from the first non-empty value of the `ARM_OIDC_REQUEST_TOKEN` and `ACTIONS_ID_TOKEN_REQUEST_TOKEN` environment variables.",
-			},
-			"oidc_request_url": schema.StringAttribute{
-				Optional:            true,
-				Description:         "The URL for the OIDC provider from which to request an id token. For use when authenticating as a service principal using OpenID Connect. If not specified, value will be attempted to be read from the first non-empty value of the `ARM_OIDC_REQUEST_URL` and `ACTIONS_ID_TOKEN_REQUEST_URL` environment variables.",
-				MarkdownDescription: "The URL for the OIDC provider from which to request an id token. For use when authenticating as a service principal using OpenID Connect. If not specified, value will be attempted to be read from the first non-empty value of the `ARM_OIDC_REQUEST_URL` and `ACTIONS_ID_TOKEN_REQUEST_URL` environment variables.",
-			},
-			"oidc_token": schema.StringAttribute{
-				Optional:            true,
-				Sensitive:           true,
-				Description:         "The OIDC id token for use when authenticating as a service principal using OpenID Connect. If not specified, value will be attempted to be read from the `ARM_OIDC_TOKEN` environment variable.",
-				MarkdownDescription: "The OIDC id token for use when authenticating as a service principal using OpenID Connect. If not specified, value will be attempted to be read from the `ARM_OIDC_TOKEN` environment variable.",
-			},
-			"oidc_token_file_path": schema.StringAttribute{
-				Optional:            true,
-				Description:         "The path to a file containing an OIDC id token for use when authenticating using OpenID Connect. If not specified, value will be attempted to be read from the `ARM_OIDC_TOKEN_FILE_PATH` environment variable.",
-				MarkdownDescription: "The path to a file containing an OIDC id token for use when authenticating using OpenID Connect. If not specified, value will be attempted to be read from the `ARM_OIDC_TOKEN_FILE_PATH` environment variable.",
 			},
 			"role_definitions_use_supplied_names_enabled": schema.BoolAttribute{
 				Optional:            true,
@@ -148,26 +93,6 @@ func AlzProviderSchema(ctx context.Context) schema.Schema {
 				Description:         "Should the provider omit the warning if it cannot create the full list of policy role assignments? Default is `false`. If not specified, value will be attempted to be read from the `ALZ_PROVIDER_SUPPRESS_WARNING_POLICY_ROLE_ASSIGNMENTS` environment variable.",
 				MarkdownDescription: "Should the provider omit the warning if it cannot create the full list of policy role assignments? Default is `false`. If not specified, value will be attempted to be read from the `ALZ_PROVIDER_SUPPRESS_WARNING_POLICY_ROLE_ASSIGNMENTS` environment variable.",
 			},
-			"tenant_id": schema.StringAttribute{
-				Optional:            true,
-				Description:         "The Tenant ID which should be used. If not specified, value will be attempted to be read from the `ARM_TENANT_ID` environment variable.",
-				MarkdownDescription: "The Tenant ID which should be used. If not specified, value will be attempted to be read from the `ARM_TENANT_ID` environment variable.",
-			},
-			"use_cli": schema.BoolAttribute{
-				Optional:            true,
-				Description:         "Allow Azure CLI to be used for authentication. Default is `true`. If not specified, value will be attempted to be read from the `ARM_USE_CLI` environment variable.",
-				MarkdownDescription: "Allow Azure CLI to be used for authentication. Default is `true`. If not specified, value will be attempted to be read from the `ARM_USE_CLI` environment variable.",
-			},
-			"use_msi": schema.BoolAttribute{
-				Optional:            true,
-				Description:         "Allow managed service identity to be used for authentication. Default is `false`. If not specified, value will be attempted to be read from the `ARM_USE_MSI` environment variable.",
-				MarkdownDescription: "Allow managed service identity to be used for authentication. Default is `false`. If not specified, value will be attempted to be read from the `ARM_USE_MSI` environment variable.",
-			},
-			"use_oidc": schema.BoolAttribute{
-				Optional:            true,
-				Description:         "Allow OpenID Connect to be used for authentication. Default is `false`. If not specified, value will be attempted to be read from the `ARM_USE_OIDC` environment variable.",
-				MarkdownDescription: "Allow OpenID Connect to be used for authentication. Default is `false`. If not specified, value will be attempted to be read from the `ARM_USE_OIDC` environment variable.",
-			},
 		},
 		Description:         "ALZ provider to generate archetype data for use with the ALZ Terraform module.",
 		MarkdownDescription: "ALZ provider to generate archetype data for use with the ALZ Terraform module.",
@@ -175,26 +100,12 @@ func AlzProviderSchema(ctx context.Context) schema.Schema {
 }
 
 type AlzModel struct {
-	AuxiliaryTenantIds                     types.List   `tfsdk:"auxiliary_tenant_ids"`
-	ClientCertificatePassword              types.String `tfsdk:"client_certificate_password"`
-	ClientCertificatePath                  types.String `tfsdk:"client_certificate_path"`
-	ClientId                               types.String `tfsdk:"client_id"`
-	ClientSecret                           types.String `tfsdk:"client_secret"`
-	Environment                            types.String `tfsdk:"environment"`
-	LibraryFetchDependencies               types.Bool   `tfsdk:"library_fetch_dependencies"`
-	LibraryOverwriteEnabled                types.Bool   `tfsdk:"library_overwrite_enabled"`
-	LibraryReferences                      types.List   `tfsdk:"library_references"`
-	OidcRequestToken                       types.String `tfsdk:"oidc_request_token"`
-	OidcRequestUrl                         types.String `tfsdk:"oidc_request_url"`
-	OidcToken                              types.String `tfsdk:"oidc_token"`
-	OidcTokenFilePath                      types.String `tfsdk:"oidc_token_file_path"`
-	RoleDefinitionsUseSuppliedNamesEnabled types.Bool   `tfsdk:"role_definitions_use_supplied_names_enabled"`
-	SkipProviderRegistration               types.Bool   `tfsdk:"skip_provider_registration"`
-	SuppressWarningPolicyRoleAssignments   types.Bool   `tfsdk:"suppress_warning_policy_role_assignments"`
-	TenantId                               types.String `tfsdk:"tenant_id"`
-	UseCli                                 types.Bool   `tfsdk:"use_cli"`
-	UseMsi                                 types.Bool   `tfsdk:"use_msi"`
-	UseOidc                                types.Bool   `tfsdk:"use_oidc"`
+	LibraryFetchDependencies               types.Bool `tfsdk:"library_fetch_dependencies"`
+	LibraryOverwriteEnabled                types.Bool `tfsdk:"library_overwrite_enabled"`
+	LibraryReferences                      types.List `tfsdk:"library_references"`
+	RoleDefinitionsUseSuppliedNamesEnabled types.Bool `tfsdk:"role_definitions_use_supplied_names_enabled"`
+	SkipProviderRegistration               types.Bool `tfsdk:"skip_provider_registration"`
+	SuppressWarningPolicyRoleAssignments   types.Bool `tfsdk:"suppress_warning_policy_role_assignments"`
 }
 
 var _ basetypes.ObjectTypable = LibraryReferencesType{}

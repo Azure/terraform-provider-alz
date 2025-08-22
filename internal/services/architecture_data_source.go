@@ -1,4 +1,4 @@
-package provider
+package services
 
 import (
 	"context"
@@ -10,7 +10,8 @@ import (
 	"github.com/Azure/alzlib/deployment"
 	"github.com/Azure/alzlib/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy"
-	"github.com/Azure/terraform-provider-alz/internal/provider/gen"
+	"github.com/Azure/terraform-provider-alz/internal/clients"
+	"github.com/Azure/terraform-provider-alz/internal/gen"
 	"github.com/Azure/terraform-provider-alz/internal/typehelper"
 	"github.com/Azure/terraform-provider-alz/internal/typehelper/frameworktype"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -28,7 +29,7 @@ func NewArchitectureDataSource() datasource.DataSource {
 }
 
 type architectureDataSource struct {
-	data *alzProviderData
+	data *clients.Client
 }
 
 func (d *architectureDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -44,11 +45,11 @@ func (d *architectureDataSource) Configure(ctx context.Context, req datasource.C
 	if req.ProviderData == nil {
 		return
 	}
-	data, ok := req.ProviderData.(*alzProviderData)
+	data, ok := req.ProviderData.(*clients.Client)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"architectureDataSource.Configure() Unexpected type",
-			fmt.Sprintf("Expected *alzProviderData, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *clients.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 		return
 	}
@@ -167,7 +168,7 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 			)
 			return
 		}
-		if !d.data.suppressWarningPolicyRoleAssignments {
+		if !d.data.SuppressWarningPolicyRoleAssignments() {
 			resp.Diagnostics.AddWarning(
 				"architectureDataSource.Read() External role assignment creation required for Azure Policy assignments.",
 				fmt.Sprintf("This is a known limitation, please do not raise GitHub issues!\nTo suppress this message see the provider flag: `suppress_warning_policy_role_assignments`\n\nSee `https://github.com/Azure/alzlib/issues/189`\n\n%s", praErr.Error()),
@@ -268,10 +269,10 @@ func policyRoleAssignmentToProviderType(ctx context.Context, input deployment.Po
 	return gen.NewPolicyRoleAssignmentsValue(
 		gen.NewPolicyRoleAssignmentsValueNull().AttributeTypes(ctx),
 		map[string]attr.Value{
-			"role_definition_id":     types.StringValue(input.RoleDefinitionId),
+			"role_definition_id":     types.StringValue(input.RoleDefinitionID),
 			"scope":                  types.StringValue(input.Scope),
 			"policy_assignment_name": types.StringValue(input.AssignmentName),
-			"management_group_id":    types.StringValue(input.ManagementGroupId),
+			"management_group_id":    types.StringValue(input.ManagementGroupID),
 		},
 	)
 }
@@ -293,7 +294,7 @@ func alzMgToProviderType(ctx context.Context, mg *deployment.HierarchyManagement
 		gen.NewManagementGroupsValueNull().AttributeTypes(ctx),
 		map[string]attr.Value{
 			"id":                     types.StringValue(mg.Name()),
-			"parent_id":              types.StringValue(mg.ParentId()),
+			"parent_id":              types.StringValue(mg.ParentID()),
 			"display_name":           types.StringValue(mg.DisplayName()),
 			"exists":                 types.BoolValue(mg.Exists()),
 			"level":                  types.NumberValue(big.NewFloat(float64(mg.Level()))),
