@@ -17,6 +17,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy"
 	"github.com/Azure/entrauth/aztfauth"
 	"github.com/Azure/terraform-provider-alz/internal/aztfschema"
@@ -103,7 +104,11 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 	data.SetOpinionatedDefaults()
 	configureDefaults(ctx, &data)
 
-	authOptions := data.AuthOption(azcore.ClientOptions{})
+	authOptions := data.AuthOption(azcore.ClientOptions{
+		Retry: policy.RetryOptions{
+			MaxRetries: math.MaxInt16,
+		},
+	})
 	cred, err := aztfauth.NewCredential(authOptions)
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to create Azure token credential", err.Error())
