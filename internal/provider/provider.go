@@ -131,7 +131,7 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 		return
 	}
 
-	r := rand.Intn(math.MaxUint32)
+	r := rand.Intn(math.MaxInt32)
 	alzlib.Instance.Store(uint32(r))
 	tflog.Debug(ctx, "Stored random ID for AlzLib instance", map[string]interface{}{
 		"instance": r,
