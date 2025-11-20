@@ -3,8 +3,8 @@ module github.com/Azure/terraform-provider-alz
 go 1.25.2
 
 require (
-	github.com/Azure/alzlib v0.29.1
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.19.1
+	github.com/Azure/alzlib v0.29.2
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.20.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy v0.10.0
 	github.com/Azure/entrauth v0.0.0-20250819004238-dc2a3f58cbb7
 	github.com/deckarep/golang-set/v2 v2.8.0
@@ -69,7 +69,7 @@ require (
 	github.com/hashicorp/yamux v0.1.2 // indirect
 	github.com/huandu/xstrings v1.5.0 // indirect
 	github.com/imdario/mergo v0.3.15 // indirect
-	github.com/klauspost/compress v1.18.0 // indirect
+	github.com/klauspost/compress v1.18.1 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/matt-FFFFFF/goarmfunctions v0.3.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
@@ -96,14 +96,14 @@ require (
 	github.com/yuin/goldmark-meta v1.1.0 // indirect
 	github.com/zclconf/go-cty v1.16.3 // indirect
 	go.abhg.dev/goldmark/frontmatter v0.2.0 // indirect
-	golang.org/x/crypto v0.43.0 // indirect
+	golang.org/x/crypto v0.45.0 // indirect
 	golang.org/x/exp v0.0.0-20240707233637-46b078467d37 // indirect
-	golang.org/x/mod v0.28.0 // indirect
-	golang.org/x/net v0.46.0 // indirect
-	golang.org/x/sync v0.17.0 // indirect
-	golang.org/x/sys v0.37.0 // indirect
-	golang.org/x/text v0.30.0 // indirect
-	golang.org/x/tools v0.37.0 // indirect
+	golang.org/x/mod v0.29.0 // indirect
+	golang.org/x/net v0.47.0 // indirect
+	golang.org/x/sync v0.18.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/text v0.31.0 // indirect
+	golang.org/x/tools v0.38.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250218202821-56aae31c358a // indirect
 	google.golang.org/grpc v1.72.1 // indirect

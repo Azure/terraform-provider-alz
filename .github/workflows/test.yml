@@ -49,7 +49,7 @@ jobs:
       - run: go build -v .
         env:
           GOOS: linux
-          GOARCH: '386'
+          GOARCH: "386"
 
       - name: Run linters
         uses: golangci/golangci-lint-action@1481404843c368bc19ca9406f87d6e0fc97bdcfd # v7.0.0
@@ -89,8 +89,8 @@ jobs:
       matrix:
         # list whatever Terraform versions here you would like to support
         terraform:
-          - "1.6.*"
           - "1.12.*"
+          - "1.14.*"
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
