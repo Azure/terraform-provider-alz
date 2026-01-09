@@ -21,8 +21,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 )
 
-var _ datasource.DataSource = (*architectureDataSource)(nil)
-var _ datasource.DataSourceWithConfigure = (*architectureDataSource)(nil)
+var (
+	_ datasource.DataSource              = (*architectureDataSource)(nil)
+	_ datasource.DataSourceWithConfigure = (*architectureDataSource)(nil)
+)
 
 func NewArchitectureDataSource() datasource.DataSource {
 	return &architectureDataSource{}
@@ -240,7 +242,15 @@ func modifyPolicyAssignments(ctx context.Context, depl *deployment.Hierarchy, da
 				)
 				return
 			}
-			if err := mg.ModifyPolicyAssignment(paName, params, enf, noncompl, ident, resourceSel, overrides); err != nil {
+			if err := mg.ModifyPolicyAssignment(
+				paName,
+				deployment.WithParameters(params),
+				deployment.WithEnforcementMode(enf),
+				deployment.WithNonComplianceMessages(noncompl),
+				deployment.WithIdentity(ident),
+				deployment.WithResourceSelectors(resourceSel),
+				deployment.WithOverrides(overrides),
+			); err != nil {
 				resp.Diagnostics.AddError(
 					"architectureDataSource.Read() Error modifying policy assignment values in alzlib",
 					fmt.Sprintf("Error modifying policy assignment values for `%s` at mg `%s`: %s", paName, mgName, err.Error()),
@@ -314,7 +324,8 @@ func policyAssignmentType2ArmPolicyValues(ctx context.Context, pa gen.PolicyAssi
 	nonComplianceMessages []*armpolicy.NonComplianceMessage,
 	parameters map[string]*armpolicy.ParameterValuesValue,
 	resourceSelectors []*armpolicy.ResourceSelector,
-	overrides []*armpolicy.Override) {
+	overrides []*armpolicy.Override,
+) {
 	// Set enforcement mode.
 	enforcementMode = convertPolicyAssignmentEnforcementModeToSdkType(pa.EnforcementMode)
 
