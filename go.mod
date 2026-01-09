@@ -3,7 +3,7 @@ module github.com/Azure/terraform-provider-alz
 go 1.25.2
 
 require (
-	github.com/Azure/alzlib v0.29.2
+	github.com/Azure/alzlib v0.29.3
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.20.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy v0.10.0
 	github.com/Azure/entrauth v0.0.0-20250819004238-dc2a3f58cbb7
@@ -69,7 +69,7 @@ require (
 	github.com/hashicorp/yamux v0.1.2 // indirect
 	github.com/huandu/xstrings v1.5.0 // indirect
 	github.com/imdario/mergo v0.3.15 // indirect
-	github.com/klauspost/compress v1.18.1 // indirect
+	github.com/klauspost/compress v1.18.2 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/matt-FFFFFF/goarmfunctions v0.3.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
