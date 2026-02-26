@@ -78,9 +78,33 @@ var authAttrs map[string]schema.Attribute = map[string]schema.Attribute{
 	"environment": schema.StringAttribute{
 		Optional: true,
 		Validators: []validator.String{
-			stringvalidator.OneOfCaseInsensitive("public", "usgovernment", "china"),
+			stringvalidator.OneOfCaseInsensitive("public", "usgovernment", "china", "custom"),
 		},
-		MarkdownDescription: "The Cloud Environment which should be used. Possible values are `public`, `usgovernment` and `china`. Defaults to `public`. This can also be sourced from the `ARM_ENVIRONMENT` or `AZURE_ENVIRONMENT` Environment Variables.",
+		MarkdownDescription: "The Cloud Environment which should be used. Possible values are `public`, `usgovernment`, `china` and `custom`. Defaults to `public`. When set to `custom`, the `endpoint` configuration block must be provided. This can also be sourced from the `ARM_ENVIRONMENT` or `AZURE_ENVIRONMENT` Environment Variables.",
+	},
+
+	"endpoint": schema.ListNestedAttribute{
+		Optional: true,
+		NestedObject: schema.NestedAttributeObject{
+			Attributes: map[string]schema.Attribute{
+				"resource_manager_endpoint": schema.StringAttribute{
+					Optional:            true,
+					MarkdownDescription: "The Azure Resource Manager endpoint to use. This can also be sourced from the `ARM_RESOURCE_MANAGER_ENDPOINT` Environment Variable. Required when `environment` is set to `custom`. Example: `https://management.azure.com/` for public cloud.",
+				},
+				"active_directory_authority_host": schema.StringAttribute{
+					Optional:            true,
+					MarkdownDescription: "The Azure Active Directory login endpoint to use. This can also be sourced from the `ARM_ACTIVE_DIRECTORY_AUTHORITY_HOST` Environment Variable. Required when `environment` is set to `custom`. Example: `https://login.microsoftonline.com/` for public cloud.",
+				},
+				"resource_manager_audience": schema.StringAttribute{
+					Optional:            true,
+					MarkdownDescription: "The resource ID to obtain AD tokens for. This can also be sourced from the `ARM_RESOURCE_MANAGER_AUDIENCE` Environment Variable. Required when `environment` is set to `custom`. Example: `https://management.core.windows.net/` for public cloud.",
+				},
+			},
+		},
+		Validators: []validator.List{
+			listvalidator.SizeAtMost(1),
+		},
+		MarkdownDescription: "The Azure API Endpoint Configuration. This block is required when `environment` is set to `custom` and allows configuring the provider for sovereign clouds or custom Azure environments.",
 	},
 
 	// TODO@mgd: the metadata_host is used to retrieve metadata from Azure to identify current environment, this is used to eliminate Azure Stack usage, in which case the provider doesn't support.

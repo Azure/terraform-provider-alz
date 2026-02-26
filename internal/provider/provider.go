@@ -104,11 +104,15 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 	data.SetOpinionatedDefaults()
 	configureDefaults(ctx, &data)
 
-	authOptions := data.AuthOption(azcore.ClientOptions{
+	authOptions, err := data.AuthOption(ctx, azcore.ClientOptions{
 		Retry: policy.RetryOptions{
 			MaxRetries: math.MaxInt16,
 		},
 	})
+	if err != nil {
+		resp.Diagnostics.AddError("Failed to configure cloud environment", err.Error())
+		return
+	}
 	cred, err := aztfauth.NewCredential(authOptions)
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to create Azure token credential", err.Error())

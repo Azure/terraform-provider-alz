@@ -1,6 +1,7 @@
 package aztfschema_test
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -40,7 +41,11 @@ func ExampleAuthModelWithSubscriptionID_AuthOption() {
 	// Enables CLI, disables OIDC & MSI
 	model.SetOpinionatedDefaults()
 
-	opts := model.AuthOption(azcore.ClientOptions{})
+	opts, err := model.AuthOption(context.Background(), azcore.ClientOptions{})
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
 
 	fmt.Println("MSI auth:", opts.UseMSI)
 	fmt.Println("Client ID:", opts.ClientId)

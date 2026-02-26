@@ -42,6 +42,7 @@ func ExampleGenerator_WithAuthAttrs() {
 	// client_id_file_path
 	// client_secret
 	// client_secret_file_path
+	// endpoint
 	// environment
 	// example_attribute
 	// oidc_azure_service_connection_id
