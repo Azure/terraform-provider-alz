@@ -170,9 +170,9 @@ func (m *AuthModel) configureEndpointFromEnv() {
 
 		ctx := context.Background()
 		endpointValue, diags := types.ObjectValueFrom(ctx, map[string]attr.Type{
-			"resource_manager_endpoint":        types.StringType,
-			"active_directory_authority_host":  types.StringType,
-			"resource_manager_audience":        types.StringType,
+			"resource_manager_endpoint":       types.StringType,
+			"active_directory_authority_host": types.StringType,
+			"resource_manager_audience":       types.StringType,
 		}, endpoint)
 		if diags.HasError() {
 			// Failed to convert endpoint struct to Terraform object; do not set m.Endpoint from env.
@@ -183,9 +183,9 @@ func (m *AuthModel) configureEndpointFromEnv() {
 		m.Endpoint = types.ListValueMust(
 			types.ObjectType{
 				AttrTypes: map[string]attr.Type{
-					"resource_manager_endpoint":        types.StringType,
-					"active_directory_authority_host":  types.StringType,
-					"resource_manager_audience":        types.StringType,
+					"resource_manager_endpoint":       types.StringType,
+					"active_directory_authority_host": types.StringType,
+					"resource_manager_audience":       types.StringType,
 				},
 			},
 			[]attr.Value{endpointValue},

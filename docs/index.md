@@ -95,7 +95,8 @@ For more information please visit the [library documentation site](https://azure
 - `client_id_file_path` (String) The path to a file containing the Client ID which should be used. This can also be sourced from the `ARM_CLIENT_ID_FILE_PATH` Environment Variable.
 - `client_secret` (String) The Client Secret which should be used. This can also be sourced from the `ARM_CLIENT_SECRET` Environment Variable.
 - `client_secret_file_path` (String) The path to a file containing the Client Secret which should be used. For use When authenticating as a Service Principal using a Client Secret. This can also be sourced from the `ARM_CLIENT_SECRET_FILE_PATH` Environment Variable.
-- `environment` (String) The Cloud Environment which should be used. Possible values are `public`, `usgovernment` and `china`. Defaults to `public`. This can also be sourced from the `ARM_ENVIRONMENT` or `AZURE_ENVIRONMENT` Environment Variables.
+- `endpoint` (Attributes List) The Azure API Endpoint Configuration. This block is required when `environment` is set to `custom` and allows configuring the provider for sovereign clouds or custom Azure environments. (see [below for nested schema](#nestedatt--endpoint))
+- `environment` (String) The Cloud Environment which should be used. Possible values are `public`, `usgovernment`, `china` and `custom`. Defaults to `public`. When set to `custom`, the `endpoint` configuration block must be provided. This can also be sourced from the `ARM_ENVIRONMENT` or `AZURE_ENVIRONMENT` Environment Variables.
 - `library_fetch_dependencies` (Boolean) Whether to automatically fetch dependencies for the library. This option reads the `alz_library_metadata.json` file in any supplied library and will recursively download dependent libraries. Default is `true`.
 - `library_overwrite_enabled` (Boolean) Whether to allow overwriting of the library by other lib directories. Default is `false`.
 - `oidc_azure_service_connection_id` (String) The Azure Pipelines Service Connection ID to use for authentication. This can also be sourced from the `ARM_ADO_PIPELINE_SERVICE_CONNECTION_ID`, `ARM_OIDC_AZURE_SERVICE_CONNECTION_ID`, or `AZURESUBSCRIPTION_SERVICE_CONNECTION_ID` Environment Variables.
@@ -121,3 +122,13 @@ Optional:
 - `custom_url` (String, Sensitive) A custom path/URL to the library to use. Conflicts with `path` and `ref`. For supported protocols, see [go-getter](https://pkg.go.dev/github.com/hashicorp/go-getter/v2). Value is marked sensitive as may contain secrets.
 - `path` (String) The path in the ALZ Library, e.g. `platform/alz`. Also requires `ref`. Conflicts with `custom_url`.
 - `ref` (String) This is the version of the library to use, e.g. `2024.07.5`. Also requires `path`. Conflicts with `custom_url`.
+
+
+<a id="nestedatt--endpoint"></a>
+### Nested Schema for `endpoint`
+
+Optional:
+
+- `active_directory_authority_host` (String) The Azure Active Directory login endpoint to use. This can also be sourced from the `ARM_ACTIVE_DIRECTORY_AUTHORITY_HOST` Environment Variable. Required when `environment` is set to `custom`. Example: `https://login.microsoftonline.com/` for public cloud.
+- `resource_manager_audience` (String) The resource ID to obtain AD tokens for. This can also be sourced from the `ARM_RESOURCE_MANAGER_AUDIENCE` Environment Variable. Required when `environment` is set to `custom`. Example: `https://management.core.windows.net/` for public cloud.
+- `resource_manager_endpoint` (String) The Azure Resource Manager endpoint to use. This can also be sourced from the `ARM_RESOURCE_MANAGER_ENDPOINT` Environment Variable. Required when `environment` is set to `custom`. Example: `https://management.azure.com/` for public cloud.

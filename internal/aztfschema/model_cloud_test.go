@@ -2,7 +2,6 @@ package aztfschema
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
@@ -93,9 +92,9 @@ func Test_buildCustomCloudConfiguration_Success(t *testing.T) {
 	}
 
 	endpointValue, diags := types.ObjectValueFrom(ctx, map[string]attr.Type{
-		"resource_manager_endpoint":        types.StringType,
-		"active_directory_authority_host":  types.StringType,
-		"resource_manager_audience":        types.StringType,
+		"resource_manager_endpoint":       types.StringType,
+		"active_directory_authority_host": types.StringType,
+		"resource_manager_audience":       types.StringType,
 	}, endpoint)
 	if diags.HasError() {
 		t.Fatalf("Failed to create endpoint object: %v", diags.Errors())
@@ -104,9 +103,9 @@ func Test_buildCustomCloudConfiguration_Success(t *testing.T) {
 	endpointList := types.ListValueMust(
 		types.ObjectType{
 			AttrTypes: map[string]attr.Type{
-				"resource_manager_endpoint":        types.StringType,
-				"active_directory_authority_host":  types.StringType,
-				"resource_manager_audience":        types.StringType,
+				"resource_manager_endpoint":       types.StringType,
+				"active_directory_authority_host": types.StringType,
+				"resource_manager_audience":       types.StringType,
 			},
 		},
 		[]attr.Value{endpointValue},
@@ -160,9 +159,9 @@ func Test_buildCustomCloudConfiguration_EmptyEndpoint(t *testing.T) {
 	emptyList := types.ListValueMust(
 		types.ObjectType{
 			AttrTypes: map[string]attr.Type{
-				"resource_manager_endpoint":        types.StringType,
-				"active_directory_authority_host":  types.StringType,
-				"resource_manager_audience":        types.StringType,
+				"resource_manager_endpoint":       types.StringType,
+				"active_directory_authority_host": types.StringType,
+				"resource_manager_audience":       types.StringType,
 			},
 		},
 		[]attr.Value{},
@@ -237,9 +236,9 @@ func Test_buildCustomCloudConfiguration_MissingFields(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			endpointValue, diags := types.ObjectValueFrom(ctx, map[string]attr.Type{
-				"resource_manager_endpoint":        types.StringType,
-				"active_directory_authority_host":  types.StringType,
-				"resource_manager_audience":        types.StringType,
+				"resource_manager_endpoint":       types.StringType,
+				"active_directory_authority_host": types.StringType,
+				"resource_manager_audience":       types.StringType,
 			}, tt.endpoint)
 			if diags.HasError() {
 				t.Fatalf("Failed to create endpoint object: %v", diags.Errors())
@@ -248,9 +247,9 @@ func Test_buildCustomCloudConfiguration_MissingFields(t *testing.T) {
 			endpointList := types.ListValueMust(
 				types.ObjectType{
 					AttrTypes: map[string]attr.Type{
-						"resource_manager_endpoint":        types.StringType,
-						"active_directory_authority_host":  types.StringType,
-						"resource_manager_audience":        types.StringType,
+						"resource_manager_endpoint":       types.StringType,
+						"active_directory_authority_host": types.StringType,
+						"resource_manager_audience":       types.StringType,
 					},
 				},
 				[]attr.Value{endpointValue},
@@ -277,22 +276,10 @@ func Test_buildCustomCloudConfiguration_MissingFields(t *testing.T) {
 
 // Test_configureEndpointFromEnv tests environment variable configuration.
 func Test_configureEndpointFromEnv(t *testing.T) {
-	// Save original environment variables
-	originalRM := os.Getenv("ARM_RESOURCE_MANAGER_ENDPOINT")
-	originalAD := os.Getenv("ARM_ACTIVE_DIRECTORY_AUTHORITY_HOST")
-	originalAudience := os.Getenv("ARM_RESOURCE_MANAGER_AUDIENCE")
-
-	// Restore environment after test
-	defer func() {
-		os.Setenv("ARM_RESOURCE_MANAGER_ENDPOINT", originalRM)
-		os.Setenv("ARM_ACTIVE_DIRECTORY_AUTHORITY_HOST", originalAD)
-		os.Setenv("ARM_RESOURCE_MANAGER_AUDIENCE", originalAudience)
-	}()
-
 	// Set test environment variables
-	os.Setenv("ARM_RESOURCE_MANAGER_ENDPOINT", "https://management.env.example.com/")
-	os.Setenv("ARM_ACTIVE_DIRECTORY_AUTHORITY_HOST", "https://login.env.example.com/")
-	os.Setenv("ARM_RESOURCE_MANAGER_AUDIENCE", "https://management.core.env.example.com/")
+	t.Setenv("ARM_RESOURCE_MANAGER_ENDPOINT", "https://management.env.example.com/")
+	t.Setenv("ARM_ACTIVE_DIRECTORY_AUTHORITY_HOST", "https://login.env.example.com/")
+	t.Setenv("ARM_RESOURCE_MANAGER_AUDIENCE", "https://management.core.env.example.com/")
 
 	m := &AuthModel{
 		Environment: types.StringValue("custom"),
@@ -334,22 +321,10 @@ func Test_configureEndpointFromEnv(t *testing.T) {
 
 // Test_configureEndpointFromEnv_PartialEnvironment tests partial environment variable configuration.
 func Test_configureEndpointFromEnv_PartialEnvironment(t *testing.T) {
-	// Save original environment variables
-	originalRM := os.Getenv("ARM_RESOURCE_MANAGER_ENDPOINT")
-	originalAD := os.Getenv("ARM_ACTIVE_DIRECTORY_AUTHORITY_HOST")
-	originalAudience := os.Getenv("ARM_RESOURCE_MANAGER_AUDIENCE")
-
-	// Restore environment after test
-	defer func() {
-		os.Setenv("ARM_RESOURCE_MANAGER_ENDPOINT", originalRM)
-		os.Setenv("ARM_ACTIVE_DIRECTORY_AUTHORITY_HOST", originalAD)
-		os.Setenv("ARM_RESOURCE_MANAGER_AUDIENCE", originalAudience)
-	}()
-
 	// Set only one environment variable
-	os.Unsetenv("ARM_ACTIVE_DIRECTORY_AUTHORITY_HOST")
-	os.Unsetenv("ARM_RESOURCE_MANAGER_AUDIENCE")
-	os.Setenv("ARM_RESOURCE_MANAGER_ENDPOINT", "https://management.env.example.com/")
+	t.Setenv("ARM_ACTIVE_DIRECTORY_AUTHORITY_HOST", "")
+	t.Setenv("ARM_RESOURCE_MANAGER_AUDIENCE", "")
+	t.Setenv("ARM_RESOURCE_MANAGER_ENDPOINT", "https://management.env.example.com/")
 
 	m := &AuthModel{
 		Environment: types.StringValue("custom"),
@@ -366,22 +341,10 @@ func Test_configureEndpointFromEnv_PartialEnvironment(t *testing.T) {
 
 // Test_configureEndpointFromEnv_NoEnvironment tests behavior when no environment variables are set.
 func Test_configureEndpointFromEnv_NoEnvironment(t *testing.T) {
-	// Save original environment variables
-	originalRM := os.Getenv("ARM_RESOURCE_MANAGER_ENDPOINT")
-	originalAD := os.Getenv("ARM_ACTIVE_DIRECTORY_AUTHORITY_HOST")
-	originalAudience := os.Getenv("ARM_RESOURCE_MANAGER_AUDIENCE")
-
-	// Restore environment after test
-	defer func() {
-		os.Setenv("ARM_RESOURCE_MANAGER_ENDPOINT", originalRM)
-		os.Setenv("ARM_ACTIVE_DIRECTORY_AUTHORITY_HOST", originalAD)
-		os.Setenv("ARM_RESOURCE_MANAGER_AUDIENCE", originalAudience)
-	}()
-
 	// Unset all environment variables
-	os.Unsetenv("ARM_RESOURCE_MANAGER_ENDPOINT")
-	os.Unsetenv("ARM_ACTIVE_DIRECTORY_AUTHORITY_HOST")
-	os.Unsetenv("ARM_RESOURCE_MANAGER_AUDIENCE")
+	t.Setenv("ARM_RESOURCE_MANAGER_ENDPOINT", "")
+	t.Setenv("ARM_ACTIVE_DIRECTORY_AUTHORITY_HOST", "")
+	t.Setenv("ARM_RESOURCE_MANAGER_AUDIENCE", "")
 
 	m := &AuthModel{
 		Environment: types.StringValue("custom"),
