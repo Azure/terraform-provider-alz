@@ -270,15 +270,24 @@ func modifyPolicyAssignments(ctx context.Context, depl *deployment.Hierarchy, da
 	}
 }
 
-// applyDefaultNonComplianceMessages applies the default non-compliance message to all policy assignments
-// that don't have messages (or merges with existing messages based on merge mode).
+// applyDefaultNonComplianceMessages applies the default non-compliance message to all policy assignments.
+// If there are no existing messages, the default is added.
+// If there are existing messages, the merge mode controls behavior:
+//   - "replace" (default): removes existing default messages (those without policyDefinitionReferenceId)
+//     and adds the configured default. Policy-specific messages (with policyDefinitionReferenceId) are preserved.
+//   - "prefer_existing": if a default message (without policyDefinitionReferenceId) already exists, it is kept.
+//     If none exists, the configured default is added. Policy-specific messages are always preserved.
+//
+// For backward compatibility, {enforcementMode} is replaced in ALL non-compliance messages
+// (Default → "must", DoNotEnforce → "should").
+//
 // This runs BEFORE modifyPolicyAssignments, so explicit non_compliance_messages in
-// policy_assignments_to_modify will take precedence (overwrite).
+// policy_assignments_to_modify will take precedence.
 func applyDefaultNonComplianceMessages(depl *deployment.Hierarchy, data gen.ArchitectureModel, resp *datasource.ReadResponse) {
 	defaultMessage := data.NonComplianceMessageDefault.ValueString()
 
-	// Determine merge mode (default to "keep_existing")
-	mergeMode := "keep_existing"
+	// Determine merge mode (default to "replace")
+	mergeMode := "replace"
 	if isKnown(data.NonComplianceMessageDefaultMergeMode) && data.NonComplianceMessageDefaultMergeMode.ValueString() != "" {
 		mergeMode = data.NonComplianceMessageDefaultMergeMode.ValueString()
 	}
@@ -297,14 +306,6 @@ func applyDefaultNonComplianceMessages(depl *deployment.Hierarchy, data gen.Arch
 				continue
 			}
 
-			existingMessages := pa.Properties.NonComplianceMessages
-			hasExistingMessages := len(existingMessages) > 0
-
-			// If there are existing messages and merge mode is "keep_existing", skip this assignment
-			if hasExistingMessages && mergeMode == "keep_existing" {
-				continue
-			}
-
 			// Determine enforcement replacement based on enforcement mode
 			// Default (enforced) = "must", DoNotEnforce (audit) = "should"
 			enforcementReplacement := "must"
@@ -313,22 +314,49 @@ func applyDefaultNonComplianceMessages(depl *deployment.Hierarchy, data gen.Arch
 			}
 
 			// Replace {enforcementMode} placeholder in the default message
-			messageWithPlaceholder := strings.ReplaceAll(defaultMessage, "{enforcementMode}", enforcementReplacement)
+			resolvedDefault := strings.ReplaceAll(defaultMessage, "{enforcementMode}", enforcementReplacement)
+
+			existingMessages := pa.Properties.NonComplianceMessages
+
+			// Separate existing messages into policy-specific (with policyDefinitionReferenceId)
+			// and default (without policyDefinitionReferenceId)
+			var policySpecificMessages []*armpolicy.NonComplianceMessage
+			var existingDefaultMessages []*armpolicy.NonComplianceMessage
+			for _, msg := range existingMessages {
+				if msg.PolicyDefinitionReferenceID != nil && *msg.PolicyDefinitionReferenceID != "" {
+					policySpecificMessages = append(policySpecificMessages, msg)
+				} else {
+					existingDefaultMessages = append(existingDefaultMessages, msg)
+				}
+			}
 
 			// Build the new non-compliance messages
 			var newMessages []*armpolicy.NonComplianceMessage
 
-			if hasExistingMessages {
-				// Append mode: add the default message to existing messages
-				newMessages = make([]*armpolicy.NonComplianceMessage, len(existingMessages)+1)
-				copy(newMessages, existingMessages)
-				newMessages[len(existingMessages)] = &armpolicy.NonComplianceMessage{
-					Message: to.Ptr(messageWithPlaceholder),
+			// Always preserve policy-specific messages
+			newMessages = append(newMessages, policySpecificMessages...)
+
+			switch mergeMode {
+			case "prefer_existing":
+				// Keep existing default messages if present, otherwise add the configured default
+				if len(existingDefaultMessages) > 0 {
+					newMessages = append(newMessages, existingDefaultMessages...)
+				} else {
+					newMessages = append(newMessages, &armpolicy.NonComplianceMessage{
+						Message: to.Ptr(resolvedDefault),
+					})
 				}
-			} else {
-				// No existing messages: add the default
-				newMessages = []*armpolicy.NonComplianceMessage{
-					{Message: to.Ptr(messageWithPlaceholder)},
+			default: // "replace"
+				// Drop existing default messages and add the configured default
+				newMessages = append(newMessages, &armpolicy.NonComplianceMessage{
+					Message: to.Ptr(resolvedDefault),
+				})
+			}
+
+			// Replace {enforcementMode} in ALL non-compliance messages for backward compatibility
+			for _, msg := range newMessages {
+				if msg.Message != nil {
+					*msg.Message = strings.ReplaceAll(*msg.Message, "{enforcementMode}", enforcementReplacement)
 				}
 			}
 

@@ -117,10 +117,10 @@ func ArchitectureDataSourceSchema(ctx context.Context) schema.Schema {
 			},
 			"non_compliance_message_default_merge_mode": schema.StringAttribute{
 				Optional:            true,
-				Description:         "Controls behavior for policy assignments that already have non-compliance messages. `append` adds the default message to existing messages, `keep_existing` preserves existing messages without adding the default. Defaults to `keep_existing`. Note: Assignments with no messages always receive the default.",
-				MarkdownDescription: "Controls behavior for policy assignments that already have non-compliance messages. `append` adds the default message to existing messages, `keep_existing` preserves existing messages without adding the default. Defaults to `keep_existing`. Note: Assignments with no messages always receive the default.",
+				Description:         "Controls behavior when a policy assignment already has a default non-compliance message (one without a `policyDefinitionReferenceId`). `replace` (default) removes the existing default message and adds the configured default. `prefer_existing` keeps the existing default message if present, only adding the configured default when none exists. Policy-specific messages (with `policyDefinitionReferenceId`) are always preserved. Assignments with no messages always receive the default.",
+				MarkdownDescription: "Controls behavior when a policy assignment already has a default non-compliance message (one without a `policyDefinitionReferenceId`). `replace` (default) removes the existing default message and adds the configured default. `prefer_existing` keeps the existing default message if present, only adding the configured default when none exists. Policy-specific messages (with `policyDefinitionReferenceId`) are always preserved. Assignments with no messages always receive the default.",
 				Validators: []validator.String{
-					stringvalidator.OneOf("append", "keep_existing"),
+					stringvalidator.OneOf("replace", "prefer_existing"),
 				},
 			},
 			"override_policy_definition_parameter_assign_permissions_set": schema.SetNestedAttribute{

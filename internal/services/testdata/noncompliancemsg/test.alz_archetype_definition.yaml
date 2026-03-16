@@ -1,0 +1,8 @@
+---
+name: test
+policy_assignments:
+  - policy-with-message
+  - policy-without-message
+  - policy-donotenforce
+policy_definitions:
+  - test-policy-definition

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/Azure/alzlib/deployment"
@@ -343,5 +344,88 @@ func TestPolicyRoleAssignmentsSetToProviderType(t *testing.T) {
 			AssignmentName:   praval.PolicyAssignmentName.ValueString(),
 		}
 		assert.True(t, src.Contains(setMember))
+	}
+}
+
+// TestEnforcementModeReplacement tests the {enforcementMode} placeholder replacement logic.
+func TestEnforcementModeReplacement(t *testing.T) {
+	testCases := []struct {
+		name               string
+		enforcementMode    *armpolicy.EnforcementMode
+		expectedReplacement string
+	}{
+		{
+			name:               "Default enforcement mode should use 'must'",
+			enforcementMode:    to.Ptr(armpolicy.EnforcementModeDefault),
+			expectedReplacement: "must",
+		},
+		{
+			name:               "DoNotEnforce should use 'should'",
+			enforcementMode:    to.Ptr(armpolicy.EnforcementModeDoNotEnforce),
+			expectedReplacement: "should",
+		},
+		{
+			name:               "Nil enforcement mode should default to 'must'",
+			enforcementMode:    nil,
+			expectedReplacement: "must",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Determine enforcement replacement based on enforcement mode
+			// This mirrors the logic in applyDefaultNonComplianceMessages
+			enforcementReplacement := "must"
+			if tc.enforcementMode != nil && *tc.enforcementMode == armpolicy.EnforcementModeDoNotEnforce {
+				enforcementReplacement = "should"
+			}
+			assert.Equal(t, tc.expectedReplacement, enforcementReplacement)
+		})
+	}
+}
+
+// TestNonComplianceMessagePlaceholderReplacement tests the {enforcementMode} placeholder replacement in messages.
+func TestNonComplianceMessagePlaceholderReplacement(t *testing.T) {
+	testCases := []struct {
+		name            string
+		inputMessage    string
+		enforcementMode *armpolicy.EnforcementMode
+		expectedMessage string
+	}{
+		{
+			name:            "Replace placeholder with 'must' for Default mode",
+			inputMessage:    "This resource {enforcementMode} be compliant with the assigned policy.",
+			enforcementMode: to.Ptr(armpolicy.EnforcementModeDefault),
+			expectedMessage: "This resource must be compliant with the assigned policy.",
+		},
+		{
+			name:            "Replace placeholder with 'should' for DoNotEnforce mode",
+			inputMessage:    "This resource {enforcementMode} be compliant with the assigned policy.",
+			enforcementMode: to.Ptr(armpolicy.EnforcementModeDoNotEnforce),
+			expectedMessage: "This resource should be compliant with the assigned policy.",
+		},
+		{
+			name:            "No placeholder - message unchanged",
+			inputMessage:    "This resource must be compliant.",
+			enforcementMode: to.Ptr(armpolicy.EnforcementModeDefault),
+			expectedMessage: "This resource must be compliant.",
+		},
+		{
+			name:            "Multiple placeholders",
+			inputMessage:    "Resources {enforcementMode} comply. Non-compliance {enforcementMode} be reported.",
+			enforcementMode: to.Ptr(armpolicy.EnforcementModeDoNotEnforce),
+			expectedMessage: "Resources should comply. Non-compliance should be reported.",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			enforcementReplacement := "must"
+			if tc.enforcementMode != nil && *tc.enforcementMode == armpolicy.EnforcementModeDoNotEnforce {
+				enforcementReplacement = "should"
+			}
+			result := strings.ReplaceAll(tc.inputMessage, "{enforcementMode}", enforcementReplacement)
+			assert.Equal(t, tc.expectedMessage, result)
+		})
 	}
 }

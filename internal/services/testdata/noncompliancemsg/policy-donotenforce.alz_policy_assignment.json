@@ -1,0 +1,13 @@
+{
+  "type": "Microsoft.Authorization/policyAssignments",
+  "apiVersion": "2022-06-01",
+  "name": "policy-donotenforce",
+  "properties": {
+    "description": "Policy assignment with DoNotEnforce mode.",
+    "displayName": "Policy DoNotEnforce",
+    "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/test-policy-definition",
+    "enforcementMode": "DoNotEnforce",
+    "parameters": {},
+    "scope": "/providers/Microsoft.Management/managementGroups/PLACEHOLDER"
+  }
+}
