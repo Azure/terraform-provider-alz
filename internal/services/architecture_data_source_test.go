@@ -350,23 +350,23 @@ func TestPolicyRoleAssignmentsSetToProviderType(t *testing.T) {
 // TestEnforcementModeReplacement tests the {enforcementMode} placeholder replacement logic.
 func TestEnforcementModeReplacement(t *testing.T) {
 	testCases := []struct {
-		name               string
-		enforcementMode    *armpolicy.EnforcementMode
+		name                string
+		enforcementMode     *armpolicy.EnforcementMode
 		expectedReplacement string
 	}{
 		{
-			name:               "Default enforcement mode should use 'must'",
-			enforcementMode:    to.Ptr(armpolicy.EnforcementModeDefault),
+			name:                "Default enforcement mode should use 'must'",
+			enforcementMode:     to.Ptr(armpolicy.EnforcementModeDefault),
 			expectedReplacement: "must",
 		},
 		{
-			name:               "DoNotEnforce should use 'should'",
-			enforcementMode:    to.Ptr(armpolicy.EnforcementModeDoNotEnforce),
+			name:                "DoNotEnforce should use 'should'",
+			enforcementMode:     to.Ptr(armpolicy.EnforcementModeDoNotEnforce),
 			expectedReplacement: "should",
 		},
 		{
-			name:               "Nil enforcement mode should default to 'must'",
-			enforcementMode:    nil,
+			name:                "Nil enforcement mode should default to 'must'",
+			enforcementMode:     nil,
 			expectedReplacement: "must",
 		},
 	}
