@@ -110,6 +110,19 @@ func ArchitectureDataSourceSchema(ctx context.Context) schema.Schema {
 					stringvalidator.LengthAtLeast(1),
 				},
 			},
+			"non_compliance_message_default": schema.StringAttribute{
+				Optional:            true,
+				Description:         "A default non-compliance message to apply to policy assignments that don't have one.",
+				MarkdownDescription: "A default non-compliance message to apply to policy assignments that don't have one.",
+			},
+			"non_compliance_message_default_merge_mode": schema.StringAttribute{
+				Optional:            true,
+				Description:         "Controls behavior for policy assignments that already have non-compliance messages. `append` adds the default message to existing messages, `keep_existing` preserves existing messages without adding the default. Defaults to `keep_existing`. Note: Assignments with no messages always receive the default.",
+				MarkdownDescription: "Controls behavior for policy assignments that already have non-compliance messages. `append` adds the default message to existing messages, `keep_existing` preserves existing messages without adding the default. Defaults to `keep_existing`. Note: Assignments with no messages always receive the default.",
+				Validators: []validator.String{
+					stringvalidator.OneOf("append", "keep_existing"),
+				},
+			},
 			"override_policy_definition_parameter_assign_permissions_set": schema.SetNestedAttribute{
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -474,6 +487,8 @@ type ArchitectureModel struct {
 	Location                                                types.String   `tfsdk:"location"`
 	ManagementGroups                                        types.List     `tfsdk:"management_groups"`
 	Name                                                    types.String   `tfsdk:"name"`
+	NonComplianceMessageDefault                             types.String   `tfsdk:"non_compliance_message_default"`
+	NonComplianceMessageDefaultMergeMode                    types.String   `tfsdk:"non_compliance_message_default_merge_mode"`
 	OverridePolicyDefinitionParameterAssignPermissionsSet   types.Set      `tfsdk:"override_policy_definition_parameter_assign_permissions_set"`
 	OverridePolicyDefinitionParameterAssignPermissionsUnset types.Set      `tfsdk:"override_policy_definition_parameter_assign_permissions_unset"`
 	PolicyAssignmentsToModify                               types.Map      `tfsdk:"policy_assignments_to_modify"`

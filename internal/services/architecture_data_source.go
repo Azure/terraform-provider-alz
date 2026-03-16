@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/Azure/alzlib/deployment"
@@ -152,7 +153,15 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 		}
 	}
 
-	// Modify policy assignments
+	// Apply default non-compliance messages to all policy assignments if NonComplianceMessageDefault is set
+	if isKnown(data.NonComplianceMessageDefault) && data.NonComplianceMessageDefault.ValueString() != "" {
+		applyDefaultNonComplianceMessages(depl, data, resp)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	// Modify policy assignments (explicit configs take precedence over defaults)
 	modifyPolicyAssignments(ctx, depl, data, resp)
 	if resp.Diagnostics.HasError() {
 		return
@@ -254,6 +263,83 @@ func modifyPolicyAssignments(ctx context.Context, depl *deployment.Hierarchy, da
 				resp.Diagnostics.AddError(
 					"architectureDataSource.Read() Error modifying policy assignment values in alzlib",
 					fmt.Sprintf("Error modifying policy assignment values for `%s` at mg `%s`: %s", paName, mgName, err.Error()),
+				)
+				return
+			}
+		}
+	}
+}
+
+// applyDefaultNonComplianceMessages applies the default non-compliance message to all policy assignments
+// that don't have messages (or merges with existing messages based on merge mode).
+// This runs BEFORE modifyPolicyAssignments, so explicit non_compliance_messages in
+// policy_assignments_to_modify will take precedence (overwrite).
+func applyDefaultNonComplianceMessages(depl *deployment.Hierarchy, data gen.ArchitectureModel, resp *datasource.ReadResponse) {
+	defaultMessage := data.NonComplianceMessageDefault.ValueString()
+
+	// Determine merge mode (default to "keep_existing")
+	mergeMode := "keep_existing"
+	if isKnown(data.NonComplianceMessageDefaultMergeMode) && data.NonComplianceMessageDefaultMergeMode.ValueString() != "" {
+		mergeMode = data.NonComplianceMessageDefaultMergeMode.ValueString()
+	}
+
+	// Iterate through all management groups in the hierarchy
+	for _, mgName := range depl.ManagementGroupNames() {
+		mg := depl.ManagementGroup(mgName)
+		if mg == nil {
+			continue
+		}
+
+		// Get all policy assignments for this management group
+		policyAssignments := mg.PolicyAssignmentMap()
+		for paName, pa := range policyAssignments {
+			if pa == nil || pa.Properties == nil {
+				continue
+			}
+
+			existingMessages := pa.Properties.NonComplianceMessages
+			hasExistingMessages := len(existingMessages) > 0
+
+			// If there are existing messages and merge mode is "keep_existing", skip this assignment
+			if hasExistingMessages && mergeMode == "keep_existing" {
+				continue
+			}
+
+			// Determine enforcement replacement based on enforcement mode
+			// Default (enforced) = "must", DoNotEnforce (audit) = "should"
+			enforcementReplacement := "must"
+			if pa.Properties.EnforcementMode != nil && *pa.Properties.EnforcementMode == armpolicy.EnforcementModeDoNotEnforce {
+				enforcementReplacement = "should"
+			}
+
+			// Replace {enforcementMode} placeholder in the default message
+			messageWithPlaceholder := strings.ReplaceAll(defaultMessage, "{enforcementMode}", enforcementReplacement)
+
+			// Build the new non-compliance messages
+			var newMessages []*armpolicy.NonComplianceMessage
+
+			if hasExistingMessages {
+				// Append mode: add the default message to existing messages
+				newMessages = make([]*armpolicy.NonComplianceMessage, len(existingMessages)+1)
+				copy(newMessages, existingMessages)
+				newMessages[len(existingMessages)] = &armpolicy.NonComplianceMessage{
+					Message: to.Ptr(messageWithPlaceholder),
+				}
+			} else {
+				// No existing messages: add the default
+				newMessages = []*armpolicy.NonComplianceMessage{
+					{Message: to.Ptr(messageWithPlaceholder)},
+				}
+			}
+
+			// Apply the non-compliance messages using ModifyPolicyAssignment
+			if err := mg.ModifyPolicyAssignment(
+				paName,
+				deployment.WithNonComplianceMessages(newMessages),
+			); err != nil {
+				resp.Diagnostics.AddError(
+					"architectureDataSource.Read() Error applying default non-compliance message",
+					fmt.Sprintf("Error applying default non-compliance message for `%s` at mg `%s`: %s", paName, mgName, err.Error()),
 				)
 				return
 			}

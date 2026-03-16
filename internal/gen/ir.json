@@ -269,6 +269,32 @@
             }
           },
           {
+            "name": "non_compliance_message_default",
+            "string": {
+              "description": "A default non-compliance message to apply to policy assignments that don't have one.",
+              "computed_optional_required": "optional"
+            }
+          },
+          {
+            "name": "non_compliance_message_default_merge_mode",
+            "string": {
+              "description": "Controls behavior for policy assignments that already have non-compliance messages. `append` adds the default message to existing messages, `keep_existing` preserves existing messages without adding the default. Defaults to `keep_existing`. Note: Assignments with no messages always receive the default.",
+              "computed_optional_required": "optional",
+              "validators": [
+                {
+                  "custom": {
+                    "imports": [
+                      {
+                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                      }
+                    ],
+                    "schema_definition": "stringvalidator.OneOf(\"append\", \"keep_existing\")"
+                  }
+                }
+              ]
+            }
+          },
+          {
             "name": "policy_assignments_to_modify",
             "map_nested": {
               "computed_optional_required": "optional",
