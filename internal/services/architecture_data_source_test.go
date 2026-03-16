@@ -373,13 +373,7 @@ func TestEnforcementModeReplacement(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Determine enforcement replacement based on enforcement mode
-			// This mirrors the logic in applyDefaultNonComplianceMessages
-			enforcementReplacement := "must"
-			if tc.enforcementMode != nil && *tc.enforcementMode == armpolicy.EnforcementModeDoNotEnforce {
-				enforcementReplacement = "should"
-			}
-			assert.Equal(t, tc.expectedReplacement, enforcementReplacement)
+			assert.Equal(t, tc.expectedReplacement, enforcementModeReplacement(tc.enforcementMode))
 		})
 	}
 }
@@ -420,12 +414,24 @@ func TestNonComplianceMessagePlaceholderReplacement(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			enforcementReplacement := "must"
-			if tc.enforcementMode != nil && *tc.enforcementMode == armpolicy.EnforcementModeDoNotEnforce {
-				enforcementReplacement = "should"
-			}
-			result := strings.ReplaceAll(tc.inputMessage, "{enforcementMode}", enforcementReplacement)
+			result := strings.ReplaceAll(tc.inputMessage, "{enforcementMode}", enforcementModeReplacement(tc.enforcementMode))
 			assert.Equal(t, tc.expectedMessage, result)
 		})
 	}
+}
+
+func TestNewNonComplianceMessageConfig(t *testing.T) {
+	cfg := NewNonComplianceMessageConfig()
+	assert.False(t, cfg.Enabled)
+	assert.Equal(t, DefaultNonComplianceMessage, cfg.DefaultMessage)
+	assert.Equal(t, NonComplianceMergeModeReplace, cfg.MergeMode)
+}
+
+func TestNonComplianceMergeMode(t *testing.T) {
+	assert.Equal(t, NonComplianceMergeModeReplace, NonComplianceMergeMode("replace"))
+	assert.Equal(t, NonComplianceMergeModePreferExisting, NonComplianceMergeMode("prefer_existing"))
+}
+
+func TestDefaultNonComplianceMessageConst(t *testing.T) {
+	assert.Contains(t, DefaultNonComplianceMessage, "{enforcementMode}")
 }
