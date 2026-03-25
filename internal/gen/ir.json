@@ -269,26 +269,45 @@
             }
           },
           {
-            "name": "non_compliance_message_default",
-            "string": {
-              "description": "A default non-compliance message to apply to policy assignments that don't have one.",
-              "computed_optional_required": "optional"
-            }
-          },
-          {
-            "name": "non_compliance_message_default_merge_mode",
-            "string": {
-              "description": "Controls behavior when a policy assignment already has a default non-compliance message (one without a `policyDefinitionReferenceId`). `replace` (default) removes the existing default message and adds the configured default. `prefer_existing` keeps the existing default message if present, only adding the configured default when none exists. Policy-specific messages (with `policyDefinitionReferenceId`) are always preserved. Assignments with no messages always receive the default.",
+            "name": "non_compliance_message_settings",
+            "single_nested": {
+              "description": "Settings for controlling default non-compliance messages on policy assignments. When configured, a default non-compliance message will be applied to policy assignments.",
               "computed_optional_required": "optional",
-              "validators": [
+              "attributes": [
                 {
-                  "custom": {
-                    "imports": [
+                  "name": "default_message",
+                  "string": {
+                    "description": "The default non-compliance message to apply to policy assignments. Supports the `{enforcementMode}` placeholder which is replaced with `must` for enforced assignments and `should` for non-enforced. If empty, the default non-compliance message feature is disabled.",
+                    "computed_optional_required": "required"
+                  }
+                },
+                {
+                  "name": "merge_mode",
+                  "string": {
+                    "description": "Controls behavior when a policy assignment already has a default non-compliance message (one without a `policyDefinitionReferenceId`). `replace` (default) removes the existing default message and adds the configured default. `prefer_existing` keeps the existing default message if present, only adding the configured default when none exists. Policy-specific messages (with `policyDefinitionReferenceId`) are always preserved. Assignments with no messages always receive the default if a default message is supplied.",
+                    "computed_optional_required": "optional",
+                    "validators": [
                       {
-                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                        "custom": {
+                          "imports": [
+                            {
+                              "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                            }
+                          ],
+                          "schema_definition": "stringvalidator.OneOf(\"replace\", \"prefer_existing\")"
+                        }
                       }
-                    ],
-                    "schema_definition": "stringvalidator.OneOf(\"replace\", \"prefer_existing\")"
+                    ]
+                  }
+                },
+                {
+                  "name": "exclusions",
+                  "set": {
+                    "description": "A set of policy assignment names to exclude from non-compliance message processing. Use this for policies that do not support non-compliance messages.",
+                    "computed_optional_required": "optional",
+                    "element_type": {
+                      "string": {}
+                    }
                   }
                 }
               ]

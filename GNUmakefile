@@ -34,3 +34,4 @@ genprovider:
 .PHONY: tools
 tools:
 	go install github.com/hashicorp/terraform-plugin-codegen-framework/cmd/tfplugingen-framework@latest
+	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest

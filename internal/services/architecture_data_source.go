@@ -155,12 +155,21 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	// Handle default non-compliance messages for policies
 	ncmCfg := NewNonComplianceMessageConfig()
-	if isKnown(data.NonComplianceMessageDefault) && data.NonComplianceMessageDefault.ValueString() != "" {
+	if isKnown(data.NonComplianceMessageSettings) {
 		ncmCfg.Enabled = true
-		ncmCfg.DefaultMessage = data.NonComplianceMessageDefault.ValueString()
-	}
-	if isKnown(data.NonComplianceMessageDefaultMergeMode) && data.NonComplianceMessageDefaultMergeMode.ValueString() != "" {
-		ncmCfg.MergeMode = NonComplianceMergeMode(data.NonComplianceMessageDefaultMergeMode.ValueString())
+		if isKnown(data.NonComplianceMessageSettings.DefaultMessage) && data.NonComplianceMessageSettings.DefaultMessage.ValueString() != "" {
+			ncmCfg.DefaultMessage = data.NonComplianceMessageSettings.DefaultMessage.ValueString()
+		}
+		if isKnown(data.NonComplianceMessageSettings.MergeMode) && data.NonComplianceMessageSettings.MergeMode.ValueString() != "" {
+			ncmCfg.MergeMode = NonComplianceMergeMode(data.NonComplianceMessageSettings.MergeMode.ValueString())
+		}
+		if isKnown(data.NonComplianceMessageSettings.Exclusions) {
+			for _, elem := range data.NonComplianceMessageSettings.Exclusions.Elements() {
+				if paName, ok := elem.(types.String); ok {
+					ncmCfg.Exclusions[paName.ValueString()] = struct{}{}
+				}
+			}
+		}
 	}
 	applyDefaultNonComplianceMessages(depl, ncmCfg, resp)
 	if resp.Diagnostics.HasError() {
@@ -642,31 +651,22 @@ func convertPolicyAssignmentParametersMapToSdkType(src types.Map, resp *datasour
 type NonComplianceMergeMode string
 
 const (
-	// NonComplianceMergeModeReplace removes existing default messages (those without policyDefinitionReferenceId)
-	// and adds the configured default. Policy-specific messages are preserved.
 	NonComplianceMergeModeReplace NonComplianceMergeMode = "replace"
 
-	// NonComplianceMergeModePreferExisting keeps the existing default message if present.
-	// Only adds the configured default when no default message exists.
-	// Policy-specific messages are always preserved.
 	NonComplianceMergeModePreferExisting NonComplianceMergeMode = "prefer_existing"
 )
 
 // DefaultNonComplianceMessage is the sensible default non-compliance message.
 const DefaultNonComplianceMessage = "This resource {enforcementMode} be compliant with the assigned policy."
 
-// NonComplianceMessageConfig holds the configuration for default non-compliance messages.
 type NonComplianceMessageConfig struct {
-	// Enabled controls whether default non-compliance messages are applied.
-	// Default: false for backward compatibility.
 	Enabled bool
 
-	// DefaultMessage is the message to apply. Supports {enforcementMode} placeholder.
-	// If empty, DefaultNonComplianceMessage is used.
 	DefaultMessage string
 
-	// MergeMode controls behavior when a policy assignment already has a default message.
 	MergeMode NonComplianceMergeMode
+
+	Exclusions map[string]struct{}
 }
 
 // NewNonComplianceMessageConfig creates a new config with defaults (disabled, replace mode, default message).
@@ -675,6 +675,7 @@ func NewNonComplianceMessageConfig() NonComplianceMessageConfig {
 		Enabled:        false,
 		DefaultMessage: DefaultNonComplianceMessage,
 		MergeMode:      NonComplianceMergeModeReplace,
+		Exclusions:     make(map[string]struct{}),
 	}
 }
 
@@ -713,6 +714,11 @@ func applyDefaultNonComplianceMessages(depl *deployment.Hierarchy, cfg NonCompli
 		policyAssignments := mg.PolicyAssignmentMap()
 		for paName, pa := range policyAssignments {
 			if pa == nil || pa.Properties == nil {
+				continue
+			}
+
+			// Skip excluded policy assignments
+			if _, excluded := cfg.Exclusions[paName]; excluded {
 				continue
 			}
 

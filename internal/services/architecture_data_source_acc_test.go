@@ -235,6 +235,35 @@ func TestAccAlzArchitectureDataSourceNonComplianceMessagePreferExisting(t *testi
 	})
 }
 
+// TestAccAlzArchitectureDataSourceNonComplianceMessageExclusions tests the exclusions feature.
+func TestAccAlzArchitectureDataSourceNonComplianceMessageExclusions(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acceptance.AccTestPreCheck(t) },
+		ProtoV6ProviderFactories: acceptance.AccTestProtoV6ProviderFactoriesUnique(),
+		ExternalProviders: map[string]resource.ExternalProvider{
+			"azapi": {
+				Source:            "azure/azapi",
+				VersionConstraint: "~> 2.0",
+			},
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccArchitectureDataSourceConfigNonComplianceMessageExclusions(),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Excluded policy with no original messages should still have none
+					resource.TestCheckOutput("excluded_no_message_nc_count", "0"),
+					// Excluded policy with original messages should retain them unchanged
+					resource.TestCheckOutput("excluded_with_message_nc_count", "2"),
+					resource.TestCheckOutput("excluded_with_message_nc_policy_specific", "Message for specific policy definition"),
+					resource.TestCheckOutput("excluded_with_message_nc_default", "Existing non-compliance message"),
+					// Non-excluded policy without message should get the default applied
+					resource.TestCheckOutput("policy_without_message_nc_message", "This resource must be compliant."),
+				),
+			},
+		},
+	})
+}
+
 // testAccArchitectureDataSourceConfigRemoteLib returns a test configuration for TestAccAlzArchetypeDataSource.
 func testAccArchitectureDataSourceConfigRemoteLib() string {
 	return `
@@ -575,7 +604,10 @@ data "alz_architecture" "test" {
   name                     = "test"
   root_management_group_id = data.azapi_client_config.current.tenant_id
   location                 = "northeurope"
-  non_compliance_message_default = "This resource {enforcementMode} be compliant."
+
+  non_compliance_message_settings = {
+    default_message = "This resource {enforcementMode} be compliant."
+  }
 
   timeouts {
     read = "5m"
@@ -626,8 +658,11 @@ data "alz_architecture" "test" {
   name                                       = "test"
   root_management_group_id                   = data.azapi_client_config.current.tenant_id
   location                                   = "northeurope"
-  non_compliance_message_default             = "This resource {enforcementMode} be compliant."
-  non_compliance_message_default_merge_mode  = "prefer_existing"
+
+  non_compliance_message_settings = {
+    default_message = "This resource {enforcementMode} be compliant."
+    merge_mode      = "prefer_existing"
+  }
 
   timeouts {
     read = "5m"
@@ -653,6 +688,61 @@ output "policy_with_message_nc_policy_specific" {
 
 output "policy_with_message_nc_default" {
   value = one([for m in local.policy_with_message.properties.nonComplianceMessages : m.message if try(m.policyDefinitionReferenceId, "") == ""])
+}
+`
+}
+
+func testAccArchitectureDataSourceConfigNonComplianceMessageExclusions() string {
+	return `
+provider "alz" {
+  library_references = [
+    {
+      custom_url = "${path.root}/testdata/noncompliancemsg"
+    }
+  ]
+}
+
+data "azapi_client_config" "current" {}
+
+data "alz_architecture" "test" {
+  name                     = "test"
+  root_management_group_id = data.azapi_client_config.current.tenant_id
+  location                 = "northeurope"
+
+  non_compliance_message_settings = {
+    default_message = "This resource {enforcementMode} be compliant."
+    exclusions      = ["policy-donotenforce", "policy-with-message"]
+  }
+
+  timeouts {
+    read = "5m"
+  }
+}
+
+locals {
+  excluded_no_message   = jsondecode(data.alz_architecture.test.management_groups[0].policy_assignments["policy-donotenforce"])
+  excluded_with_message = jsondecode(data.alz_architecture.test.management_groups[0].policy_assignments["policy-with-message"])
+  policy_without_message = jsondecode(data.alz_architecture.test.management_groups[0].policy_assignments["policy-without-message"])
+}
+
+output "excluded_no_message_nc_count" {
+  value = tostring(length(try(local.excluded_no_message.properties.nonComplianceMessages, [])))
+}
+
+output "excluded_with_message_nc_count" {
+  value = tostring(length(local.excluded_with_message.properties.nonComplianceMessages))
+}
+
+output "excluded_with_message_nc_policy_specific" {
+  value = one([for m in local.excluded_with_message.properties.nonComplianceMessages : m.message if try(m.policyDefinitionReferenceId, "") != ""])
+}
+
+output "excluded_with_message_nc_default" {
+  value = one([for m in local.excluded_with_message.properties.nonComplianceMessages : m.message if try(m.policyDefinitionReferenceId, "") == ""])
+}
+
+output "policy_without_message_nc_message" {
+  value = local.policy_without_message.properties.nonComplianceMessages[0].message
 }
 `
 }

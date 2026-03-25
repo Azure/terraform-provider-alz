@@ -425,6 +425,8 @@ func TestNewNonComplianceMessageConfig(t *testing.T) {
 	assert.False(t, cfg.Enabled)
 	assert.Equal(t, DefaultNonComplianceMessage, cfg.DefaultMessage)
 	assert.Equal(t, NonComplianceMergeModeReplace, cfg.MergeMode)
+	assert.NotNil(t, cfg.Exclusions)
+	assert.Empty(t, cfg.Exclusions)
 }
 
 func TestNonComplianceMergeMode(t *testing.T) {
@@ -434,4 +436,64 @@ func TestNonComplianceMergeMode(t *testing.T) {
 
 func TestDefaultNonComplianceMessageConst(t *testing.T) {
 	assert.Contains(t, DefaultNonComplianceMessage, "{enforcementMode}")
+}
+
+func TestNonComplianceMessageExclusions(t *testing.T) {
+	t.Run("ExclusionSkipsPolicy", func(t *testing.T) {
+		cfg := NewNonComplianceMessageConfig()
+		cfg.Enabled = true
+		cfg.DefaultMessage = "Default message"
+		cfg.Exclusions["excluded-policy"] = struct{}{}
+
+		_, excluded := cfg.Exclusions["excluded-policy"]
+		assert.True(t, excluded)
+
+		_, notExcluded := cfg.Exclusions["other-policy"]
+		assert.False(t, notExcluded)
+	})
+
+	t.Run("EmptyExclusionsSkipsNothing", func(t *testing.T) {
+		cfg := NewNonComplianceMessageConfig()
+		cfg.Enabled = true
+		assert.Empty(t, cfg.Exclusions)
+
+		_, excluded := cfg.Exclusions["any-policy"]
+		assert.False(t, excluded)
+	})
+
+	t.Run("MultipleExclusions", func(t *testing.T) {
+		cfg := NewNonComplianceMessageConfig()
+		cfg.Enabled = true
+		cfg.Exclusions["policy-a"] = struct{}{}
+		cfg.Exclusions["policy-b"] = struct{}{}
+		cfg.Exclusions["policy-c"] = struct{}{}
+
+		assert.Len(t, cfg.Exclusions, 3)
+		for _, name := range []string{"policy-a", "policy-b", "policy-c"} {
+			_, excluded := cfg.Exclusions[name]
+			assert.True(t, excluded, "expected %s to be excluded", name)
+		}
+
+		_, notExcluded := cfg.Exclusions["policy-d"]
+		assert.False(t, notExcluded)
+	})
+
+	t.Run("ExclusionWithExistingMessages", func(t *testing.T) {
+		// Verify that excluding a policy with existing messages preserves them in the config map
+		cfg := NewNonComplianceMessageConfig()
+		cfg.Enabled = true
+		cfg.DefaultMessage = "Default message"
+		cfg.Exclusions["policy-no-messages"] = struct{}{}
+		cfg.Exclusions["policy-has-messages"] = struct{}{}
+
+		// Both should be excluded
+		_, excludedNoMsg := cfg.Exclusions["policy-no-messages"]
+		assert.True(t, excludedNoMsg)
+		_, excludedHasMsg := cfg.Exclusions["policy-has-messages"]
+		assert.True(t, excludedHasMsg)
+
+		// Non-excluded policy should not be in the exclusion set
+		_, notExcluded := cfg.Exclusions["policy-not-excluded"]
+		assert.False(t, notExcluded)
+	})
 }
