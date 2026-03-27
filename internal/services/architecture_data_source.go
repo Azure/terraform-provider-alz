@@ -731,8 +731,6 @@ func applyDefaultNonComplianceMessages(depl *deployment.Hierarchy, az *alzlib.Al
 
 			enforcementReplacement := enforcementModeReplacement(pa.Properties.EnforcementMode, enforcedRepl, notEnforcedRepl)
 
-			resolvedDefault := strings.ReplaceAll(defaultMessage, placeholder, enforcementReplacement)
-
 			existingMessages := pa.Properties.NonComplianceMessages
 
 			// Separate existing messages into policy-specific (with policyDefinitionReferenceId) and the single default message (without policyDefinitionReferenceId).
@@ -758,12 +756,12 @@ func applyDefaultNonComplianceMessages(depl *deployment.Hierarchy, az *alzlib.Al
 					newMessages = append(newMessages, existingDefaultMessage)
 				} else {
 					newMessages = append(newMessages, &armpolicy.NonComplianceMessage{
-						Message: to.Ptr(resolvedDefault),
+						Message: to.Ptr(defaultMessage),
 					})
 				}
 			default: // Replace existing default messages. Default behavior is to replace
 				newMessages = append(newMessages, &armpolicy.NonComplianceMessage{
-					Message: to.Ptr(resolvedDefault),
+					Message: to.Ptr(defaultMessage),
 				})
 			}
 
