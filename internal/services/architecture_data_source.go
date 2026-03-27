@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/alzlib"
+	"github.com/Azure/alzlib/assets"
 	"github.com/Azure/alzlib/deployment"
 	"github.com/Azure/alzlib/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy"
@@ -32,7 +34,7 @@ const (
 	NonComplianceMergeModePreferExisting NonComplianceMergeMode = "prefer_existing"
 )
 
-// Default NonComplianceMessage with sensible defaults
+// Default NonComplianceMessage with sensible defaults.
 const DefaultNonComplianceMessage = "This resource {enforcementMode} be compliant with the assigned policy."
 
 const DefaultEnforcementModePlaceholder = "{enforcementMode}"
@@ -183,7 +185,7 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 		}
 	}
 
-	// Handle default non-compliance messages for policies
+	// Handle default non-compliance messages for policy assignments
 	ncmCfg := NewNonComplianceMessageConfig()
 	ncmDataSettings := data.DefaultNonComplianceMessageSettings
 	if !ncmDataSettings.IsNull() && !ncmDataSettings.IsUnknown() {
@@ -195,6 +197,8 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 			ncmCfg.MergeMode = NonComplianceMergeMode(mode)
 		}
 	}
+
+	// Override provider defaults if set
 	if p := d.data.NonComplianceMessagePlaceholder(); p != "" {
 		ncmCfg.Placeholder = p
 	}
@@ -204,7 +208,9 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 	if r := d.data.NonComplianceMessageNotEnforcedReplacement(); r != "" {
 		ncmCfg.NotEnforcedReplacement = r
 	}
-	applyDefaultNonComplianceMessages(depl, ncmCfg, resp)
+
+	applyDefaultNonComplianceMessages(depl, d.data.AlzLib, ncmCfg, resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -693,31 +699,15 @@ func NewNonComplianceMessageConfig() NonComplianceMessageConfig {
 }
 
 // applyDefaultNonComplianceMessages applies the default non-compliance message to all policy assignments
-// in the hierarchy according to the provided config.
-//
-// If there are no existing messages, the default is added.
-// If there are existing messages, the merge mode controls behavior:
-//   - Replace: removes existing default messages (those without policyDefinitionReferenceId)
-//     and adds the configured default. Policy-specific messages are preserved.
-//   - PreferExisting: if a default message already exists, it is kept.
-//     If none exists, the configured default is added. Policy-specific messages are always preserved.
-//
-// The configured placeholder is replaced in ALL non-compliance messages
-// with the appropriate enforcement mode replacement.
-//
-// This runs BEFORE modifyPolicyAssignments, so explicit non_compliance_messages in
-// policy_assignments_to_modify will take precedence.
-func applyDefaultNonComplianceMessages(depl *deployment.Hierarchy, cfg NonComplianceMessageConfig, resp *datasource.ReadResponse) {
+
+// Runs BEFORE modifyPolicyAssignments, so explicit non_compliance_messages in policy_assignments_to_modify will take precedence.
+func applyDefaultNonComplianceMessages(depl *deployment.Hierarchy, az *alzlib.AlzLib, cfg NonComplianceMessageConfig, resp *datasource.ReadResponse) {
 	if !cfg.Enabled {
 		return // if no default non-compliance message is configured, do nothing
 	}
 
-	// If no default is supplied, use sensible default.
+	// Set Non Compliance Config to Vars
 	defaultMessage := cfg.DefaultMessage
-	if defaultMessage == "" {
-		defaultMessage = DefaultNonComplianceMessage
-	}
-
 	placeholder := cfg.Placeholder
 	enforcedRepl := cfg.EnforcedReplacement
 	notEnforcedRepl := cfg.NotEnforcedReplacement
@@ -734,21 +724,25 @@ func applyDefaultNonComplianceMessages(depl *deployment.Hierarchy, cfg NonCompli
 				continue
 			}
 
+			// Checks if policy assignments are directly assigning a policy definition that has a resource provider mode, as they do not support non-compliance messages
+			if isResourceProviderModePolicyDefinitionAssignment(pa, az) {
+				continue // Skip if it's a resource provider mode policy definition assignment
+			}
+
 			enforcementReplacement := enforcementModeReplacement(pa.Properties.EnforcementMode, enforcedRepl, notEnforcedRepl)
 
 			resolvedDefault := strings.ReplaceAll(defaultMessage, placeholder, enforcementReplacement)
 
 			existingMessages := pa.Properties.NonComplianceMessages
 
-			// Separate existing messages into policy-specific (with policyDefinitionReferenceId)
-			// and default (without policyDefinitionReferenceId)
+			// Separate existing messages into policy-specific (with policyDefinitionReferenceId) and the single default message (without policyDefinitionReferenceId).
 			var policySpecificMessages []*armpolicy.NonComplianceMessage
-			var existingDefaultMessages []*armpolicy.NonComplianceMessage
+			var existingDefaultMessage *armpolicy.NonComplianceMessage
 			for _, msg := range existingMessages {
 				if msg.PolicyDefinitionReferenceID != nil && *msg.PolicyDefinitionReferenceID != "" {
 					policySpecificMessages = append(policySpecificMessages, msg)
 				} else {
-					existingDefaultMessages = append(existingDefaultMessages, msg)
+					existingDefaultMessage = msg
 				}
 			}
 
@@ -756,22 +750,24 @@ func applyDefaultNonComplianceMessages(depl *deployment.Hierarchy, cfg NonCompli
 			var newMessages []*armpolicy.NonComplianceMessage
 			newMessages = append(newMessages, policySpecificMessages...)
 
+			// Handle the default message based on the merge mode.
 			switch cfg.MergeMode {
+			// If prefer_existing, only add the default if there isn't one already.
 			case NonComplianceMergeModePreferExisting:
-				if len(existingDefaultMessages) > 0 {
-					newMessages = append(newMessages, existingDefaultMessages...)
+				if existingDefaultMessage != nil {
+					newMessages = append(newMessages, existingDefaultMessage)
 				} else {
 					newMessages = append(newMessages, &armpolicy.NonComplianceMessage{
 						Message: to.Ptr(resolvedDefault),
 					})
 				}
-			default: // Replace
+			default: // Replace existing default messages. Default behavior is to replace
 				newMessages = append(newMessages, &armpolicy.NonComplianceMessage{
 					Message: to.Ptr(resolvedDefault),
 				})
 			}
 
-			// Replace placeholder in ALL non-compliance messages for backward compatibility
+			// Handle placeholder subsitution for all compiled non-compliance messages for policy assignment
 			for _, msg := range newMessages {
 				if msg.Message != nil {
 					*msg.Message = strings.ReplaceAll(*msg.Message, placeholder, enforcementReplacement)
@@ -798,6 +794,33 @@ func enforcementModeReplacement(mode *armpolicy.EnforcementMode, enforcedRepl, n
 		return notEnforcedRepl
 	}
 	return enforcedRepl
+}
+
+// Checks the policy definition of an assignment and returns true if it's mode is a resource provider specific one, e.g. "Microsoft.KeyVault.Data".
+// Direct policy assignments with resource provider mode definitions do not support non-compliance messages.
+func isResourceProviderModePolicyDefinitionAssignment(pa *assets.PolicyAssignment, az *alzlib.AlzLib) bool {
+	if pa.Properties == nil || pa.Properties.PolicyDefinitionID == nil {
+		return false
+	}
+
+	resID, version, err := pa.ReferencedPolicyDefinitionResourceIDAndVersion()
+	if err != nil || resID == nil {
+		return false
+	}
+
+	// Only check direct policy definition assignments, not policy set definitions
+	// Default non-compliance messages are supported even if they contain resource provider mode policy definitions.
+	if !strings.EqualFold(resID.ResourceType.Type, "policyDefinitions") {
+		return false
+	}
+
+	pd := az.PolicyDefinition(resID.Name, version)
+	if pd == nil || pd.Properties == nil || pd.Properties.Mode == nil {
+		return false
+	}
+
+	mode := strings.ToLower(*pd.Properties.Mode)
+	return mode != "all" && mode != "indexed"
 }
 
 func isKnown(val attr.Value) bool {

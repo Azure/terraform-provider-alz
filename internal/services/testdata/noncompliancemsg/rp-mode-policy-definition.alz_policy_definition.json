@@ -1,0 +1,21 @@
+{
+    "type": "Microsoft.Authorization/policyDefinitions",
+    "apiVersion": "2021-06-01",
+    "name": "rp-mode-policy-definition",
+    "properties": {
+        "description": "Test policy definition with resource provider mode.",
+        "displayName": "RP Mode Policy Definition",
+        "mode": "Microsoft.KeyVault.Data",
+        "parameters": {},
+        "policyRule": {
+            "if": {
+                "field": "type",
+                "equals": "Microsoft.KeyVault.Data/vaults/keys"
+            },
+            "then": {
+                "effect": "audit"
+            }
+        },
+        "policyType": "Custom"
+    }
+}

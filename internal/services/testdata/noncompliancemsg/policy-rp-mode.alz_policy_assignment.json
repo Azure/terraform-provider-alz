@@ -1,0 +1,13 @@
+{
+    "type": "Microsoft.Authorization/policyAssignments",
+    "apiVersion": "2022-06-01",
+    "name": "policy-rp-mode",
+    "properties": {
+        "description": "Policy assignment referencing a resource provider mode policy definition.",
+        "displayName": "Policy RP Mode",
+        "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/rp-mode-policy-definition",
+        "enforcementMode": "Default",
+        "parameters": {},
+        "scope": "/providers/Microsoft.Management/managementGroups/PLACEHOLDER"
+    }
+}

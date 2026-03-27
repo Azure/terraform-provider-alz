@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Azure/alzlib"
+	"github.com/Azure/alzlib/assets"
 	"github.com/Azure/alzlib/deployment"
 	"github.com/Azure/alzlib/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy"
@@ -437,4 +439,104 @@ func TestNonComplianceMergeMode(t *testing.T) {
 
 func TestDefaultNonComplianceMessageConst(t *testing.T) {
 	assert.Contains(t, DefaultNonComplianceMessage, "{enforcementMode}")
+}
+
+func TestIsResourceProviderModePolicyDefinitionAssignment(t *testing.T) {
+	az := alzlib.NewAlzLib(nil)
+
+	// Add an "All" mode policy definition
+	allModePd := armpolicy.Definition{
+		Name: to.Ptr("all-mode-def"),
+		Properties: &armpolicy.DefinitionProperties{
+			Mode: to.Ptr("All"),
+		},
+	}
+	err := az.AddPolicyDefinitions(assets.NewPolicyDefinition(allModePd))
+	assert.NoError(t, err)
+
+	// Add an "Indexed" mode policy definition
+	indexedModePd := armpolicy.Definition{
+		Name: to.Ptr("indexed-mode-def"),
+		Properties: &armpolicy.DefinitionProperties{
+			Mode: to.Ptr("Indexed"),
+		},
+	}
+	err = az.AddPolicyDefinitions(assets.NewPolicyDefinition(indexedModePd))
+	assert.NoError(t, err)
+
+	// Add a resource provider mode policy definition
+	rpModePd := armpolicy.Definition{
+		Name: to.Ptr("rp-mode-def"),
+		Properties: &armpolicy.DefinitionProperties{
+			Mode: to.Ptr("Microsoft.KeyVault.Data"),
+		},
+	}
+	err = az.AddPolicyDefinitions(assets.NewPolicyDefinition(rpModePd))
+	assert.NoError(t, err)
+
+	testCases := []struct {
+		name     string
+		pa       *assets.PolicyAssignment
+		expected bool
+	}{
+		{
+			name: "All mode - should not skip",
+			pa: assets.NewPolicyAssignment(armpolicy.Assignment{
+				Properties: &armpolicy.AssignmentProperties{
+					PolicyDefinitionID: to.Ptr("/providers/Microsoft.Authorization/policyDefinitions/all-mode-def"),
+				},
+			}),
+			expected: false,
+		},
+		{
+			name: "Indexed mode - should not skip",
+			pa: assets.NewPolicyAssignment(armpolicy.Assignment{
+				Properties: &armpolicy.AssignmentProperties{
+					PolicyDefinitionID: to.Ptr("/providers/Microsoft.Authorization/policyDefinitions/indexed-mode-def"),
+				},
+			}),
+			expected: false,
+		},
+		{
+			name: "Resource provider mode - should skip",
+			pa: assets.NewPolicyAssignment(armpolicy.Assignment{
+				Properties: &armpolicy.AssignmentProperties{
+					PolicyDefinitionID: to.Ptr("/providers/Microsoft.Authorization/policyDefinitions/rp-mode-def"),
+				},
+			}),
+			expected: true,
+		},
+		{
+			name: "Policy set definition - should not skip",
+			pa: assets.NewPolicyAssignment(armpolicy.Assignment{
+				Properties: &armpolicy.AssignmentProperties{
+					PolicyDefinitionID: to.Ptr("/providers/Microsoft.Authorization/policySetDefinitions/some-set-def"),
+				},
+			}),
+			expected: false,
+		},
+		{
+			name: "Unknown definition - should not skip",
+			pa: assets.NewPolicyAssignment(armpolicy.Assignment{
+				Properties: &armpolicy.AssignmentProperties{
+					PolicyDefinitionID: to.Ptr("/providers/Microsoft.Authorization/policyDefinitions/nonexistent-def"),
+				},
+			}),
+			expected: false,
+		},
+		{
+			name: "Nil properties - should not skip",
+			pa: assets.NewPolicyAssignment(armpolicy.Assignment{
+				Properties: nil,
+			}),
+			expected: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := isResourceProviderModePolicyDefinitionAssignment(tc.pa, az)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
 }
