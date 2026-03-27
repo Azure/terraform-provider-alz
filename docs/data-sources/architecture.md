@@ -81,7 +81,7 @@ See the release notes [here](https://github.com/hashicorp/terraform/releases/tag
 
 ### Optional
 
-- `non_compliance_message_settings` (Attributes) Settings for controlling default non-compliance messages on policy assignments. When configured, a default non-compliance message will be applied to policy assignments. (see [below for nested schema](#nestedatt--non_compliance_message_settings))
+- `default_non_compliance_message_settings` (Attributes) Settings for controlling default non-compliance messages on policy assignments. When configured, a default non-compliance message will be applied to policy assignments. (see [below for nested schema](#nestedatt--default_non_compliance_message_settings))
 - `override_policy_definition_parameter_assign_permissions_set` (Attributes Set) This list of objects allows you to set the [`assignPermissions` metadata property](https://learn.microsoft.com/azure/governance/policy/concepts/definition-structure-parameters#parameter-properties) of the supplied definition and parameter names. This allows you to correct policies that haven't been authored correctly and means that the provider can generate the correct policy role assignments. (see [below for nested schema](#nestedatt--override_policy_definition_parameter_assign_permissions_set))
 - `override_policy_definition_parameter_assign_permissions_unset` (Attributes Set) This list of objects allows you to unset set the [`assignPermissions` metadata property](https://learn.microsoft.com/azure/governance/policy/concepts/definition-structure-parameters#parameter-properties) of the supplied definition and parameter names. This allows you to correct policies that haven't been authored correctly, or prevent permissions being assigned for policies that are disabled in a policy set. The provider can then generate the correct policy role assignments. (see [below for nested schema](#nestedatt--override_policy_definition_parameter_assign_permissions_unset))
 - `policy_assignments_to_modify` (Attributes Map) A mested map of policy assignments to modify. The key is the management group id, and the value is an object with a single attribute, `policy_assignments`. This is another map. (see [below for nested schema](#nestedatt--policy_assignments_to_modify))
@@ -94,16 +94,15 @@ See the release notes [here](https://github.com/hashicorp/terraform/releases/tag
 - `management_groups` (Attributes List) This is a list of objects pertaining to the tier of management groups to be deployed (relative to the supplied root management group id). Use the `level` attribute to specify the tier of management groups to deploy. (see [below for nested schema](#nestedatt--management_groups))
 - `policy_role_assignments` (Attributes Set) A set of role assignments that need to be created for the policies that have been assigned in the hierarchy. Since we will likely be using system assigned identities, we don't know the principal ID until after the deployment. Therefore this data can be used to create the role assignments after the deployment. (see [below for nested schema](#nestedatt--policy_role_assignments))
 
-<a id="nestedatt--non_compliance_message_settings"></a>
-### Nested Schema for `non_compliance_message_settings`
+<a id="nestedatt--default_non_compliance_message_settings"></a>
+### Nested Schema for `default_non_compliance_message_settings`
 
 Required:
 
-- `default_message` (String) The default non-compliance message to apply to policy assignments. Supports the `{enforcementMode}` placeholder which is replaced with `must` for enforced assignments and `should` for non-enforced. If empty, the default non-compliance message feature is disabled.
+- `default_message` (String) The default non-compliance message to apply to policy assignments. Supports placeholder substitution configured in the provider's `non_compliance_message_settings` block.
 
 Optional:
 
-- `exclusions` (Set of String) A set of policy assignment names to exclude from non-compliance message processing. Use this for policies that do not support non-compliance messages.
 - `merge_mode` (String) Controls behavior when a policy assignment already has a default non-compliance message (one without a `policyDefinitionReferenceId`). `replace` (default) removes the existing default message and adds the configured default. `prefer_existing` keeps the existing default message if present, only adding the configured default when none exists. Policy-specific messages (with `policyDefinitionReferenceId`) are always preserved. Assignments with no messages always receive the default if a default message is supplied.
 
 
