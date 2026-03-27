@@ -171,10 +171,21 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 
 	// Store the alz pointer in the provider struct so we don't have to do all this work every time `.Configure` is called.
 	// Due to fetch from Azure, it takes approx 30 seconds each time and is called 4-5 time during a single acceptance test.
-	p.data = clients.NewClient(
+	clientOpts := []clients.Option{
 		clients.WithAlzLib(alz),
 		clients.WithSuppressWarningPolicyRoleAssignments(data.SuppressWarningPolicyRoleAssignments.ValueBool()),
-	)
+	}
+
+	// Parse non-compliance message substitution settings if configured.
+	ncmSubSettings := data.NonComplianceMessageSubstitutionSettings
+	if !ncmSubSettings.IsNull() && !ncmSubSettings.IsUnknown() {
+		placeholder := ncmSubSettings.EnforcementModePlaceholder.ValueString()
+		enforcedRepl := ncmSubSettings.EnforcedReplacement.ValueString()
+		notEnforcedRepl := ncmSubSettings.NotEnforcedReplacement.ValueString()
+		clientOpts = append(clientOpts, clients.WithNonComplianceMessageSubstitutionSettings(placeholder, enforcedRepl, notEnforcedRepl))
+	}
+
+	p.data = clients.NewClient(clientOpts...)
 	resp.DataSourceData = p.data
 	resp.ResourceData = p.data
 	tflog.Debug(ctx, "Provider configuration finished")

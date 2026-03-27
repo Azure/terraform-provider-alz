@@ -27,6 +27,36 @@ var (
 	_ datasource.DataSourceWithConfigure = (*architectureDataSource)(nil)
 )
 
+const (
+	NonComplianceMergeModeReplace        NonComplianceMergeMode = "replace"
+	NonComplianceMergeModePreferExisting NonComplianceMergeMode = "prefer_existing"
+)
+
+// Default NonComplianceMessage with sensible defaults
+const DefaultNonComplianceMessage = "This resource {enforcementMode} be compliant with the assigned policy."
+
+const DefaultEnforcementModePlaceholder = "{enforcementMode}"
+
+const DefaultEnforcedReplacement = "must"
+
+const DefaultNotEnforcedReplacement = "should"
+
+type NonComplianceMergeMode string
+
+type NonComplianceMessageConfig struct {
+	Enabled bool
+
+	DefaultMessage string
+
+	MergeMode NonComplianceMergeMode
+
+	Placeholder string
+
+	EnforcedReplacement string
+
+	NotEnforcedReplacement string
+}
+
 func NewArchitectureDataSource() datasource.DataSource {
 	return &architectureDataSource{}
 }
@@ -155,21 +185,24 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	// Handle default non-compliance messages for policies
 	ncmCfg := NewNonComplianceMessageConfig()
-	if isKnown(data.NonComplianceMessageSettings) {
+	ncmDataSettings := data.DefaultNonComplianceMessageSettings
+	if !ncmDataSettings.IsNull() && !ncmDataSettings.IsUnknown() {
 		ncmCfg.Enabled = true
-		if isKnown(data.NonComplianceMessageSettings.DefaultMessage) && data.NonComplianceMessageSettings.DefaultMessage.ValueString() != "" {
-			ncmCfg.DefaultMessage = data.NonComplianceMessageSettings.DefaultMessage.ValueString()
+		if msg := ncmDataSettings.DefaultMessage.ValueString(); msg != "" {
+			ncmCfg.DefaultMessage = msg
 		}
-		if isKnown(data.NonComplianceMessageSettings.MergeMode) && data.NonComplianceMessageSettings.MergeMode.ValueString() != "" {
-			ncmCfg.MergeMode = NonComplianceMergeMode(data.NonComplianceMessageSettings.MergeMode.ValueString())
+		if mode := ncmDataSettings.MergeMode.ValueString(); mode != "" {
+			ncmCfg.MergeMode = NonComplianceMergeMode(mode)
 		}
-		if isKnown(data.NonComplianceMessageSettings.Exclusions) {
-			for _, elem := range data.NonComplianceMessageSettings.Exclusions.Elements() {
-				if paName, ok := elem.(types.String); ok {
-					ncmCfg.Exclusions[paName.ValueString()] = struct{}{}
-				}
-			}
-		}
+	}
+	if p := d.data.NonComplianceMessagePlaceholder(); p != "" {
+		ncmCfg.Placeholder = p
+	}
+	if r := d.data.NonComplianceMessageEnforcedReplacement(); r != "" {
+		ncmCfg.EnforcedReplacement = r
+	}
+	if r := d.data.NonComplianceMessageNotEnforcedReplacement(); r != "" {
+		ncmCfg.NotEnforcedReplacement = r
 	}
 	applyDefaultNonComplianceMessages(depl, ncmCfg, resp)
 	if resp.Diagnostics.HasError() {
@@ -647,35 +680,15 @@ func convertPolicyAssignmentParametersMapToSdkType(src types.Map, resp *datasour
 	return result
 }
 
-// NonComplianceMergeMode controls how default non-compliance messages interact with existing messages.
-type NonComplianceMergeMode string
-
-const (
-	NonComplianceMergeModeReplace NonComplianceMergeMode = "replace"
-
-	NonComplianceMergeModePreferExisting NonComplianceMergeMode = "prefer_existing"
-)
-
-// DefaultNonComplianceMessage is the sensible default non-compliance message.
-const DefaultNonComplianceMessage = "This resource {enforcementMode} be compliant with the assigned policy."
-
-type NonComplianceMessageConfig struct {
-	Enabled bool
-
-	DefaultMessage string
-
-	MergeMode NonComplianceMergeMode
-
-	Exclusions map[string]struct{}
-}
-
-// NewNonComplianceMessageConfig creates a new config with defaults (disabled, replace mode, default message).
+// NewNonComplianceMessageConfig creates a new config with the sensible defaults.
 func NewNonComplianceMessageConfig() NonComplianceMessageConfig {
 	return NonComplianceMessageConfig{
-		Enabled:        false,
-		DefaultMessage: DefaultNonComplianceMessage,
-		MergeMode:      NonComplianceMergeModeReplace,
-		Exclusions:     make(map[string]struct{}),
+		Enabled:                false,
+		DefaultMessage:         DefaultNonComplianceMessage,
+		MergeMode:              NonComplianceMergeModeReplace,
+		Placeholder:            DefaultEnforcementModePlaceholder,
+		EnforcedReplacement:    DefaultEnforcedReplacement,
+		NotEnforcedReplacement: DefaultNotEnforcedReplacement,
 	}
 }
 
@@ -689,8 +702,8 @@ func NewNonComplianceMessageConfig() NonComplianceMessageConfig {
 //   - PreferExisting: if a default message already exists, it is kept.
 //     If none exists, the configured default is added. Policy-specific messages are always preserved.
 //
-// For backward compatibility, {enforcementMode} is replaced in ALL non-compliance messages
-// (Default → "must", DoNotEnforce → "should").
+// The configured placeholder is replaced in ALL non-compliance messages
+// with the appropriate enforcement mode replacement.
 //
 // This runs BEFORE modifyPolicyAssignments, so explicit non_compliance_messages in
 // policy_assignments_to_modify will take precedence.
@@ -705,6 +718,10 @@ func applyDefaultNonComplianceMessages(depl *deployment.Hierarchy, cfg NonCompli
 		defaultMessage = DefaultNonComplianceMessage
 	}
 
+	placeholder := cfg.Placeholder
+	enforcedRepl := cfg.EnforcedReplacement
+	notEnforcedRepl := cfg.NotEnforcedReplacement
+
 	for _, mgName := range depl.ManagementGroupNames() {
 		mg := depl.ManagementGroup(mgName)
 		if mg == nil {
@@ -717,14 +734,9 @@ func applyDefaultNonComplianceMessages(depl *deployment.Hierarchy, cfg NonCompli
 				continue
 			}
 
-			// Skip excluded policy assignments
-			if _, excluded := cfg.Exclusions[paName]; excluded {
-				continue
-			}
+			enforcementReplacement := enforcementModeReplacement(pa.Properties.EnforcementMode, enforcedRepl, notEnforcedRepl)
 
-			enforcementReplacement := enforcementModeReplacement(pa.Properties.EnforcementMode)
-
-			resolvedDefault := strings.ReplaceAll(defaultMessage, "{enforcementMode}", enforcementReplacement)
+			resolvedDefault := strings.ReplaceAll(defaultMessage, placeholder, enforcementReplacement)
 
 			existingMessages := pa.Properties.NonComplianceMessages
 
@@ -759,10 +771,10 @@ func applyDefaultNonComplianceMessages(depl *deployment.Hierarchy, cfg NonCompli
 				})
 			}
 
-			// Replace {enforcementMode} in ALL non-compliance messages for backward compatibility
+			// Replace placeholder in ALL non-compliance messages for backward compatibility
 			for _, msg := range newMessages {
 				if msg.Message != nil {
-					*msg.Message = strings.ReplaceAll(*msg.Message, "{enforcementMode}", enforcementReplacement)
+					*msg.Message = strings.ReplaceAll(*msg.Message, placeholder, enforcementReplacement)
 				}
 			}
 
@@ -780,13 +792,12 @@ func applyDefaultNonComplianceMessages(depl *deployment.Hierarchy, cfg NonCompli
 	}
 }
 
-// enforcementModeReplacement returns the text replacement for the {enforcementMode} placeholder.
-// Default (enforced) = "must", DoNotEnforce (audit) = "should".
-func enforcementModeReplacement(mode *armpolicy.EnforcementMode) string {
+// enforcementModeReplacement returns the text replacement for the enforcement mode placeholder.
+func enforcementModeReplacement(mode *armpolicy.EnforcementMode, enforcedRepl, notEnforcedRepl string) string {
 	if mode != nil && *mode == armpolicy.EnforcementModeDoNotEnforce {
-		return "should"
+		return notEnforcedRepl
 	}
-	return "must"
+	return enforcedRepl
 }
 
 func isKnown(val attr.Value) bool {

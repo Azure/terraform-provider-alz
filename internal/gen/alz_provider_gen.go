@@ -78,6 +78,33 @@ func AlzProviderSchema(ctx context.Context) schema.Schema {
 					listvalidator.SizeAtLeast(1),
 				},
 			},
+			"non_compliance_message_substitution_settings": schema.SingleNestedAttribute{
+				Attributes: map[string]schema.Attribute{
+					"enforced_replacement": schema.StringAttribute{
+						Optional:            true,
+						Description:         "The replacement string to use for the enforcement mode placeholder when the policy assignment is enforced. Defaults to `must`.",
+						MarkdownDescription: "The replacement string to use for the enforcement mode placeholder when the policy assignment is enforced. Defaults to `must`.",
+					},
+					"enforcement_mode_placeholder": schema.StringAttribute{
+						Optional:            true,
+						Description:         "The placeholder string in the default message that will be replaced based on the enforcement mode. Defaults to `{enforcementMode}`.",
+						MarkdownDescription: "The placeholder string in the default message that will be replaced based on the enforcement mode. Defaults to `{enforcementMode}`.",
+					},
+					"not_enforced_replacement": schema.StringAttribute{
+						Optional:            true,
+						Description:         "The replacement string to use for the enforcement mode placeholder when the policy assignment is not enforced. Defaults to `should`.",
+						MarkdownDescription: "The replacement string to use for the enforcement mode placeholder when the policy assignment is not enforced. Defaults to `should`.",
+					},
+				},
+				CustomType: NonComplianceMessageSubstitutionSettingsType{
+					ObjectType: types.ObjectType{
+						AttrTypes: NonComplianceMessageSubstitutionSettingsValue{}.AttributeTypes(ctx),
+					},
+				},
+				Optional:            true,
+				Description:         "Global settings for non-compliance message placeholder substitutions. These control how placeholders in non-compliance messages are resolved based on the enforcement mode of policy assignments.",
+				MarkdownDescription: "Global settings for non-compliance message placeholder substitutions. These control how placeholders in non-compliance messages are resolved based on the enforcement mode of policy assignments.",
+			},
 			"role_definitions_use_supplied_names_enabled": schema.BoolAttribute{
 				Optional:            true,
 				Description:         "Whether to allow using the Name and RoleName supplied in the library directly for a predictable ID. Default behaviour is to update them to unique values per management group. Default is `false`.",
@@ -100,12 +127,13 @@ func AlzProviderSchema(ctx context.Context) schema.Schema {
 }
 
 type AlzModel struct {
-	LibraryFetchDependencies               types.Bool `tfsdk:"library_fetch_dependencies"`
-	LibraryOverwriteEnabled                types.Bool `tfsdk:"library_overwrite_enabled"`
-	LibraryReferences                      types.List `tfsdk:"library_references"`
-	RoleDefinitionsUseSuppliedNamesEnabled types.Bool `tfsdk:"role_definitions_use_supplied_names_enabled"`
-	SkipProviderRegistration               types.Bool `tfsdk:"skip_provider_registration"`
-	SuppressWarningPolicyRoleAssignments   types.Bool `tfsdk:"suppress_warning_policy_role_assignments"`
+	LibraryFetchDependencies                 types.Bool                                    `tfsdk:"library_fetch_dependencies"`
+	LibraryOverwriteEnabled                  types.Bool                                    `tfsdk:"library_overwrite_enabled"`
+	LibraryReferences                        types.List                                    `tfsdk:"library_references"`
+	NonComplianceMessageSubstitutionSettings NonComplianceMessageSubstitutionSettingsValue `tfsdk:"non_compliance_message_substitution_settings"`
+	RoleDefinitionsUseSuppliedNamesEnabled   types.Bool                                    `tfsdk:"role_definitions_use_supplied_names_enabled"`
+	SkipProviderRegistration                 types.Bool                                    `tfsdk:"skip_provider_registration"`
+	SuppressWarningPolicyRoleAssignments     types.Bool                                    `tfsdk:"suppress_warning_policy_role_assignments"`
 }
 
 var _ basetypes.ObjectTypable = LibraryReferencesType{}
@@ -539,5 +567,439 @@ func (v LibraryReferencesValue) AttributeTypes(ctx context.Context) map[string]a
 		"custom_url": basetypes.StringType{},
 		"path":       basetypes.StringType{},
 		"ref":        basetypes.StringType{},
+	}
+}
+
+var _ basetypes.ObjectTypable = NonComplianceMessageSubstitutionSettingsType{}
+
+type NonComplianceMessageSubstitutionSettingsType struct {
+	basetypes.ObjectType
+}
+
+func (t NonComplianceMessageSubstitutionSettingsType) Equal(o attr.Type) bool {
+	other, ok := o.(NonComplianceMessageSubstitutionSettingsType)
+
+	if !ok {
+		return false
+	}
+
+	return t.ObjectType.Equal(other.ObjectType)
+}
+
+func (t NonComplianceMessageSubstitutionSettingsType) String() string {
+	return "NonComplianceMessageSubstitutionSettingsType"
+}
+
+func (t NonComplianceMessageSubstitutionSettingsType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributes := in.Attributes()
+
+	enforcedReplacementAttribute, ok := attributes["enforced_replacement"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`enforced_replacement is missing from object`)
+
+		return nil, diags
+	}
+
+	enforcedReplacementVal, ok := enforcedReplacementAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`enforced_replacement expected to be basetypes.StringValue, was: %T`, enforcedReplacementAttribute))
+	}
+
+	enforcementModePlaceholderAttribute, ok := attributes["enforcement_mode_placeholder"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`enforcement_mode_placeholder is missing from object`)
+
+		return nil, diags
+	}
+
+	enforcementModePlaceholderVal, ok := enforcementModePlaceholderAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`enforcement_mode_placeholder expected to be basetypes.StringValue, was: %T`, enforcementModePlaceholderAttribute))
+	}
+
+	notEnforcedReplacementAttribute, ok := attributes["not_enforced_replacement"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`not_enforced_replacement is missing from object`)
+
+		return nil, diags
+	}
+
+	notEnforcedReplacementVal, ok := notEnforcedReplacementAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`not_enforced_replacement expected to be basetypes.StringValue, was: %T`, notEnforcedReplacementAttribute))
+	}
+
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	return NonComplianceMessageSubstitutionSettingsValue{
+		EnforcedReplacement:        enforcedReplacementVal,
+		EnforcementModePlaceholder: enforcementModePlaceholderVal,
+		NotEnforcedReplacement:     notEnforcedReplacementVal,
+		state:                      attr.ValueStateKnown,
+	}, diags
+}
+
+func NewNonComplianceMessageSubstitutionSettingsValueNull() NonComplianceMessageSubstitutionSettingsValue {
+	return NonComplianceMessageSubstitutionSettingsValue{
+		state: attr.ValueStateNull,
+	}
+}
+
+func NewNonComplianceMessageSubstitutionSettingsValueUnknown() NonComplianceMessageSubstitutionSettingsValue {
+	return NonComplianceMessageSubstitutionSettingsValue{
+		state: attr.ValueStateUnknown,
+	}
+}
+
+func NewNonComplianceMessageSubstitutionSettingsValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (NonComplianceMessageSubstitutionSettingsValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	// Reference: https://github.com/hashicorp/terraform-plugin-framework/issues/521
+	ctx := context.Background()
+
+	for name, attributeType := range attributeTypes {
+		attribute, ok := attributes[name]
+
+		if !ok {
+			diags.AddError(
+				"Missing NonComplianceMessageSubstitutionSettingsValue Attribute Value",
+				"While creating a NonComplianceMessageSubstitutionSettingsValue value, a missing attribute value was detected. "+
+					"A NonComplianceMessageSubstitutionSettingsValue must contain values for all attributes, even if null or unknown. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("NonComplianceMessageSubstitutionSettingsValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
+			)
+
+			continue
+		}
+
+		if !attributeType.Equal(attribute.Type(ctx)) {
+			diags.AddError(
+				"Invalid NonComplianceMessageSubstitutionSettingsValue Attribute Type",
+				"While creating a NonComplianceMessageSubstitutionSettingsValue value, an invalid attribute value was detected. "+
+					"A NonComplianceMessageSubstitutionSettingsValue must use a matching attribute type for the value. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("NonComplianceMessageSubstitutionSettingsValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
+					fmt.Sprintf("NonComplianceMessageSubstitutionSettingsValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
+			)
+		}
+	}
+
+	for name := range attributes {
+		_, ok := attributeTypes[name]
+
+		if !ok {
+			diags.AddError(
+				"Extra NonComplianceMessageSubstitutionSettingsValue Attribute Value",
+				"While creating a NonComplianceMessageSubstitutionSettingsValue value, an extra attribute value was detected. "+
+					"A NonComplianceMessageSubstitutionSettingsValue must not contain values beyond the expected attribute types. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("Extra NonComplianceMessageSubstitutionSettingsValue Attribute Name: %s", name),
+			)
+		}
+	}
+
+	if diags.HasError() {
+		return NewNonComplianceMessageSubstitutionSettingsValueUnknown(), diags
+	}
+
+	enforcedReplacementAttribute, ok := attributes["enforced_replacement"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`enforced_replacement is missing from object`)
+
+		return NewNonComplianceMessageSubstitutionSettingsValueUnknown(), diags
+	}
+
+	enforcedReplacementVal, ok := enforcedReplacementAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`enforced_replacement expected to be basetypes.StringValue, was: %T`, enforcedReplacementAttribute))
+	}
+
+	enforcementModePlaceholderAttribute, ok := attributes["enforcement_mode_placeholder"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`enforcement_mode_placeholder is missing from object`)
+
+		return NewNonComplianceMessageSubstitutionSettingsValueUnknown(), diags
+	}
+
+	enforcementModePlaceholderVal, ok := enforcementModePlaceholderAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`enforcement_mode_placeholder expected to be basetypes.StringValue, was: %T`, enforcementModePlaceholderAttribute))
+	}
+
+	notEnforcedReplacementAttribute, ok := attributes["not_enforced_replacement"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`not_enforced_replacement is missing from object`)
+
+		return NewNonComplianceMessageSubstitutionSettingsValueUnknown(), diags
+	}
+
+	notEnforcedReplacementVal, ok := notEnforcedReplacementAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`not_enforced_replacement expected to be basetypes.StringValue, was: %T`, notEnforcedReplacementAttribute))
+	}
+
+	if diags.HasError() {
+		return NewNonComplianceMessageSubstitutionSettingsValueUnknown(), diags
+	}
+
+	return NonComplianceMessageSubstitutionSettingsValue{
+		EnforcedReplacement:        enforcedReplacementVal,
+		EnforcementModePlaceholder: enforcementModePlaceholderVal,
+		NotEnforcedReplacement:     notEnforcedReplacementVal,
+		state:                      attr.ValueStateKnown,
+	}, diags
+}
+
+func NewNonComplianceMessageSubstitutionSettingsValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) NonComplianceMessageSubstitutionSettingsValue {
+	object, diags := NewNonComplianceMessageSubstitutionSettingsValue(attributeTypes, attributes)
+
+	if diags.HasError() {
+		// This could potentially be added to the diag package.
+		diagsStrings := make([]string, 0, len(diags))
+
+		for _, diagnostic := range diags {
+			diagsStrings = append(diagsStrings, fmt.Sprintf(
+				"%s | %s | %s",
+				diagnostic.Severity(),
+				diagnostic.Summary(),
+				diagnostic.Detail()))
+		}
+
+		panic("NewNonComplianceMessageSubstitutionSettingsValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
+	}
+
+	return object
+}
+
+func (t NonComplianceMessageSubstitutionSettingsType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
+	if in.Type() == nil {
+		return NewNonComplianceMessageSubstitutionSettingsValueNull(), nil
+	}
+
+	if !in.Type().Equal(t.TerraformType(ctx)) {
+		return nil, fmt.Errorf("expected %s, got %s", t.TerraformType(ctx), in.Type())
+	}
+
+	if !in.IsKnown() {
+		return NewNonComplianceMessageSubstitutionSettingsValueUnknown(), nil
+	}
+
+	if in.IsNull() {
+		return NewNonComplianceMessageSubstitutionSettingsValueNull(), nil
+	}
+
+	attributes := map[string]attr.Value{}
+
+	val := map[string]tftypes.Value{}
+
+	err := in.As(&val)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range val {
+		a, err := t.AttrTypes[k].ValueFromTerraform(ctx, v)
+
+		if err != nil {
+			return nil, err
+		}
+
+		attributes[k] = a
+	}
+
+	return NewNonComplianceMessageSubstitutionSettingsValueMust(NonComplianceMessageSubstitutionSettingsValue{}.AttributeTypes(ctx), attributes), nil
+}
+
+func (t NonComplianceMessageSubstitutionSettingsType) ValueType(ctx context.Context) attr.Value {
+	return NonComplianceMessageSubstitutionSettingsValue{}
+}
+
+var _ basetypes.ObjectValuable = NonComplianceMessageSubstitutionSettingsValue{}
+
+type NonComplianceMessageSubstitutionSettingsValue struct {
+	EnforcedReplacement        basetypes.StringValue `tfsdk:"enforced_replacement"`
+	EnforcementModePlaceholder basetypes.StringValue `tfsdk:"enforcement_mode_placeholder"`
+	NotEnforcedReplacement     basetypes.StringValue `tfsdk:"not_enforced_replacement"`
+	state                      attr.ValueState
+}
+
+func (v NonComplianceMessageSubstitutionSettingsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
+	attrTypes := make(map[string]tftypes.Type, 3)
+
+	var val tftypes.Value
+	var err error
+
+	attrTypes["enforced_replacement"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["enforcement_mode_placeholder"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["not_enforced_replacement"] = basetypes.StringType{}.TerraformType(ctx)
+
+	objectType := tftypes.Object{AttributeTypes: attrTypes}
+
+	switch v.state {
+	case attr.ValueStateKnown:
+		vals := make(map[string]tftypes.Value, 3)
+
+		val, err = v.EnforcedReplacement.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["enforced_replacement"] = val
+
+		val, err = v.EnforcementModePlaceholder.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["enforcement_mode_placeholder"] = val
+
+		val, err = v.NotEnforcedReplacement.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["not_enforced_replacement"] = val
+
+		if err := tftypes.ValidateValue(objectType, vals); err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		return tftypes.NewValue(objectType, vals), nil
+	case attr.ValueStateNull:
+		return tftypes.NewValue(objectType, nil), nil
+	case attr.ValueStateUnknown:
+		return tftypes.NewValue(objectType, tftypes.UnknownValue), nil
+	default:
+		panic(fmt.Sprintf("unhandled Object state in ToTerraformValue: %s", v.state))
+	}
+}
+
+func (v NonComplianceMessageSubstitutionSettingsValue) IsNull() bool {
+	return v.state == attr.ValueStateNull
+}
+
+func (v NonComplianceMessageSubstitutionSettingsValue) IsUnknown() bool {
+	return v.state == attr.ValueStateUnknown
+}
+
+func (v NonComplianceMessageSubstitutionSettingsValue) String() string {
+	return "NonComplianceMessageSubstitutionSettingsValue"
+}
+
+func (v NonComplianceMessageSubstitutionSettingsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributeTypes := map[string]attr.Type{
+		"enforced_replacement":         basetypes.StringType{},
+		"enforcement_mode_placeholder": basetypes.StringType{},
+		"not_enforced_replacement":     basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
+		map[string]attr.Value{
+			"enforced_replacement":         v.EnforcedReplacement,
+			"enforcement_mode_placeholder": v.EnforcementModePlaceholder,
+			"not_enforced_replacement":     v.NotEnforcedReplacement,
+		})
+
+	return objVal, diags
+}
+
+func (v NonComplianceMessageSubstitutionSettingsValue) Equal(o attr.Value) bool {
+	other, ok := o.(NonComplianceMessageSubstitutionSettingsValue)
+
+	if !ok {
+		return false
+	}
+
+	if v.state != other.state {
+		return false
+	}
+
+	if v.state != attr.ValueStateKnown {
+		return true
+	}
+
+	if !v.EnforcedReplacement.Equal(other.EnforcedReplacement) {
+		return false
+	}
+
+	if !v.EnforcementModePlaceholder.Equal(other.EnforcementModePlaceholder) {
+		return false
+	}
+
+	if !v.NotEnforcedReplacement.Equal(other.NotEnforcedReplacement) {
+		return false
+	}
+
+	return true
+}
+
+func (v NonComplianceMessageSubstitutionSettingsValue) Type(ctx context.Context) attr.Type {
+	return NonComplianceMessageSubstitutionSettingsType{
+		basetypes.ObjectType{
+			AttrTypes: v.AttributeTypes(ctx),
+		},
+	}
+}
+
+func (v NonComplianceMessageSubstitutionSettingsValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
+	return map[string]attr.Type{
+		"enforced_replacement":         basetypes.StringType{},
+		"enforcement_mode_placeholder": basetypes.StringType{},
+		"not_enforced_replacement":     basetypes.StringType{},
 	}
 }

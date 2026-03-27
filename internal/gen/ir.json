@@ -168,6 +168,36 @@
               }
             ]
           }
+        },
+        {
+          "name": "non_compliance_message_substitution_settings",
+          "single_nested": {
+            "description": "Global settings for non-compliance message placeholder substitutions. These control how placeholders in non-compliance messages are resolved based on the enforcement mode of policy assignments.",
+            "optional_required": "optional",
+            "attributes": [
+              {
+                "name": "enforcement_mode_placeholder",
+                "string": {
+                  "description": "The placeholder string in the default message that will be replaced based on the enforcement mode. Defaults to `{enforcementMode}`.",
+                  "optional_required": "optional"
+                }
+              },
+              {
+                "name": "enforced_replacement",
+                "string": {
+                  "description": "The replacement string to use for the enforcement mode placeholder when the policy assignment is enforced. Defaults to `must`.",
+                  "optional_required": "optional"
+                }
+              },
+              {
+                "name": "not_enforced_replacement",
+                "string": {
+                  "description": "The replacement string to use for the enforcement mode placeholder when the policy assignment is not enforced. Defaults to `should`.",
+                  "optional_required": "optional"
+                }
+              }
+            ]
+          }
         }
       ]
     }
@@ -269,7 +299,7 @@
             }
           },
           {
-            "name": "non_compliance_message_settings",
+            "name": "default_non_compliance_message_settings",
             "single_nested": {
               "description": "Settings for controlling default non-compliance messages on policy assignments. When configured, a default non-compliance message will be applied to policy assignments.",
               "computed_optional_required": "optional",
@@ -277,7 +307,7 @@
                 {
                   "name": "default_message",
                   "string": {
-                    "description": "The default non-compliance message to apply to policy assignments. Supports the `{enforcementMode}` placeholder which is replaced with `must` for enforced assignments and `should` for non-enforced. If empty, the default non-compliance message feature is disabled.",
+                    "description": "The default non-compliance message to apply to policy assignments. Supports placeholder substitution configured in the provider's `non_compliance_message_settings` block.",
                     "computed_optional_required": "required"
                   }
                 },
@@ -298,16 +328,6 @@
                         }
                       }
                     ]
-                  }
-                },
-                {
-                  "name": "exclusions",
-                  "set": {
-                    "description": "A set of policy assignment names to exclude from non-compliance message processing. Use this for policies that do not support non-compliance messages.",
-                    "computed_optional_required": "optional",
-                    "element_type": {
-                      "string": {}
-                    }
                   }
                 }
               ]
