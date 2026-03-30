@@ -99,7 +99,7 @@ See the release notes [here](https://github.com/hashicorp/terraform/releases/tag
 
 Required:
 
-- `default_message` (String) The default non-compliance message to apply to policy assignments. Supports placeholder substitution configured in the provider's `non_compliance_message_settings` block.
+- `default_message` (String) The default non-compliance message to apply to policy assignments. Supports placeholder substitution configured in the provider's `non_compliance_message_substitution_settings` block.
 
 Optional:
 

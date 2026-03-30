@@ -209,13 +209,14 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 		ncmCfg.NotEnforcedReplacement = r
 	}
 
-	applyDefaultNonComplianceMessages(depl, d.data.AlzLib, ncmCfg, resp)
+	// Modify policy assignments (explicit configs take precedence over defaults)
+	modifyPolicyAssignments(ctx, depl, data, resp)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Modify policy assignments (explicit configs take precedence over defaults)
-	modifyPolicyAssignments(ctx, depl, data, resp)
+	// Apply default non-compliance messages after policy assignments are finalized
+	applyDefaultNonComplianceMessages(depl, d.data.AlzLib, ncmCfg, resp)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -767,7 +768,7 @@ func applyDefaultNonComplianceMessages(depl *deployment.Hierarchy, az *alzlib.Al
 				})
 			}
 
-			// Handle placeholder subsitution for all compiled non-compliance messages for policy assignment
+			// Handle placeholder substitution for all compiled non-compliance messages for policy assignment
 			for _, msg := range newMessages {
 				if msg.Message != nil {
 					*msg.Message = strings.ReplaceAll(*msg.Message, placeholder, enforcementReplacement)
