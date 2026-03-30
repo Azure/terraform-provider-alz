@@ -210,7 +210,6 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	applyDefaultNonComplianceMessages(depl, d.data.AlzLib, ncmCfg, resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -720,8 +719,11 @@ func applyDefaultNonComplianceMessages(depl *deployment.Hierarchy, az *alzlib.Al
 
 		policyAssignments := mg.PolicyAssignmentMap()
 		for paName, pa := range policyAssignments {
-			if pa == nil || pa.Properties == nil {
-				continue
+			if err := pa.Validate(); err != nil {
+				resp.Diagnostics.AddError(
+					"Policy assignment validation failed",
+					fmt.Sprintf("Policy assignment `%s` at mg `%s`: %s", paName, mgName, err.Error()),
+				)
 			}
 
 			// Checks if policy assignments are directly assigning a policy definition that has a resource provider mode, as they do not support non-compliance messages
