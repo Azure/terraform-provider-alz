@@ -255,7 +255,7 @@ func TestAccAlzArchitectureDataSourceNonComplianceMessageCustomSubstitution(t *t
 					// Policy without message should have default applied with custom enforced replacement
 					resource.TestCheckOutput("policy_without_message_nc_message", "This resource needs to be compliant."),
 					// Policy with DoNotEnforce should have custom not-enforced replacement
-					resource.TestCheckOutput("policy_donotenforce_nc_message", "This resource should be compliant."),
+					resource.TestCheckOutput("policy_donotenforce_nc_message", "This resource has to be compliant."),
 					// Policy-specific message preserved, default message uses custom replacement
 					resource.TestCheckOutput("policy_with_message_nc_count", "2"),
 					resource.TestCheckOutput("policy_with_message_nc_policy_specific", "Message for specific policy definition"),
@@ -644,7 +644,7 @@ output "policy_with_message_nc_default" {
 }
 
 output "policy_rp_mode_nc_empty" {
-  value = tostring(try(local.policy_rp_mode.properties.nonComplianceMessages, null) == null)
+  value = tostring(length(try(local.policy_rp_mode.properties.nonComplianceMessages, [])) == 0)
 }
 `
 }
@@ -711,7 +711,7 @@ provider "alz" {
   non_compliance_message_substitution_settings = {
     enforcement_mode_placeholder = "{MODE}"
     enforced_replacement         = "needs to"
-    not_enforced_replacement     = "should"
+    not_enforced_replacement     = "has to"
   }
 }
 
