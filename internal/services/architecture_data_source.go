@@ -720,11 +720,13 @@ func applyDefaultNonComplianceMessages(depl *deployment.Hierarchy, az *alzlib.Al
 
 		policyAssignments := mg.PolicyAssignmentMap()
 		for paName, pa := range policyAssignments {
-			if err := pa.Validate(); err != nil {
+
+			if err := assets.ValidatePolicyAssignment(pa); err != nil {
 				resp.Diagnostics.AddError(
 					"Policy assignment validation failed",
 					fmt.Sprintf("Policy assignment `%s` at mg `%s`: %s", paName, mgName, err.Error()),
 				)
+				continue
 			}
 
 			// Checks if policy assignments are directly assigning a policy definition that has a resource provider mode, as they do not support non-compliance messages

@@ -30,8 +30,8 @@ func ArchitectureDataSourceSchema(ctx context.Context) schema.Schema {
 				Attributes: map[string]schema.Attribute{
 					"default_message": schema.StringAttribute{
 						Required:            true,
-						Description:         "The default non-compliance message to apply to policy assignments. Supports placeholder substitution configured in the provider's `non_compliance_message_settings` block.",
-						MarkdownDescription: "The default non-compliance message to apply to policy assignments. Supports placeholder substitution configured in the provider's `non_compliance_message_settings` block.",
+						Description:         "The default non-compliance message to apply to policy assignments. Supports placeholder substitution configured in the provider's `non_compliance_message_substitution_settings` block.",
+						MarkdownDescription: "The default non-compliance message to apply to policy assignments. Supports placeholder substitution configured in the provider's `non_compliance_message_substitution_settings` block.",
 					},
 					"merge_mode": schema.StringAttribute{
 						Optional:            true,

@@ -3,7 +3,7 @@ module github.com/Azure/terraform-provider-alz
 go 1.25.2
 
 require (
-	github.com/Azure/alzlib v0.29.3
+	github.com/Azure/alzlib v0.30.1
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.20.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy v0.10.0
 	github.com/Azure/entrauth v0.0.0-20250819004238-dc2a3f58cbb7
