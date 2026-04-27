@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
@@ -22,6 +23,19 @@ import (
 func AlzProviderSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
 		Attributes: map[string]schema.Attribute{
+			"cache_file_name": schema.StringAttribute{
+				Optional:            true,
+				Description:         "Path to a gzipped cache file (must end in `.gz`) containing built-in policy and policy set definitions. When set, the provider will load the cache from this file (if it exists) so that built-in definitions do not need to be fetched from Azure. Use `cache_file_save_enabled` to (re)write the cache file after the provider has been configured. Caches should be regularly updated to ensure no miscalculation for the policy role assignments, as new minor or patch versions of built-in policy definitions may be released.",
+				MarkdownDescription: "Path to a gzipped cache file (must end in `.gz`) containing built-in policy and policy set definitions. When set, the provider will load the cache from this file (if it exists) so that built-in definitions do not need to be fetched from Azure. Use `cache_file_save_enabled` to (re)write the cache file after the provider has been configured. Caches should be regularly updated to ensure no miscalculation for the policy role assignments, as new minor or patch versions of built-in policy definitions may be released.",
+				Validators: []validator.String{
+					stringvalidator.RegexMatches(regexp.MustCompile(`\.gz$`), "cache_file_name must end with .gz"),
+				},
+			},
+			"cache_file_save_enabled": schema.BoolAttribute{
+				Optional:            true,
+				Description:         "Whether to (re)write the cache file specified by `cache_file_name` after the provider has been configured. When `true`, the built-in policy and policy set definitions loaded into the AlzLib will be exported and saved to the file. Defaults to `false`. Has no effect when `cache_file_name` is not set.",
+				MarkdownDescription: "Whether to (re)write the cache file specified by `cache_file_name` after the provider has been configured. When `true`, the built-in policy and policy set definitions loaded into the AlzLib will be exported and saved to the file. Defaults to `false`. Has no effect when `cache_file_name` is not set.",
+			},
 			"library_fetch_dependencies": schema.BoolAttribute{
 				Optional:            true,
 				Description:         "Whether to automatically fetch dependencies for the library. This option reads the `alz_library_metadata.json` file in any supplied library and will recursively download dependent libraries. Default is `true`.",
@@ -127,6 +141,8 @@ func AlzProviderSchema(ctx context.Context) schema.Schema {
 }
 
 type AlzModel struct {
+	CacheFileName                            types.String                                  `tfsdk:"cache_file_name"`
+	CacheFileSaveEnabled                     types.Bool                                    `tfsdk:"cache_file_save_enabled"`
 	LibraryFetchDependencies                 types.Bool                                    `tfsdk:"library_fetch_dependencies"`
 	LibraryOverwriteEnabled                  types.Bool                                    `tfsdk:"library_overwrite_enabled"`
 	LibraryReferences                        types.List                                    `tfsdk:"library_references"`

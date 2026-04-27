@@ -9,11 +9,13 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/Azure/alzlib"
+	"github.com/Azure/alzlib/cache"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
@@ -170,10 +172,37 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 		})
 	}
 
+	// If a cache file was supplied and exists, load it and inject into AlzLib so
+	// that built-in policy and policy set definitions can be served from the cache
+	// without making Azure API calls during Init.
+	cacheFileName := data.CacheFileName.ValueString()
+	if cacheFileName != "" {
+		if err := loadCacheFile(ctx, alz, cacheFileName); err != nil {
+			resp.Diagnostics.AddError("Failed to load cache file", err.Error())
+			return
+		}
+	}
+
 	// Init alzlib
 	if err := alz.Init(ctx, libRefs...); err != nil {
 		resp.Diagnostics.AddError("Failed to initialize AlzLib", err.Error())
 		return
+	}
+
+	// If requested, persist the built-in cache to disk so that subsequent runs
+	// can use it. This must happen after Init so that the AlzLib has been
+	// populated with the built-in definitions referenced by the library.
+	if cacheFileName != "" && data.CacheFileSaveEnabled.ValueBool() {
+		if err := saveCacheFile(ctx, alz, cacheFileName); err != nil {
+			resp.Diagnostics.AddError("Failed to save cache file", err.Error())
+			return
+		}
+	}
+
+	// Drop the cache to free up RAM now that the AlzLib has been populated.
+	if cacheFileName != "" {
+		alz.AddCache(nil)
+		tflog.Debug(ctx, "Dropped AlzLib built-in cache to free memory")
 	}
 
 	// Store the alz pointer in the provider struct so we don't have to do all this work every time `.Configure` is called.
@@ -376,4 +405,87 @@ func configureDefaults(_ context.Context, data *AlzModel) {
 	if data.SuppressWarningPolicyRoleAssignments.IsNull() {
 		data.SuppressWarningPolicyRoleAssignments = types.BoolValue(false)
 	}
+
+	// Do not save the cache file by default.
+	if data.CacheFileSaveEnabled.IsNull() {
+		data.CacheFileSaveEnabled = types.BoolValue(false)
+	}
+}
+
+// loadCacheFile loads the gzipped cache file at the given path and injects it
+// into the AlzLib. If the file does not exist, this is treated as a no-op so
+// that the cache file can be created on first run when used with
+// `cache_file_save_enabled = true`.
+func loadCacheFile(ctx context.Context, alz *alzlib.AlzLib, path string) error {
+	f, err := os.Open(path) // #nosec G304 -- path is provided by the operator via provider config.
+	if err != nil {
+		if os.IsNotExist(err) {
+			tflog.Debug(ctx, "Cache file does not exist, skipping load", map[string]interface{}{
+				"cache_file_name": path,
+			})
+			return nil
+		}
+		return fmt.Errorf("opening cache file %q: %w", path, err)
+	}
+	defer f.Close() // #nosec G307 -- read-only.
+
+	c, err := cache.NewCache(f)
+	if err != nil {
+		return fmt.Errorf("reading cache file %q: %w", path, err)
+	}
+	alz.AddCache(c)
+	tflog.Debug(ctx, "Loaded AlzLib built-in cache from file", map[string]interface{}{
+		"cache_file_name": path,
+	})
+	return nil
+}
+
+// saveCacheFile exports the built-in policy and policy set definitions from the
+// AlzLib and writes them to the given path as a gzipped JSON file. The write is
+// performed via a temporary file in the same directory and renamed atomically
+// to avoid leaving a corrupt cache file if the process is interrupted.
+func saveCacheFile(ctx context.Context, alz *alzlib.AlzLib, path string) error {
+	c := alz.ExportBuiltInCache()
+
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("creating cache directory %q: %w", dir, err)
+	}
+
+	tmp, err := os.CreateTemp(dir, filepath.Base(path)+".tmp-*")
+	if err != nil {
+		return fmt.Errorf("creating temporary cache file in %q: %w", dir, err)
+	}
+	tmpName := tmp.Name()
+	// Best-effort cleanup if we don't make it to the rename.
+	defer func() { _ = os.Remove(tmpName) }()
+
+	if err := c.Save(tmp); err != nil {
+		_ = tmp.Close()
+		return fmt.Errorf("writing cache file %q: %w", path, err)
+	}
+	if err := tmp.Close(); err != nil {
+		return fmt.Errorf("closing cache file %q: %w", tmpName, err)
+	}
+	if err := os.Rename(tmpName, path); err != nil {
+		// On some platforms (notably older Windows behaviour) os.Rename can
+		// fail when the destination file already exists. Fall back to
+		// removing the existing destination and renaming again so
+		// cache_file_save_enabled works on the second and subsequent runs.
+		// The temp file is fully written and closed before this point, so
+		// the file content remains valid.
+		if _, statErr := os.Stat(path); statErr != nil {
+			return fmt.Errorf("renaming cache file %q to %q: %w", tmpName, path, err)
+		}
+		if rmErr := os.Remove(path); rmErr != nil && !os.IsNotExist(rmErr) {
+			return fmt.Errorf("removing existing cache file %q: %w", path, rmErr)
+		}
+		if err := os.Rename(tmpName, path); err != nil {
+			return fmt.Errorf("renaming cache file %q to %q: %w", tmpName, path, err)
+		}
+	}
+	tflog.Debug(ctx, "Saved AlzLib built-in cache to file", map[string]interface{}{
+		"cache_file_name": path,
+	})
+	return nil
 }
