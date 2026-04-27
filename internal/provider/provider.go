@@ -37,6 +37,13 @@ import (
 
 const (
 	userAgentBase = "AzureTerraformAlzProvider"
+
+	// Defaults for non-compliance message placeholder substitution settings.
+	// These are applied at the provider level when the user does not set them
+	// in the `non_compliance_message_substitution_settings` block.
+	defaultEnforcementModePlaceholder = "{enforcementMode}"
+	defaultEnforcedReplacement        = "must"
+	defaultNotEnforcedReplacement     = "should"
 )
 
 // Ensure ScaffoldingProvider satisfies various provider interfaces.
@@ -176,14 +183,24 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 		clients.WithSuppressWarningPolicyRoleAssignments(data.SuppressWarningPolicyRoleAssignments.ValueBool()),
 	}
 
-	// Parse non-compliance message substitution settings if configured.
+	// Parse non-compliance message substitution settings, applying provider-level
+	// defaults when the block (or any individual attribute) is not configured.
+	placeholder := defaultEnforcementModePlaceholder
+	enforcedRepl := defaultEnforcedReplacement
+	notEnforcedRepl := defaultNotEnforcedReplacement
 	ncmSubSettings := data.NonComplianceMessageSubstitutionSettings
 	if !ncmSubSettings.IsNull() && !ncmSubSettings.IsUnknown() {
-		placeholder := ncmSubSettings.EnforcementModePlaceholder.ValueString()
-		enforcedRepl := ncmSubSettings.EnforcedReplacement.ValueString()
-		notEnforcedRepl := ncmSubSettings.NotEnforcedReplacement.ValueString()
-		clientOpts = append(clientOpts, clients.WithNonComplianceMessageSubstitutionSettings(placeholder, enforcedRepl, notEnforcedRepl))
+		if v := ncmSubSettings.EnforcementModePlaceholder; !v.IsNull() && !v.IsUnknown() && v.ValueString() != "" {
+			placeholder = v.ValueString()
+		}
+		if v := ncmSubSettings.EnforcedReplacement; !v.IsNull() && !v.IsUnknown() && v.ValueString() != "" {
+			enforcedRepl = v.ValueString()
+		}
+		if v := ncmSubSettings.NotEnforcedReplacement; !v.IsNull() && !v.IsUnknown() && v.ValueString() != "" {
+			notEnforcedRepl = v.ValueString()
+		}
 	}
+	clientOpts = append(clientOpts, clients.WithNonComplianceMessageSubstitutionSettings(placeholder, enforcedRepl, notEnforcedRepl))
 
 	p.data = clients.NewClient(clientOpts...)
 	resp.DataSourceData = p.data
