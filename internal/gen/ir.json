@@ -43,6 +43,35 @@
           }
         },
         {
+          "name": "cache_file_name",
+          "string": {
+            "optional_required": "optional",
+            "description": "Path to a gzipped cache file (must end in `.gz`) containing built-in policy and policy set definitions. When set, the provider will load the cache from this file (if it exists) so that built-in definitions do not need to be fetched from Azure. Use `cache_file_save_enabled` to (re)write the cache file after the provider has been configured. Caches should be regularly updated to ensure no miscalculation for the policy role assignments, as new minor or patch versions of built-in policy definitions may be released.",
+            "validators": [
+              {
+                "custom": {
+                  "imports": [
+                    {
+                      "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                    },
+                    {
+                      "path": "regexp"
+                    }
+                  ],
+                  "schema_definition": "stringvalidator.RegexMatches(regexp.MustCompile(`\\.gz$`), \"cache_file_name must end with .gz\")"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "name": "cache_file_save_enabled",
+          "bool": {
+            "optional_required": "optional",
+            "description": "Whether to (re)write the cache file specified by `cache_file_name` after the provider has been configured. When `true`, the built-in policy and policy set definitions loaded into the AlzLib will be exported and saved to the file. Defaults to `false`. Has no effect when `cache_file_name` is not set."
+          }
+        },
+        {
           "name": "library_references",
           "list_nested": {
             "optional_required": "required",

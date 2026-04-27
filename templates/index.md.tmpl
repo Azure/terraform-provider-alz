@@ -57,4 +57,10 @@ Within the library are the following types of asserts:
 
 For more information please visit the [library documentation site](https://azure.github.io/Azure-Landing-Zones-Library/).
 
+## Built-In Policy Definition Cache
+
+The provider can use a local gzipped cache file to avoid fetching built-in Azure policy and policy set definitions from Azure on every run. This is configured via the `cache_file_name` (path to a `.gz` file) and `cache_file_save_enabled` (whether to (re)write the file after the provider is configured) options.
+
+~> **Important** Using a cache means the provider will not see hotfixes, new minor versions, or any other updates to built-in policy definitions until the cache file is refreshed. Policy assignments MUST allow patch version updates in their version constraints (e.g. `1.0.*`), and MAY allow minor version updates (e.g. `1.*.*`). Therefore the cache file should be regenerated regularly (for example by setting `cache_file_save_enabled = true` periodically, or by deleting the cache file) to ensure no miscalculation for the policy role assignments.
+
 {{ .SchemaMarkdown | trimspace }}
