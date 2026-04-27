@@ -1,0 +1,21 @@
+{
+  "type": "Microsoft.Authorization/policyDefinitions",
+  "apiVersion": "2021-06-01",
+  "name": "test-policy-definition",
+  "properties": {
+    "description": "Test policy definition for non-compliance message tests.",
+    "displayName": "Test Policy Definition",
+    "mode": "All",
+    "parameters": {},
+    "policyRule": {
+      "if": {
+        "field": "type",
+        "equals": "Microsoft.Resources/subscriptions"
+      },
+      "then": {
+        "effect": "audit"
+      }
+    },
+    "policyType": "Custom"
+  }
+}

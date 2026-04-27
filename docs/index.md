@@ -99,6 +99,7 @@ For more information please visit the [library documentation site](https://azure
 - `environment` (String) The Cloud Environment which should be used. Possible values are `public`, `usgovernment`, `china` and `custom`. Defaults to `public`. When set to `custom`, the `endpoint` configuration block must be provided. This can also be sourced from the `ARM_ENVIRONMENT` or `AZURE_ENVIRONMENT` Environment Variables.
 - `library_fetch_dependencies` (Boolean) Whether to automatically fetch dependencies for the library. This option reads the `alz_library_metadata.json` file in any supplied library and will recursively download dependent libraries. Default is `true`.
 - `library_overwrite_enabled` (Boolean) Whether to allow overwriting of the library by other lib directories. Default is `false`.
+- `non_compliance_message_substitution_settings` (Attributes) Global settings for non-compliance message placeholder substitutions. These control how placeholders in non-compliance messages are resolved based on the enforcement mode of policy assignments. (see [below for nested schema](#nestedatt--non_compliance_message_substitution_settings))
 - `oidc_azure_service_connection_id` (String) The Azure Pipelines Service Connection ID to use for authentication. This can also be sourced from the `ARM_ADO_PIPELINE_SERVICE_CONNECTION_ID`, `ARM_OIDC_AZURE_SERVICE_CONNECTION_ID`, or `AZURESUBSCRIPTION_SERVICE_CONNECTION_ID` Environment Variables.
 - `oidc_request_token` (String) The bearer token for the request to the OIDC provider. This can also be sourced from the `ARM_OIDC_REQUEST_TOKEN`, `ACTIONS_ID_TOKEN_REQUEST_TOKEN`, or `SYSTEM_ACCESSTOKEN` Environment Variables.
 - `oidc_request_url` (String) The URL for the OIDC provider from which to request an ID token. This can also be sourced from the `ARM_OIDC_REQUEST_URL`, `ACTIONS_ID_TOKEN_REQUEST_URL`, or `SYSTEM_OIDCREQUESTURI` Environment Variables.
@@ -132,3 +133,13 @@ Optional:
 - `active_directory_authority_host` (String) The Azure Active Directory login endpoint to use. This can also be sourced from the `ARM_ACTIVE_DIRECTORY_AUTHORITY_HOST` Environment Variable. Required when `environment` is set to `custom`. Example: `https://login.microsoftonline.com/` for public cloud.
 - `resource_manager_audience` (String) The resource ID to obtain AD tokens for. This can also be sourced from the `ARM_RESOURCE_MANAGER_AUDIENCE` Environment Variable. Required when `environment` is set to `custom`. Example: `https://management.core.windows.net/` for public cloud.
 - `resource_manager_endpoint` (String) The Azure Resource Manager endpoint to use. This can also be sourced from the `ARM_RESOURCE_MANAGER_ENDPOINT` Environment Variable. Required when `environment` is set to `custom`. Example: `https://management.azure.com/` for public cloud.
+
+
+<a id="nestedatt--non_compliance_message_substitution_settings"></a>
+### Nested Schema for `non_compliance_message_substitution_settings`
+
+Optional:
+
+- `enforced_replacement` (String) The replacement string to use for the enforcement mode placeholder when the policy assignment is enforced. Defaults to `must`.
+- `enforcement_mode_placeholder` (String) The placeholder string in the default message that will be replaced based on the enforcement mode. Defaults to `{enforcementMode}`.
+- `not_enforced_replacement` (String) The replacement string to use for the enforcement mode placeholder when the policy assignment is not enforced. Defaults to `should`.

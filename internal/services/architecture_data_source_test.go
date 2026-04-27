@@ -1,8 +1,11 @@
 package services
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/Azure/alzlib"
+	"github.com/Azure/alzlib/assets"
 	"github.com/Azure/alzlib/deployment"
 	"github.com/Azure/alzlib/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy"
@@ -343,5 +346,199 @@ func TestPolicyRoleAssignmentsSetToProviderType(t *testing.T) {
 			AssignmentName:   praval.PolicyAssignmentName.ValueString(),
 		}
 		assert.True(t, src.Contains(setMember))
+	}
+}
+
+// TestEnforcementModeReplacement tests the {enforcementMode} placeholder replacement logic.
+func TestEnforcementModeReplacement(t *testing.T) {
+	testCases := []struct {
+		name                string
+		enforcementMode     *armpolicy.EnforcementMode
+		expectedReplacement string
+	}{
+		{
+			name:                "Default enforcement mode should use 'must'",
+			enforcementMode:     to.Ptr(armpolicy.EnforcementModeDefault),
+			expectedReplacement: "must",
+		},
+		{
+			name:                "DoNotEnforce should use 'should'",
+			enforcementMode:     to.Ptr(armpolicy.EnforcementModeDoNotEnforce),
+			expectedReplacement: "should",
+		},
+		{
+			name:                "Nil enforcement mode should default to 'must'",
+			enforcementMode:     nil,
+			expectedReplacement: "must",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expectedReplacement, enforcementModeReplacement(tc.enforcementMode, "must", "should"))
+		})
+	}
+}
+
+// TestNonComplianceMessagePlaceholderReplacement tests the {enforcementMode} placeholder replacement in messages.
+func TestNonComplianceMessagePlaceholderReplacement(t *testing.T) {
+	testCases := []struct {
+		name            string
+		inputMessage    string
+		enforcementMode *armpolicy.EnforcementMode
+		expectedMessage string
+	}{
+		{
+			name:            "Replace placeholder with 'must' for Default mode",
+			inputMessage:    "This resource {enforcementMode} be compliant with the assigned policy.",
+			enforcementMode: to.Ptr(armpolicy.EnforcementModeDefault),
+			expectedMessage: "This resource must be compliant with the assigned policy.",
+		},
+		{
+			name:            "Replace placeholder with 'should' for DoNotEnforce mode",
+			inputMessage:    "This resource {enforcementMode} be compliant with the assigned policy.",
+			enforcementMode: to.Ptr(armpolicy.EnforcementModeDoNotEnforce),
+			expectedMessage: "This resource should be compliant with the assigned policy.",
+		},
+		{
+			name:            "No placeholder - message unchanged",
+			inputMessage:    "This resource must be compliant.",
+			enforcementMode: to.Ptr(armpolicy.EnforcementModeDefault),
+			expectedMessage: "This resource must be compliant.",
+		},
+		{
+			name:            "Multiple placeholders",
+			inputMessage:    "Resources {enforcementMode} comply. Non-compliance {enforcementMode} be reported.",
+			enforcementMode: to.Ptr(armpolicy.EnforcementModeDoNotEnforce),
+			expectedMessage: "Resources should comply. Non-compliance should be reported.",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := strings.ReplaceAll(tc.inputMessage, "{enforcementMode}", enforcementModeReplacement(tc.enforcementMode, "must", "should"))
+			assert.Equal(t, tc.expectedMessage, result)
+		})
+	}
+}
+
+func TestNewNonComplianceMessageConfig(t *testing.T) {
+	cfg := NewNonComplianceMessageConfig()
+	assert.False(t, cfg.Enabled)
+	assert.Equal(t, DefaultNonComplianceMessage, cfg.DefaultMessage)
+	assert.Equal(t, NonComplianceMergeModeReplace, cfg.MergeMode)
+	// Substitution settings are sourced from provider configuration and are
+	// expected to be empty in the data-source-level default config.
+	assert.Empty(t, cfg.Placeholder)
+	assert.Empty(t, cfg.EnforcedReplacement)
+	assert.Empty(t, cfg.NotEnforcedReplacement)
+}
+
+func TestNonComplianceMergeMode(t *testing.T) {
+	assert.Equal(t, NonComplianceMergeModeReplace, NonComplianceMergeMode("replace"))
+	assert.Equal(t, NonComplianceMergeModePreferExisting, NonComplianceMergeMode("prefer_existing"))
+}
+
+func TestDefaultNonComplianceMessageConst(t *testing.T) {
+	assert.Contains(t, DefaultNonComplianceMessage, "{enforcementMode}")
+}
+
+func TestIsResourceProviderModePolicyDefinitionAssignment(t *testing.T) {
+	az := alzlib.NewAlzLib(nil)
+
+	// Add an "All" mode policy definition
+	allModePd := armpolicy.Definition{
+		Name: to.Ptr("all-mode-def"),
+		Properties: &armpolicy.DefinitionProperties{
+			Mode: to.Ptr("All"),
+		},
+	}
+	err := az.AddPolicyDefinitions(assets.NewPolicyDefinition(allModePd))
+	assert.NoError(t, err)
+
+	// Add an "Indexed" mode policy definition
+	indexedModePd := armpolicy.Definition{
+		Name: to.Ptr("indexed-mode-def"),
+		Properties: &armpolicy.DefinitionProperties{
+			Mode: to.Ptr("Indexed"),
+		},
+	}
+	err = az.AddPolicyDefinitions(assets.NewPolicyDefinition(indexedModePd))
+	assert.NoError(t, err)
+
+	// Add a resource provider mode policy definition
+	rpModePd := armpolicy.Definition{
+		Name: to.Ptr("rp-mode-def"),
+		Properties: &armpolicy.DefinitionProperties{
+			Mode: to.Ptr("Microsoft.KeyVault.Data"),
+		},
+	}
+	err = az.AddPolicyDefinitions(assets.NewPolicyDefinition(rpModePd))
+	assert.NoError(t, err)
+
+	testCases := []struct {
+		name     string
+		pa       *assets.PolicyAssignment
+		expected bool
+	}{
+		{
+			name: "All mode - should not skip",
+			pa: assets.NewPolicyAssignment(armpolicy.Assignment{
+				Properties: &armpolicy.AssignmentProperties{
+					PolicyDefinitionID: to.Ptr("/providers/Microsoft.Authorization/policyDefinitions/all-mode-def"),
+				},
+			}),
+			expected: false,
+		},
+		{
+			name: "Indexed mode - should not skip",
+			pa: assets.NewPolicyAssignment(armpolicy.Assignment{
+				Properties: &armpolicy.AssignmentProperties{
+					PolicyDefinitionID: to.Ptr("/providers/Microsoft.Authorization/policyDefinitions/indexed-mode-def"),
+				},
+			}),
+			expected: false,
+		},
+		{
+			name: "Resource provider mode - should skip",
+			pa: assets.NewPolicyAssignment(armpolicy.Assignment{
+				Properties: &armpolicy.AssignmentProperties{
+					PolicyDefinitionID: to.Ptr("/providers/Microsoft.Authorization/policyDefinitions/rp-mode-def"),
+				},
+			}),
+			expected: true,
+		},
+		{
+			name: "Policy set definition - should not skip",
+			pa: assets.NewPolicyAssignment(armpolicy.Assignment{
+				Properties: &armpolicy.AssignmentProperties{
+					PolicyDefinitionID: to.Ptr("/providers/Microsoft.Authorization/policySetDefinitions/some-set-def"),
+				},
+			}),
+			expected: false,
+		},
+		{
+			name: "Unknown definition - should not skip",
+			pa: assets.NewPolicyAssignment(armpolicy.Assignment{
+				Properties: &armpolicy.AssignmentProperties{
+					PolicyDefinitionID: to.Ptr("/providers/Microsoft.Authorization/policyDefinitions/nonexistent-def"),
+				},
+			}),
+			expected: false,
+		},
+		{
+			name: "Nil properties - should not skip",
+			pa: assets.NewPolicyAssignment(armpolicy.Assignment{
+				Properties: nil,
+			}),
+			expected: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := isResourceProviderModePolicyDefinitionAssignment(tc.pa, az)
+			assert.Equal(t, tc.expected, result)
+		})
 	}
 }

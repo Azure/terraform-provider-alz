@@ -37,6 +37,13 @@ import (
 
 const (
 	userAgentBase = "AzureTerraformAlzProvider"
+
+	// Defaults for non-compliance message placeholder substitution settings.
+	// These are applied at the provider level when the user does not set them
+	// in the `non_compliance_message_substitution_settings` block.
+	defaultEnforcementModePlaceholder = "{enforcementMode}"
+	defaultEnforcedReplacement        = "must"
+	defaultNotEnforcedReplacement     = "should"
 )
 
 // Ensure ScaffoldingProvider satisfies various provider interfaces.
@@ -171,10 +178,31 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 
 	// Store the alz pointer in the provider struct so we don't have to do all this work every time `.Configure` is called.
 	// Due to fetch from Azure, it takes approx 30 seconds each time and is called 4-5 time during a single acceptance test.
-	p.data = clients.NewClient(
+	clientOpts := []clients.Option{
 		clients.WithAlzLib(alz),
 		clients.WithSuppressWarningPolicyRoleAssignments(data.SuppressWarningPolicyRoleAssignments.ValueBool()),
-	)
+	}
+
+	// Parse non-compliance message substitution settings, applying provider-level
+	// defaults when the block (or any individual attribute) is not configured.
+	placeholder := defaultEnforcementModePlaceholder
+	enforcedRepl := defaultEnforcedReplacement
+	notEnforcedRepl := defaultNotEnforcedReplacement
+	ncmSubSettings := data.NonComplianceMessageSubstitutionSettings
+	if !ncmSubSettings.IsNull() && !ncmSubSettings.IsUnknown() {
+		if v := ncmSubSettings.EnforcementModePlaceholder; !v.IsNull() && !v.IsUnknown() && v.ValueString() != "" {
+			placeholder = v.ValueString()
+		}
+		if v := ncmSubSettings.EnforcedReplacement; !v.IsNull() && !v.IsUnknown() && v.ValueString() != "" {
+			enforcedRepl = v.ValueString()
+		}
+		if v := ncmSubSettings.NotEnforcedReplacement; !v.IsNull() && !v.IsUnknown() && v.ValueString() != "" {
+			notEnforcedRepl = v.ValueString()
+		}
+	}
+	clientOpts = append(clientOpts, clients.WithNonComplianceMessageSubstitutionSettings(placeholder, enforcedRepl, notEnforcedRepl))
+
+	p.data = clients.NewClient(clientOpts...)
 	resp.DataSourceData = p.data
 	resp.ResourceData = p.data
 	tflog.Debug(ctx, "Provider configuration finished")

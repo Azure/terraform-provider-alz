@@ -176,6 +176,96 @@ func TestAccArchitectureDataSourceMultipleProviders(t *testing.T) {
 	})
 }
 
+// TestAccAlzArchitectureDataSourceNonComplianceMessageDefault tests the default non-compliance message feature.
+func TestAccAlzArchitectureDataSourceNonComplianceMessageDefault(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acceptance.AccTestPreCheck(t) },
+		ProtoV6ProviderFactories: acceptance.AccTestProtoV6ProviderFactoriesUnique(),
+		ExternalProviders: map[string]resource.ExternalProvider{
+			"azapi": {
+				Source:            "azure/azapi",
+				VersionConstraint: "~> 2.0",
+			},
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccArchitectureDataSourceConfigNonComplianceMessageDefault(),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Policy without message should have default applied with "must" (Default mode)
+					resource.TestCheckOutput("policy_without_message_nc_message", "This resource must be compliant."),
+					// Policy with DoNotEnforce should have "should" in the message
+					resource.TestCheckOutput("policy_donotenforce_nc_message", "This resource should be compliant."),
+					// Overwrite mode (default): policy-specific message preserved, default message overwritten
+					resource.TestCheckOutput("policy_with_message_nc_count", "2"),
+					// The policy-specific message (with policyDefinitionReferenceId) is preserved
+					resource.TestCheckOutput("policy_with_message_nc_policy_specific", "Message for specific policy definition"),
+					// The default message is the new one (old default overwritten)
+					resource.TestCheckOutput("policy_with_message_nc_default", "This resource must be compliant."),
+					// Policy assignment referencing a resource provider mode definition should have no non-compliance messages
+					resource.TestCheckOutput("policy_rp_mode_nc_empty", "true"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccAlzArchitectureDataSourceNonComplianceMessagePreferExisting tests the prefer_existing merge mode.
+func TestAccAlzArchitectureDataSourceNonComplianceMessagePreferExisting(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acceptance.AccTestPreCheck(t) },
+		ProtoV6ProviderFactories: acceptance.AccTestProtoV6ProviderFactoriesUnique(),
+		ExternalProviders: map[string]resource.ExternalProvider{
+			"azapi": {
+				Source:            "azure/azapi",
+				VersionConstraint: "~> 2.0",
+			},
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccArchitectureDataSourceConfigNonComplianceMessagePreferExisting(),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// prefer_existing: existing default message is kept, policy-specific preserved
+					resource.TestCheckOutput("policy_with_message_nc_count", "2"),
+					resource.TestCheckOutput("policy_with_message_nc_policy_specific", "Message for specific policy definition"),
+					// Existing default is preserved (not replaced)
+					resource.TestCheckOutput("policy_with_message_nc_default", "Existing non-compliance message"),
+					// Policy without message should still get the configured default
+					resource.TestCheckOutput("policy_without_message_nc_message", "This resource must be compliant."),
+				),
+			},
+		},
+	})
+}
+
+// TestAccAlzArchitectureDataSourceNonComplianceMessageCustomSubstitution tests custom placeholder and replacement values.
+func TestAccAlzArchitectureDataSourceNonComplianceMessageCustomSubstitution(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acceptance.AccTestPreCheck(t) },
+		ProtoV6ProviderFactories: acceptance.AccTestProtoV6ProviderFactoriesUnique(),
+		ExternalProviders: map[string]resource.ExternalProvider{
+			"azapi": {
+				Source:            "azure/azapi",
+				VersionConstraint: "~> 2.0",
+			},
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccArchitectureDataSourceConfigNonComplianceMessageCustomSubstitution(),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Policy without message should have default applied with custom enforced replacement
+					resource.TestCheckOutput("policy_without_message_nc_message", "This resource needs to be compliant."),
+					// Policy with DoNotEnforce should have custom not-enforced replacement
+					resource.TestCheckOutput("policy_donotenforce_nc_message", "This resource has to be compliant."),
+					// Policy-specific message preserved, default message uses custom replacement
+					resource.TestCheckOutput("policy_with_message_nc_count", "2"),
+					resource.TestCheckOutput("policy_with_message_nc_policy_specific", "Message for specific policy definition"),
+					resource.TestCheckOutput("policy_with_message_nc_default", "This resource needs to be compliant."),
+				),
+			},
+		},
+	})
+}
+
 // testAccArchitectureDataSourceConfigRemoteLib returns a test configuration for TestAccAlzArchetypeDataSource.
 func testAccArchitectureDataSourceConfigRemoteLib() string {
 	return `
@@ -496,6 +586,175 @@ data "alz_architecture" "test2" {
 	timeouts {
 		read = "5m"
 	}
+}
+`
+}
+
+func testAccArchitectureDataSourceConfigNonComplianceMessageDefault() string {
+	return `
+provider "alz" {
+  library_references = [
+    {
+      custom_url = "${path.root}/testdata/noncompliancemsg"
+    }
+  ]
+}
+
+data "azapi_client_config" "current" {}
+
+data "alz_architecture" "test" {
+  name                     = "test"
+  root_management_group_id = data.azapi_client_config.current.tenant_id
+  location                 = "northeurope"
+
+  default_non_compliance_message_settings = {
+    default_message = "This resource {enforcementMode} be compliant."
+  }
+
+  timeouts {
+    read = "5m"
+  }
+}
+
+locals {
+  policy_without_message = jsondecode(data.alz_architecture.test.management_groups[0].policy_assignments["policy-without-message"])
+  policy_with_message    = jsondecode(data.alz_architecture.test.management_groups[0].policy_assignments["policy-with-message"])
+  policy_donotenforce    = jsondecode(data.alz_architecture.test.management_groups[0].policy_assignments["policy-donotenforce"])
+  policy_rp_mode         = jsondecode(data.alz_architecture.test.management_groups[0].policy_assignments["policy-rp-mode"])
+}
+
+output "policy_without_message_nc_message" {
+  value = local.policy_without_message.properties.nonComplianceMessages[0].message
+}
+
+output "policy_donotenforce_nc_message" {
+  value = local.policy_donotenforce.properties.nonComplianceMessages[0].message
+}
+
+output "policy_with_message_nc_count" {
+  value = tostring(length(local.policy_with_message.properties.nonComplianceMessages))
+}
+
+output "policy_with_message_nc_policy_specific" {
+  value = one([for m in local.policy_with_message.properties.nonComplianceMessages : m.message if try(m.policyDefinitionReferenceId, "") != ""])
+}
+
+output "policy_with_message_nc_default" {
+  value = one([for m in local.policy_with_message.properties.nonComplianceMessages : m.message if try(m.policyDefinitionReferenceId, "") == ""])
+}
+
+output "policy_rp_mode_nc_empty" {
+  value = tostring(length(try(local.policy_rp_mode.properties.nonComplianceMessages, [])) == 0)
+}
+`
+}
+
+func testAccArchitectureDataSourceConfigNonComplianceMessagePreferExisting() string {
+	return `
+provider "alz" {
+  library_references = [
+    {
+      custom_url = "${path.root}/testdata/noncompliancemsg"
+    }
+  ]
+}
+
+data "azapi_client_config" "current" {}
+
+data "alz_architecture" "test" {
+  name                                       = "test"
+  root_management_group_id                   = data.azapi_client_config.current.tenant_id
+  location                                   = "northeurope"
+
+  default_non_compliance_message_settings = {
+    default_message = "This resource {enforcementMode} be compliant."
+    merge_mode      = "prefer_existing"
+  }
+
+  timeouts {
+    read = "5m"
+  }
+}
+
+locals {
+  policy_without_message = jsondecode(data.alz_architecture.test.management_groups[0].policy_assignments["policy-without-message"])
+  policy_with_message    = jsondecode(data.alz_architecture.test.management_groups[0].policy_assignments["policy-with-message"])
+}
+
+output "policy_without_message_nc_message" {
+  value = local.policy_without_message.properties.nonComplianceMessages[0].message
+}
+
+output "policy_with_message_nc_count" {
+  value = tostring(length(local.policy_with_message.properties.nonComplianceMessages))
+}
+
+output "policy_with_message_nc_policy_specific" {
+  value = one([for m in local.policy_with_message.properties.nonComplianceMessages : m.message if try(m.policyDefinitionReferenceId, "") != ""])
+}
+
+output "policy_with_message_nc_default" {
+  value = one([for m in local.policy_with_message.properties.nonComplianceMessages : m.message if try(m.policyDefinitionReferenceId, "") == ""])
+}
+`
+}
+
+func testAccArchitectureDataSourceConfigNonComplianceMessageCustomSubstitution() string {
+	return `
+provider "alz" {
+  library_references = [
+    {
+      custom_url = "${path.root}/testdata/noncompliancemsg"
+    }
+  ]
+
+  non_compliance_message_substitution_settings = {
+    enforcement_mode_placeholder = "{MODE}"
+    enforced_replacement         = "needs to"
+    not_enforced_replacement     = "has to"
+  }
+}
+
+data "azapi_client_config" "current" {}
+
+data "alz_architecture" "test" {
+  name                     = "test"
+  root_management_group_id = data.azapi_client_config.current.tenant_id
+  location                 = "northeurope"
+
+  default_non_compliance_message_settings = {
+    default_message = "This resource {MODE} be compliant."
+  }
+
+  timeouts {
+    read = "5m"
+  }
+}
+
+locals {
+  policy_without_message = jsondecode(data.alz_architecture.test.management_groups[0].policy_assignments["policy-without-message"])
+  policy_with_message    = jsondecode(data.alz_architecture.test.management_groups[0].policy_assignments["policy-with-message"])
+  policy_donotenforce    = jsondecode(data.alz_architecture.test.management_groups[0].policy_assignments["policy-donotenforce"])
+}
+
+output "policy_without_message_nc_message" {
+  value = local.policy_without_message.properties.nonComplianceMessages[0].message
+}
+
+output "policy_donotenforce_nc_message" {
+  value = local.policy_donotenforce.properties.nonComplianceMessages[0].message
+}
+
+output "policy_with_message_nc_count" {
+  value = tostring(length(local.policy_with_message.properties.nonComplianceMessages))
+}
+
+output "policy_with_message_nc_policy_specific" {
+  value = one([for m in local.policy_with_message.properties.nonComplianceMessages : m.message if try(m.policyDefinitionReferenceId, "") != ""])
+}
+
+output "policy_with_message_nc_default" {
+  value = one([for m in local.policy_with_message.properties.nonComplianceMessages : m.message if try(m.policyDefinitionReferenceId, "") == ""])
 }
 `
 }

@@ -168,6 +168,36 @@
               }
             ]
           }
+        },
+        {
+          "name": "non_compliance_message_substitution_settings",
+          "single_nested": {
+            "description": "Global settings for non-compliance message placeholder substitutions. These control how placeholders in non-compliance messages are resolved based on the enforcement mode of policy assignments.",
+            "optional_required": "optional",
+            "attributes": [
+              {
+                "name": "enforcement_mode_placeholder",
+                "string": {
+                  "description": "The placeholder string in the default message that will be replaced based on the enforcement mode. Defaults to `{enforcementMode}`.",
+                  "optional_required": "optional"
+                }
+              },
+              {
+                "name": "enforced_replacement",
+                "string": {
+                  "description": "The replacement string to use for the enforcement mode placeholder when the policy assignment is enforced. Defaults to `must`.",
+                  "optional_required": "optional"
+                }
+              },
+              {
+                "name": "not_enforced_replacement",
+                "string": {
+                  "description": "The replacement string to use for the enforcement mode placeholder when the policy assignment is not enforced. Defaults to `should`.",
+                  "optional_required": "optional"
+                }
+              }
+            ]
+          }
         }
       ]
     }
@@ -263,6 +293,41 @@
                       }
                     ],
                     "schema_definition": "stringvalidator.LengthAtLeast(1)"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "default_non_compliance_message_settings",
+            "single_nested": {
+              "description": "Settings for controlling default non-compliance messages on policy assignments. When configured, a default non-compliance message will be applied to policy assignments.",
+              "computed_optional_required": "optional",
+              "attributes": [
+                {
+                  "name": "default_message",
+                  "string": {
+                    "description": "The default non-compliance message to apply to policy assignments. Supports placeholder substitution configured in the provider's `non_compliance_message_substitution_settings` block.",
+                    "computed_optional_required": "required"
+                  }
+                },
+                {
+                  "name": "merge_mode",
+                  "string": {
+                    "description": "Controls behavior when a policy assignment already has a default non-compliance message (one without a `policyDefinitionReferenceId`). `replace` (default) removes the existing default message and adds the configured default. `prefer_existing` keeps the existing default message if present, only adding the configured default when none exists. Policy-specific messages (with `policyDefinitionReferenceId`) are always preserved. Assignments with no messages always receive the default if a default message is supplied.",
+                    "computed_optional_required": "optional",
+                    "validators": [
+                      {
+                        "custom": {
+                          "imports": [
+                            {
+                              "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                            }
+                          ],
+                          "schema_definition": "stringvalidator.OneOf(\"replace\", \"prefer_existing\")"
+                        }
+                      }
+                    ]
                   }
                 }
               ]

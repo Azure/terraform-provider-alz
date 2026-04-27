@@ -1,0 +1,10 @@
+---
+name: test
+policy_assignments:
+  - policy-with-message
+  - policy-without-message
+  - policy-donotenforce
+  - policy-rp-mode
+policy_definitions:
+  - test-policy-definition
+  - rp-mode-policy-definition

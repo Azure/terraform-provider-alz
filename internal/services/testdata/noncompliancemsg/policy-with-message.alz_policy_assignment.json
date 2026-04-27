@@ -1,0 +1,22 @@
+{
+  "type": "Microsoft.Authorization/policyAssignments",
+  "apiVersion": "2022-06-01",
+  "name": "policy-with-message",
+  "properties": {
+    "description": "Policy assignment with existing non-compliance message.",
+    "displayName": "Policy With Message",
+    "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/test-policy-definition",
+    "enforcementMode": "Default",
+    "nonComplianceMessages": [
+      {
+        "message": "Existing non-compliance message"
+      },
+      {
+        "message": "Message for specific policy definition",
+        "policyDefinitionReferenceId": "10420126870854049575"
+      }
+    ],
+    "parameters": {},
+    "scope": "/providers/Microsoft.Management/managementGroups/PLACEHOLDER"
+  }
+}

@@ -26,6 +26,31 @@ import (
 func ArchitectureDataSourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
 		Attributes: map[string]schema.Attribute{
+			"default_non_compliance_message_settings": schema.SingleNestedAttribute{
+				Attributes: map[string]schema.Attribute{
+					"default_message": schema.StringAttribute{
+						Required:            true,
+						Description:         "The default non-compliance message to apply to policy assignments. Supports placeholder substitution configured in the provider's `non_compliance_message_substitution_settings` block.",
+						MarkdownDescription: "The default non-compliance message to apply to policy assignments. Supports placeholder substitution configured in the provider's `non_compliance_message_substitution_settings` block.",
+					},
+					"merge_mode": schema.StringAttribute{
+						Optional:            true,
+						Description:         "Controls behavior when a policy assignment already has a default non-compliance message (one without a `policyDefinitionReferenceId`). `replace` (default) removes the existing default message and adds the configured default. `prefer_existing` keeps the existing default message if present, only adding the configured default when none exists. Policy-specific messages (with `policyDefinitionReferenceId`) are always preserved. Assignments with no messages always receive the default if a default message is supplied.",
+						MarkdownDescription: "Controls behavior when a policy assignment already has a default non-compliance message (one without a `policyDefinitionReferenceId`). `replace` (default) removes the existing default message and adds the configured default. `prefer_existing` keeps the existing default message if present, only adding the configured default when none exists. Policy-specific messages (with `policyDefinitionReferenceId`) are always preserved. Assignments with no messages always receive the default if a default message is supplied.",
+						Validators: []validator.String{
+							stringvalidator.OneOf("replace", "prefer_existing"),
+						},
+					},
+				},
+				CustomType: DefaultNonComplianceMessageSettingsType{
+					ObjectType: types.ObjectType{
+						AttrTypes: DefaultNonComplianceMessageSettingsValue{}.AttributeTypes(ctx),
+					},
+				},
+				Optional:            true,
+				Description:         "Settings for controlling default non-compliance messages on policy assignments. When configured, a default non-compliance message will be applied to policy assignments.",
+				MarkdownDescription: "Settings for controlling default non-compliance messages on policy assignments. When configured, a default non-compliance message will be applied to policy assignments.",
+			},
 			"id": schema.StringAttribute{
 				Computed:            true,
 				Description:         "A computed value representing the unique identifier for the architecture. Mandatory for acceptance testing.",
@@ -470,17 +495,397 @@ func ArchitectureDataSourceSchema(ctx context.Context) schema.Schema {
 }
 
 type ArchitectureModel struct {
-	Id                                                      types.String   `tfsdk:"id"`
-	Location                                                types.String   `tfsdk:"location"`
-	ManagementGroups                                        types.List     `tfsdk:"management_groups"`
-	Name                                                    types.String   `tfsdk:"name"`
-	OverridePolicyDefinitionParameterAssignPermissionsSet   types.Set      `tfsdk:"override_policy_definition_parameter_assign_permissions_set"`
-	OverridePolicyDefinitionParameterAssignPermissionsUnset types.Set      `tfsdk:"override_policy_definition_parameter_assign_permissions_unset"`
-	PolicyAssignmentsToModify                               types.Map      `tfsdk:"policy_assignments_to_modify"`
-	PolicyDefaultValues                                     types.Map      `tfsdk:"policy_default_values"`
-	PolicyRoleAssignments                                   types.Set      `tfsdk:"policy_role_assignments"`
-	RootManagementGroupId                                   types.String   `tfsdk:"root_management_group_id"`
-	Timeouts                                                timeouts.Value `tfsdk:"timeouts"`
+	DefaultNonComplianceMessageSettings                     DefaultNonComplianceMessageSettingsValue `tfsdk:"default_non_compliance_message_settings"`
+	Id                                                      types.String                             `tfsdk:"id"`
+	Location                                                types.String                             `tfsdk:"location"`
+	ManagementGroups                                        types.List                               `tfsdk:"management_groups"`
+	Name                                                    types.String                             `tfsdk:"name"`
+	OverridePolicyDefinitionParameterAssignPermissionsSet   types.Set                                `tfsdk:"override_policy_definition_parameter_assign_permissions_set"`
+	OverridePolicyDefinitionParameterAssignPermissionsUnset types.Set                                `tfsdk:"override_policy_definition_parameter_assign_permissions_unset"`
+	PolicyAssignmentsToModify                               types.Map                                `tfsdk:"policy_assignments_to_modify"`
+	PolicyDefaultValues                                     types.Map                                `tfsdk:"policy_default_values"`
+	PolicyRoleAssignments                                   types.Set                                `tfsdk:"policy_role_assignments"`
+	RootManagementGroupId                                   types.String                             `tfsdk:"root_management_group_id"`
+	Timeouts                                                timeouts.Value                           `tfsdk:"timeouts"`
+}
+
+var _ basetypes.ObjectTypable = DefaultNonComplianceMessageSettingsType{}
+
+type DefaultNonComplianceMessageSettingsType struct {
+	basetypes.ObjectType
+}
+
+func (t DefaultNonComplianceMessageSettingsType) Equal(o attr.Type) bool {
+	other, ok := o.(DefaultNonComplianceMessageSettingsType)
+
+	if !ok {
+		return false
+	}
+
+	return t.ObjectType.Equal(other.ObjectType)
+}
+
+func (t DefaultNonComplianceMessageSettingsType) String() string {
+	return "DefaultNonComplianceMessageSettingsType"
+}
+
+func (t DefaultNonComplianceMessageSettingsType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributes := in.Attributes()
+
+	defaultMessageAttribute, ok := attributes["default_message"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`default_message is missing from object`)
+
+		return nil, diags
+	}
+
+	defaultMessageVal, ok := defaultMessageAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`default_message expected to be basetypes.StringValue, was: %T`, defaultMessageAttribute))
+	}
+
+	mergeModeAttribute, ok := attributes["merge_mode"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`merge_mode is missing from object`)
+
+		return nil, diags
+	}
+
+	mergeModeVal, ok := mergeModeAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`merge_mode expected to be basetypes.StringValue, was: %T`, mergeModeAttribute))
+	}
+
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	return DefaultNonComplianceMessageSettingsValue{
+		DefaultMessage: defaultMessageVal,
+		MergeMode:      mergeModeVal,
+		state:          attr.ValueStateKnown,
+	}, diags
+}
+
+func NewDefaultNonComplianceMessageSettingsValueNull() DefaultNonComplianceMessageSettingsValue {
+	return DefaultNonComplianceMessageSettingsValue{
+		state: attr.ValueStateNull,
+	}
+}
+
+func NewDefaultNonComplianceMessageSettingsValueUnknown() DefaultNonComplianceMessageSettingsValue {
+	return DefaultNonComplianceMessageSettingsValue{
+		state: attr.ValueStateUnknown,
+	}
+}
+
+func NewDefaultNonComplianceMessageSettingsValue(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) (DefaultNonComplianceMessageSettingsValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	// Reference: https://github.com/hashicorp/terraform-plugin-framework/issues/521
+	ctx := context.Background()
+
+	for name, attributeType := range attributeTypes {
+		attribute, ok := attributes[name]
+
+		if !ok {
+			diags.AddError(
+				"Missing DefaultNonComplianceMessageSettingsValue Attribute Value",
+				"While creating a DefaultNonComplianceMessageSettingsValue value, a missing attribute value was detected. "+
+					"A DefaultNonComplianceMessageSettingsValue must contain values for all attributes, even if null or unknown. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("DefaultNonComplianceMessageSettingsValue Attribute Name (%s) Expected Type: %s", name, attributeType.String()),
+			)
+
+			continue
+		}
+
+		if !attributeType.Equal(attribute.Type(ctx)) {
+			diags.AddError(
+				"Invalid DefaultNonComplianceMessageSettingsValue Attribute Type",
+				"While creating a DefaultNonComplianceMessageSettingsValue value, an invalid attribute value was detected. "+
+					"A DefaultNonComplianceMessageSettingsValue must use a matching attribute type for the value. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("DefaultNonComplianceMessageSettingsValue Attribute Name (%s) Expected Type: %s\n", name, attributeType.String())+
+					fmt.Sprintf("DefaultNonComplianceMessageSettingsValue Attribute Name (%s) Given Type: %s", name, attribute.Type(ctx)),
+			)
+		}
+	}
+
+	for name := range attributes {
+		_, ok := attributeTypes[name]
+
+		if !ok {
+			diags.AddError(
+				"Extra DefaultNonComplianceMessageSettingsValue Attribute Value",
+				"While creating a DefaultNonComplianceMessageSettingsValue value, an extra attribute value was detected. "+
+					"A DefaultNonComplianceMessageSettingsValue must not contain values beyond the expected attribute types. "+
+					"This is always an issue with the provider and should be reported to the provider developers.\n\n"+
+					fmt.Sprintf("Extra DefaultNonComplianceMessageSettingsValue Attribute Name: %s", name),
+			)
+		}
+	}
+
+	if diags.HasError() {
+		return NewDefaultNonComplianceMessageSettingsValueUnknown(), diags
+	}
+
+	defaultMessageAttribute, ok := attributes["default_message"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`default_message is missing from object`)
+
+		return NewDefaultNonComplianceMessageSettingsValueUnknown(), diags
+	}
+
+	defaultMessageVal, ok := defaultMessageAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`default_message expected to be basetypes.StringValue, was: %T`, defaultMessageAttribute))
+	}
+
+	mergeModeAttribute, ok := attributes["merge_mode"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`merge_mode is missing from object`)
+
+		return NewDefaultNonComplianceMessageSettingsValueUnknown(), diags
+	}
+
+	mergeModeVal, ok := mergeModeAttribute.(basetypes.StringValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`merge_mode expected to be basetypes.StringValue, was: %T`, mergeModeAttribute))
+	}
+
+	if diags.HasError() {
+		return NewDefaultNonComplianceMessageSettingsValueUnknown(), diags
+	}
+
+	return DefaultNonComplianceMessageSettingsValue{
+		DefaultMessage: defaultMessageVal,
+		MergeMode:      mergeModeVal,
+		state:          attr.ValueStateKnown,
+	}, diags
+}
+
+func NewDefaultNonComplianceMessageSettingsValueMust(attributeTypes map[string]attr.Type, attributes map[string]attr.Value) DefaultNonComplianceMessageSettingsValue {
+	object, diags := NewDefaultNonComplianceMessageSettingsValue(attributeTypes, attributes)
+
+	if diags.HasError() {
+		// This could potentially be added to the diag package.
+		diagsStrings := make([]string, 0, len(diags))
+
+		for _, diagnostic := range diags {
+			diagsStrings = append(diagsStrings, fmt.Sprintf(
+				"%s | %s | %s",
+				diagnostic.Severity(),
+				diagnostic.Summary(),
+				diagnostic.Detail()))
+		}
+
+		panic("NewDefaultNonComplianceMessageSettingsValueMust received error(s): " + strings.Join(diagsStrings, "\n"))
+	}
+
+	return object
+}
+
+func (t DefaultNonComplianceMessageSettingsType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (attr.Value, error) {
+	if in.Type() == nil {
+		return NewDefaultNonComplianceMessageSettingsValueNull(), nil
+	}
+
+	if !in.Type().Equal(t.TerraformType(ctx)) {
+		return nil, fmt.Errorf("expected %s, got %s", t.TerraformType(ctx), in.Type())
+	}
+
+	if !in.IsKnown() {
+		return NewDefaultNonComplianceMessageSettingsValueUnknown(), nil
+	}
+
+	if in.IsNull() {
+		return NewDefaultNonComplianceMessageSettingsValueNull(), nil
+	}
+
+	attributes := map[string]attr.Value{}
+
+	val := map[string]tftypes.Value{}
+
+	err := in.As(&val)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range val {
+		a, err := t.AttrTypes[k].ValueFromTerraform(ctx, v)
+
+		if err != nil {
+			return nil, err
+		}
+
+		attributes[k] = a
+	}
+
+	return NewDefaultNonComplianceMessageSettingsValueMust(DefaultNonComplianceMessageSettingsValue{}.AttributeTypes(ctx), attributes), nil
+}
+
+func (t DefaultNonComplianceMessageSettingsType) ValueType(ctx context.Context) attr.Value {
+	return DefaultNonComplianceMessageSettingsValue{}
+}
+
+var _ basetypes.ObjectValuable = DefaultNonComplianceMessageSettingsValue{}
+
+type DefaultNonComplianceMessageSettingsValue struct {
+	DefaultMessage basetypes.StringValue `tfsdk:"default_message"`
+	MergeMode      basetypes.StringValue `tfsdk:"merge_mode"`
+	state          attr.ValueState
+}
+
+func (v DefaultNonComplianceMessageSettingsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
+	attrTypes := make(map[string]tftypes.Type, 2)
+
+	var val tftypes.Value
+	var err error
+
+	attrTypes["default_message"] = basetypes.StringType{}.TerraformType(ctx)
+	attrTypes["merge_mode"] = basetypes.StringType{}.TerraformType(ctx)
+
+	objectType := tftypes.Object{AttributeTypes: attrTypes}
+
+	switch v.state {
+	case attr.ValueStateKnown:
+		vals := make(map[string]tftypes.Value, 2)
+
+		val, err = v.DefaultMessage.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["default_message"] = val
+
+		val, err = v.MergeMode.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["merge_mode"] = val
+
+		if err := tftypes.ValidateValue(objectType, vals); err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		return tftypes.NewValue(objectType, vals), nil
+	case attr.ValueStateNull:
+		return tftypes.NewValue(objectType, nil), nil
+	case attr.ValueStateUnknown:
+		return tftypes.NewValue(objectType, tftypes.UnknownValue), nil
+	default:
+		panic(fmt.Sprintf("unhandled Object state in ToTerraformValue: %s", v.state))
+	}
+}
+
+func (v DefaultNonComplianceMessageSettingsValue) IsNull() bool {
+	return v.state == attr.ValueStateNull
+}
+
+func (v DefaultNonComplianceMessageSettingsValue) IsUnknown() bool {
+	return v.state == attr.ValueStateUnknown
+}
+
+func (v DefaultNonComplianceMessageSettingsValue) String() string {
+	return "DefaultNonComplianceMessageSettingsValue"
+}
+
+func (v DefaultNonComplianceMessageSettingsValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	attributeTypes := map[string]attr.Type{
+		"default_message": basetypes.StringType{},
+		"merge_mode":      basetypes.StringType{},
+	}
+
+	if v.IsNull() {
+		return types.ObjectNull(attributeTypes), diags
+	}
+
+	if v.IsUnknown() {
+		return types.ObjectUnknown(attributeTypes), diags
+	}
+
+	objVal, diags := types.ObjectValue(
+		attributeTypes,
+		map[string]attr.Value{
+			"default_message": v.DefaultMessage,
+			"merge_mode":      v.MergeMode,
+		})
+
+	return objVal, diags
+}
+
+func (v DefaultNonComplianceMessageSettingsValue) Equal(o attr.Value) bool {
+	other, ok := o.(DefaultNonComplianceMessageSettingsValue)
+
+	if !ok {
+		return false
+	}
+
+	if v.state != other.state {
+		return false
+	}
+
+	if v.state != attr.ValueStateKnown {
+		return true
+	}
+
+	if !v.DefaultMessage.Equal(other.DefaultMessage) {
+		return false
+	}
+
+	if !v.MergeMode.Equal(other.MergeMode) {
+		return false
+	}
+
+	return true
+}
+
+func (v DefaultNonComplianceMessageSettingsValue) Type(ctx context.Context) attr.Type {
+	return DefaultNonComplianceMessageSettingsType{
+		basetypes.ObjectType{
+			AttrTypes: v.AttributeTypes(ctx),
+		},
+	}
+}
+
+func (v DefaultNonComplianceMessageSettingsValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
+	return map[string]attr.Type{
+		"default_message": basetypes.StringType{},
+		"merge_mode":      basetypes.StringType{},
+	}
 }
 
 var _ basetypes.ObjectTypable = ManagementGroupsType{}

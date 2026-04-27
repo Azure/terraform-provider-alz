@@ -1,0 +1,13 @@
+{
+  "type": "Microsoft.Authorization/policyAssignments",
+  "apiVersion": "2022-06-01",
+  "name": "policy-without-message",
+  "properties": {
+    "description": "Policy assignment without non-compliance message.",
+    "displayName": "Policy Without Message",
+    "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/test-policy-definition",
+    "enforcementMode": "Default",
+    "parameters": {},
+    "scope": "/providers/Microsoft.Management/managementGroups/PLACEHOLDER"
+  }
+}
