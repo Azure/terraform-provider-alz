@@ -299,7 +299,7 @@ func TestPolicyAssignmentType2ArmPolicyValues(t *testing.T) {
 	}
 	resp := new(datasource.ReadResponse)
 	resp.Diagnostics = diag.Diagnostics{}
-	enforcementMode, identity, nonComplianceMessages, parameters, _, _ := policyAssignmentType2ArmPolicyValues(ctx, pa, resp)
+	enforcementMode, identity, nonComplianceMessages, parameters, _, _, _ := policyAssignmentType2ArmPolicyValues(ctx, pa, resp)
 
 	assert.False(t, resp.Diagnostics.HasError())
 	assert.Equal(t, armpolicy.EnforcementModeDoNotEnforce, *enforcementMode)

@@ -86,6 +86,7 @@ func TestAccAlzArchitectureDataSourceWithDefaultAndModify(t *testing.T) {
 					resource.TestCheckOutput("policy_assignment_resource_selector_kind", "resourceLocation"),
 					resource.TestCheckOutput("policy_assignment_resource_selector_in", "northeurope"),
 					resource.TestCheckOutput("policy_assignment_resource_selector_notin_should_be_null", "true"),
+					resource.TestCheckOutput("policy_assignment_not_scopes", "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-rg-excluded"),
 				),
 			},
 		},
@@ -386,6 +387,9 @@ data "alz_architecture" "test" {
 							]
 						}
 					]
+					not_scopes = [
+						"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-rg-excluded"
+					]
 				}
 			}
 		}
@@ -450,6 +454,10 @@ output "policy_assignment_resource_selector_in" {
 
 output "policy_assignment_resource_selector_notin_should_be_null" {
 	value = lookup(local.test_policy_assignment_decoded.properties.resourceSelectors[0].selectors[0], "notIn", null) == null
+}
+
+output "policy_assignment_not_scopes" {
+	value = local.test_policy_assignment_decoded.properties.notScopes[0]
 }
 `
 }

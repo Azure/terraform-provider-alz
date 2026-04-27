@@ -488,6 +488,41 @@
                             }
                           },
                           {
+                            "name": "not_scopes",
+                            "list": {
+                              "computed_optional_required": "optional",
+                              "element_type": {
+                                "string": {}
+                              },
+                              "description": "A list of scopes to exclude from the policy assignment. Each element must be a valid ARM resource id. If specified here the not scopes will replace any existing not scopes on the policy assignment.",
+                              "validators": [
+                                {
+                                  "custom": {
+                                    "imports": [
+                                      {
+                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+                                      }
+                                    ],
+                                    "schema_definition": "listvalidator.UniqueValues()"
+                                  }
+                                },
+                                {
+                                  "custom": {
+                                    "imports": [
+                                      {
+                                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+                                      },
+                                      {
+                                        "path": "github.com/Azure/terraform-provider-alz/internal/alzvalidators"
+                                      }
+                                    ],
+                                    "schema_definition": "listvalidator.ValueStringsAre(alzvalidators.ArmResourceId())"
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
                             "name": "overrides",
                             "list_nested": {
                               "validators": [
