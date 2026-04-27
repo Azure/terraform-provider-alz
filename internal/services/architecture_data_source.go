@@ -33,9 +33,6 @@ const (
 	NonComplianceMergeModeReplace        NonComplianceMergeMode = "replace"
 	NonComplianceMergeModePreferExisting NonComplianceMergeMode = "prefer_existing"
 	DefaultNonComplianceMessage                                 = "This resource {enforcementMode} be compliant with the assigned policy."
-	DefaultEnforcementModePlaceholder                           = "{enforcementMode}"
-	DefaultEnforcedReplacement                                  = "must"
-	DefaultNotEnforcedReplacement                               = "should"
 )
 
 type NonComplianceMergeMode string
@@ -190,16 +187,10 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 		}
 	}
 
-	// provider defaults
-	if p := d.data.NonComplianceMessagePlaceholder(); p != "" {
-		nonComplianceConfig.Placeholder = p
-	}
-	if er := d.data.NonComplianceMessageEnforcedReplacement(); er != "" {
-		nonComplianceConfig.EnforcedReplacement = er
-	}
-	if ner := d.data.NonComplianceMessageNotEnforcedReplacement(); ner != "" {
-		nonComplianceConfig.NotEnforcedReplacement = ner
-	}
+	// provider-level substitution settings (defaults applied during provider configure)
+	nonComplianceConfig.Placeholder = d.data.NonComplianceMessagePlaceholder()
+	nonComplianceConfig.EnforcedReplacement = d.data.NonComplianceMessageEnforcedReplacement()
+	nonComplianceConfig.NotEnforcedReplacement = d.data.NonComplianceMessageNotEnforcedReplacement()
 
 	// Modify policy assignments (explicit configs take precedence over defaults)
 	modifyPolicyAssignments(ctx, depl, data, resp)
@@ -678,15 +669,14 @@ func convertPolicyAssignmentParametersMapToSdkType(src types.Map, resp *datasour
 	return result
 }
 
-// NewNonComplianceMessageConfig creates a new config with the sensible defaults.
+// NewNonComplianceMessageConfig creates a new config with the data-source-level defaults.
+// Substitution settings (placeholder/replacements) are sourced from the provider configuration
+// and are populated by the caller from the *clients.Client.
 func NewNonComplianceMessageConfig() NonComplianceMessageConfig {
 	return NonComplianceMessageConfig{
-		Enabled:                false,
-		DefaultMessage:         DefaultNonComplianceMessage,
-		MergeMode:              NonComplianceMergeModeReplace,
-		Placeholder:            DefaultEnforcementModePlaceholder,
-		EnforcedReplacement:    DefaultEnforcedReplacement,
-		NotEnforcedReplacement: DefaultNotEnforcedReplacement,
+		Enabled:        false,
+		DefaultMessage: DefaultNonComplianceMessage,
+		MergeMode:      NonComplianceMergeModeReplace,
 	}
 }
 

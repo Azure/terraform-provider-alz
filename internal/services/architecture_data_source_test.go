@@ -375,7 +375,7 @@ func TestEnforcementModeReplacement(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.expectedReplacement, enforcementModeReplacement(tc.enforcementMode, DefaultEnforcedReplacement, DefaultNotEnforcedReplacement))
+			assert.Equal(t, tc.expectedReplacement, enforcementModeReplacement(tc.enforcementMode, "must", "should"))
 		})
 	}
 }
@@ -416,7 +416,7 @@ func TestNonComplianceMessagePlaceholderReplacement(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := strings.ReplaceAll(tc.inputMessage, DefaultEnforcementModePlaceholder, enforcementModeReplacement(tc.enforcementMode, DefaultEnforcedReplacement, DefaultNotEnforcedReplacement))
+			result := strings.ReplaceAll(tc.inputMessage, "{enforcementMode}", enforcementModeReplacement(tc.enforcementMode, "must", "should"))
 			assert.Equal(t, tc.expectedMessage, result)
 		})
 	}
@@ -427,9 +427,11 @@ func TestNewNonComplianceMessageConfig(t *testing.T) {
 	assert.False(t, cfg.Enabled)
 	assert.Equal(t, DefaultNonComplianceMessage, cfg.DefaultMessage)
 	assert.Equal(t, NonComplianceMergeModeReplace, cfg.MergeMode)
-	assert.Equal(t, DefaultEnforcementModePlaceholder, cfg.Placeholder)
-	assert.Equal(t, DefaultEnforcedReplacement, cfg.EnforcedReplacement)
-	assert.Equal(t, DefaultNotEnforcedReplacement, cfg.NotEnforcedReplacement)
+	// Substitution settings are sourced from provider configuration and are
+	// expected to be empty in the data-source-level default config.
+	assert.Empty(t, cfg.Placeholder)
+	assert.Empty(t, cfg.EnforcedReplacement)
+	assert.Empty(t, cfg.NotEnforcedReplacement)
 }
 
 func TestNonComplianceMergeMode(t *testing.T) {
