@@ -468,7 +468,21 @@ func saveCacheFile(ctx context.Context, alz *alzlib.AlzLib, path string) error {
 		return fmt.Errorf("closing cache file %q: %w", tmpName, err)
 	}
 	if err := os.Rename(tmpName, path); err != nil {
-		return fmt.Errorf("renaming cache file %q to %q: %w", tmpName, path, err)
+		// On some platforms (notably older Windows behaviour) os.Rename can
+		// fail when the destination file already exists. Fall back to
+		// removing the existing destination and renaming again so
+		// cache_file_save_enabled works on the second and subsequent runs.
+		// The temp file is fully written and closed before this point, so
+		// the file content remains valid.
+		if _, statErr := os.Stat(path); statErr != nil {
+			return fmt.Errorf("renaming cache file %q to %q: %w", tmpName, path, err)
+		}
+		if rmErr := os.Remove(path); rmErr != nil && !os.IsNotExist(rmErr) {
+			return fmt.Errorf("removing existing cache file %q: %w", path, rmErr)
+		}
+		if err := os.Rename(tmpName, path); err != nil {
+			return fmt.Errorf("renaming cache file %q to %q: %w", tmpName, path, err)
+		}
 	}
 	tflog.Debug(ctx, "Saved AlzLib built-in cache to file", map[string]interface{}{
 		"cache_file_name": path,

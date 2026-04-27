@@ -54,3 +54,26 @@ func TestLoadCacheFileInvalid(t *testing.T) {
 	err := loadCacheFile(context.Background(), alz, path)
 	assert.Error(t, err)
 }
+
+// TestSaveCacheFileOverwrite verifies that saveCacheFile can be called more
+// than once against the same destination path. This guards against platform
+// differences (notably Windows) where os.Rename can fail if the destination
+// already exists.
+func TestSaveCacheFileOverwrite(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "alzlib-cache.json.gz")
+
+	alz := alzlib.NewAlzLib(nil)
+	ctx := context.Background()
+
+	require.NoError(t, saveCacheFile(ctx, alz, path))
+	assert.FileExists(t, path)
+
+	// A second save against the same path must succeed (overwrite).
+	require.NoError(t, saveCacheFile(ctx, alz, path))
+	assert.FileExists(t, path)
+
+	// And the file should still be loadable after overwrite.
+	alz2 := alzlib.NewAlzLib(nil)
+	require.NoError(t, loadCacheFile(ctx, alz2, path))
+}
