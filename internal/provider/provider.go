@@ -199,12 +199,6 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 		}
 	}
 
-	// Drop the cache to free up RAM now that the AlzLib has been populated.
-	if cacheFileName != "" {
-		alz.AddCache(nil)
-		tflog.Debug(ctx, "Dropped AlzLib built-in cache to free memory")
-	}
-
 	// Store the alz pointer in the provider struct so we don't have to do all this work every time `.Configure` is called.
 	// Due to fetch from Azure, it takes approx 30 seconds each time and is called 4-5 time during a single acceptance test.
 	clientOpts := []clients.Option{
@@ -385,7 +379,6 @@ func configureAlzLib(token azcore.TokenCredential, data AlzModel, cloudConfig cl
 
 // configureDefaults sets default values if they aren't already set.
 func configureDefaults(_ context.Context, data *AlzModel) {
-
 	// Do not skip provider registration by default.
 	if data.SkipProviderRegistration.IsNull() {
 		data.SkipProviderRegistration = types.BoolValue(false)
