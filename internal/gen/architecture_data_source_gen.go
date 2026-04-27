@@ -256,6 +256,16 @@ func ArchitectureDataSourceSchema(ctx context.Context) schema.Schema {
 										Description:         "The non-compliance messages to use for the policy assignment.",
 										MarkdownDescription: "The non-compliance messages to use for the policy assignment.",
 									},
+									"not_scopes": schema.ListAttribute{
+										ElementType:         types.StringType,
+										Optional:            true,
+										Description:         "A list of scopes to exclude from the policy assignment. Each element must be a valid ARM resource id. If specified here the not scopes will replace any existing not scopes on the policy assignment.",
+										MarkdownDescription: "A list of scopes to exclude from the policy assignment. Each element must be a valid ARM resource id. If specified here the not scopes will replace any existing not scopes on the policy assignment.",
+										Validators: []validator.List{
+											listvalidator.UniqueValues(),
+											listvalidator.ValueStringsAre(alzvalidators.ArmResourceId()),
+										},
+									},
 									"overrides": schema.ListNestedAttribute{
 										NestedObject: schema.NestedAttributeObject{
 											Attributes: map[string]schema.Attribute{
@@ -3026,6 +3036,24 @@ func (t PolicyAssignmentsType) ValueFromObject(ctx context.Context, in basetypes
 			fmt.Sprintf(`non_compliance_messages expected to be basetypes.SetValue, was: %T`, nonComplianceMessagesAttribute))
 	}
 
+	notScopesAttribute, ok := attributes["not_scopes"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`not_scopes is missing from object`)
+
+		return nil, diags
+	}
+
+	notScopesVal, ok := notScopesAttribute.(basetypes.ListValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`not_scopes expected to be basetypes.ListValue, was: %T`, notScopesAttribute))
+	}
+
 	overridesAttribute, ok := attributes["overrides"]
 
 	if !ok {
@@ -3089,6 +3117,7 @@ func (t PolicyAssignmentsType) ValueFromObject(ctx context.Context, in basetypes
 		Identity:              identityVal,
 		IdentityIds:           identityIdsVal,
 		NonComplianceMessages: nonComplianceMessagesVal,
+		NotScopes:             notScopesVal,
 		Overrides:             overridesVal,
 		Parameters:            parametersVal,
 		ResourceSelectors:     resourceSelectorsVal,
@@ -3231,6 +3260,24 @@ func NewPolicyAssignmentsValue(attributeTypes map[string]attr.Type, attributes m
 			fmt.Sprintf(`non_compliance_messages expected to be basetypes.SetValue, was: %T`, nonComplianceMessagesAttribute))
 	}
 
+	notScopesAttribute, ok := attributes["not_scopes"]
+
+	if !ok {
+		diags.AddError(
+			"Attribute Missing",
+			`not_scopes is missing from object`)
+
+		return NewPolicyAssignmentsValueUnknown(), diags
+	}
+
+	notScopesVal, ok := notScopesAttribute.(basetypes.ListValue)
+
+	if !ok {
+		diags.AddError(
+			"Attribute Wrong Type",
+			fmt.Sprintf(`not_scopes expected to be basetypes.ListValue, was: %T`, notScopesAttribute))
+	}
+
 	overridesAttribute, ok := attributes["overrides"]
 
 	if !ok {
@@ -3294,6 +3341,7 @@ func NewPolicyAssignmentsValue(attributeTypes map[string]attr.Type, attributes m
 		Identity:              identityVal,
 		IdentityIds:           identityIdsVal,
 		NonComplianceMessages: nonComplianceMessagesVal,
+		NotScopes:             notScopesVal,
 		Overrides:             overridesVal,
 		Parameters:            parametersVal,
 		ResourceSelectors:     resourceSelectorsVal,
@@ -3373,6 +3421,7 @@ type PolicyAssignmentsValue struct {
 	Identity              basetypes.StringValue `tfsdk:"identity"`
 	IdentityIds           basetypes.SetValue    `tfsdk:"identity_ids"`
 	NonComplianceMessages basetypes.SetValue    `tfsdk:"non_compliance_messages"`
+	NotScopes             basetypes.ListValue   `tfsdk:"not_scopes"`
 	Overrides             basetypes.ListValue   `tfsdk:"overrides"`
 	Parameters            basetypes.MapValue    `tfsdk:"parameters"`
 	ResourceSelectors     basetypes.ListValue   `tfsdk:"resource_selectors"`
@@ -3380,7 +3429,7 @@ type PolicyAssignmentsValue struct {
 }
 
 func (v PolicyAssignmentsValue) ToTerraformValue(ctx context.Context) (tftypes.Value, error) {
-	attrTypes := make(map[string]tftypes.Type, 7)
+	attrTypes := make(map[string]tftypes.Type, 8)
 
 	var val tftypes.Value
 	var err error
@@ -3392,6 +3441,9 @@ func (v PolicyAssignmentsValue) ToTerraformValue(ctx context.Context) (tftypes.V
 	}.TerraformType(ctx)
 	attrTypes["non_compliance_messages"] = basetypes.SetType{
 		ElemType: NonComplianceMessagesValue{}.Type(ctx),
+	}.TerraformType(ctx)
+	attrTypes["not_scopes"] = basetypes.ListType{
+		ElemType: types.StringType,
 	}.TerraformType(ctx)
 	attrTypes["overrides"] = basetypes.ListType{
 		ElemType: OverridesValue{}.Type(ctx),
@@ -3407,7 +3459,7 @@ func (v PolicyAssignmentsValue) ToTerraformValue(ctx context.Context) (tftypes.V
 
 	switch v.state {
 	case attr.ValueStateKnown:
-		vals := make(map[string]tftypes.Value, 7)
+		vals := make(map[string]tftypes.Value, 8)
 
 		val, err = v.EnforcementMode.ToTerraformValue(ctx)
 
@@ -3440,6 +3492,14 @@ func (v PolicyAssignmentsValue) ToTerraformValue(ctx context.Context) (tftypes.V
 		}
 
 		vals["non_compliance_messages"] = val
+
+		val, err = v.NotScopes.ToTerraformValue(ctx)
+
+		if err != nil {
+			return tftypes.NewValue(objectType, tftypes.UnknownValue), err
+		}
+
+		vals["not_scopes"] = val
 
 		val, err = v.Overrides.ToTerraformValue(ctx)
 
@@ -3603,6 +3663,46 @@ func (v PolicyAssignmentsValue) ToObjectValue(ctx context.Context) (basetypes.Ob
 			"non_compliance_messages": basetypes.SetType{
 				ElemType: NonComplianceMessagesValue{}.Type(ctx),
 			},
+			"not_scopes": basetypes.ListType{
+				ElemType: types.StringType,
+			},
+			"overrides": basetypes.ListType{
+				ElemType: OverridesValue{}.Type(ctx),
+			},
+			"parameters": basetypes.MapType{
+				ElemType: types.StringType,
+			},
+			"resource_selectors": basetypes.ListType{
+				ElemType: ResourceSelectorsValue{}.Type(ctx),
+			},
+		}), diags
+	}
+
+	var notScopesVal basetypes.ListValue
+	switch {
+	case v.NotScopes.IsUnknown():
+		notScopesVal = types.ListUnknown(types.StringType)
+	case v.NotScopes.IsNull():
+		notScopesVal = types.ListNull(types.StringType)
+	default:
+		var d diag.Diagnostics
+		notScopesVal, d = types.ListValue(types.StringType, v.NotScopes.Elements())
+		diags.Append(d...)
+	}
+
+	if diags.HasError() {
+		return types.ObjectUnknown(map[string]attr.Type{
+			"enforcement_mode": basetypes.StringType{},
+			"identity":         basetypes.StringType{},
+			"identity_ids": basetypes.SetType{
+				ElemType: types.StringType,
+			},
+			"non_compliance_messages": basetypes.SetType{
+				ElemType: NonComplianceMessagesValue{}.Type(ctx),
+			},
+			"not_scopes": basetypes.ListType{
+				ElemType: types.StringType,
+			},
 			"overrides": basetypes.ListType{
 				ElemType: OverridesValue{}.Type(ctx),
 			},
@@ -3637,6 +3737,9 @@ func (v PolicyAssignmentsValue) ToObjectValue(ctx context.Context) (basetypes.Ob
 			"non_compliance_messages": basetypes.SetType{
 				ElemType: NonComplianceMessagesValue{}.Type(ctx),
 			},
+			"not_scopes": basetypes.ListType{
+				ElemType: types.StringType,
+			},
 			"overrides": basetypes.ListType{
 				ElemType: OverridesValue{}.Type(ctx),
 			},
@@ -3657,6 +3760,9 @@ func (v PolicyAssignmentsValue) ToObjectValue(ctx context.Context) (basetypes.Ob
 		},
 		"non_compliance_messages": basetypes.SetType{
 			ElemType: NonComplianceMessagesValue{}.Type(ctx),
+		},
+		"not_scopes": basetypes.ListType{
+			ElemType: types.StringType,
 		},
 		"overrides": basetypes.ListType{
 			ElemType: OverridesValue{}.Type(ctx),
@@ -3684,6 +3790,7 @@ func (v PolicyAssignmentsValue) ToObjectValue(ctx context.Context) (basetypes.Ob
 			"identity":                v.Identity,
 			"identity_ids":            identityIdsVal,
 			"non_compliance_messages": nonComplianceMessages,
+			"not_scopes":              notScopesVal,
 			"overrides":               overrides,
 			"parameters":              parametersVal,
 			"resource_selectors":      resourceSelectors,
@@ -3723,6 +3830,10 @@ func (v PolicyAssignmentsValue) Equal(o attr.Value) bool {
 		return false
 	}
 
+	if !v.NotScopes.Equal(other.NotScopes) {
+		return false
+	}
+
 	if !v.Overrides.Equal(other.Overrides) {
 		return false
 	}
@@ -3755,6 +3866,9 @@ func (v PolicyAssignmentsValue) AttributeTypes(ctx context.Context) map[string]a
 		},
 		"non_compliance_messages": basetypes.SetType{
 			ElemType: NonComplianceMessagesValue{}.Type(ctx),
+		},
+		"not_scopes": basetypes.ListType{
+			ElemType: types.StringType,
 		},
 		"overrides": basetypes.ListType{
 			ElemType: OverridesValue{}.Type(ctx),

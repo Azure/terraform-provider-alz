@@ -280,7 +280,7 @@ func modifyPolicyAssignments(ctx context.Context, depl *deployment.Hierarchy, da
 				)
 				return
 			}
-			enf, ident, noncompl, params, resourceSel, overrides := policyAssignmentType2ArmPolicyValues(ctx, mod, resp)
+			enf, ident, noncompl, params, resourceSel, overrides, notScopes := policyAssignmentType2ArmPolicyValues(ctx, mod, resp)
 			if resp.Diagnostics.HasError() {
 				resp.Diagnostics.AddError(
 					"architectureDataSource.Read() Error converting policy assignment values to Azure SDK types",
@@ -296,6 +296,7 @@ func modifyPolicyAssignments(ctx context.Context, depl *deployment.Hierarchy, da
 				deployment.WithIdentity(ident),
 				deployment.WithResourceSelectors(resourceSel),
 				deployment.WithOverrides(overrides),
+				deployment.WithNotScopes(notScopes),
 			); err != nil {
 				resp.Diagnostics.AddError(
 					"architectureDataSource.Read() Error modifying policy assignment values in alzlib",
@@ -371,6 +372,7 @@ func policyAssignmentType2ArmPolicyValues(ctx context.Context, pa gen.PolicyAssi
 	parameters map[string]*armpolicy.ParameterValuesValue,
 	resourceSelectors []*armpolicy.ResourceSelector,
 	overrides []*armpolicy.Override,
+	notScopes []*string,
 ) {
 	// Set enforcement mode.
 	enforcementMode = convertPolicyAssignmentEnforcementModeToSdkType(pa.EnforcementMode)
@@ -378,7 +380,7 @@ func policyAssignmentType2ArmPolicyValues(ctx context.Context, pa gen.PolicyAssi
 	// set identity
 	identity = convertPolicyAssignmentIdentityToSdkType(pa.Identity, pa.IdentityIds, resp)
 	if resp.Diagnostics.HasError() {
-		return nil, nil, nil, nil, nil, nil
+		return nil, nil, nil, nil, nil, nil, nil
 	}
 
 	// set non-compliance message
@@ -395,7 +397,7 @@ func policyAssignmentType2ArmPolicyValues(ctx context.Context, pa gen.PolicyAssi
 			nonCompl[i] = frameworkMsg
 		}
 		if resp.Diagnostics.HasError() {
-			return nil, nil, nil, nil, nil, nil
+			return nil, nil, nil, nil, nil, nil, nil
 		}
 		nonComplianceMessages = convertPolicyAssignmentNonComplianceMessagesToSdkType(nonCompl)
 	}
@@ -403,7 +405,7 @@ func policyAssignmentType2ArmPolicyValues(ctx context.Context, pa gen.PolicyAssi
 	// set parameters
 	parameters = convertPolicyAssignmentParametersMapToSdkType(pa.Parameters, resp)
 	if resp.Diagnostics.HasError() {
-		return nil, nil, nil, nil, nil, nil
+		return nil, nil, nil, nil, nil, nil, nil
 	}
 
 	// set resource selectors
@@ -412,7 +414,7 @@ func policyAssignmentType2ArmPolicyValues(ctx context.Context, pa gen.PolicyAssi
 		resp.Diagnostics.Append(pa.ResourceSelectors.ElementsAs(ctx, &rS, false)...)
 		resourceSelectors = convertPolicyAssignmentResourceSelectorsToSdkType(ctx, rS, resp)
 		if resp.Diagnostics.HasError() {
-			return nil, nil, nil, nil, nil, nil
+			return nil, nil, nil, nil, nil, nil, nil
 		}
 	}
 
@@ -422,11 +424,24 @@ func policyAssignmentType2ArmPolicyValues(ctx context.Context, pa gen.PolicyAssi
 		resp.Diagnostics.Append(pa.Overrides.ElementsAs(ctx, &ovr, false)...)
 		overrides = convertPolicyAssignmentOverridesToSdkType(ctx, ovr, resp)
 		if resp.Diagnostics.HasError() {
-			return nil, nil, nil, nil, nil, nil
+			return nil, nil, nil, nil, nil, nil, nil
 		}
 	}
 
-	return enforcementMode, identity, nonComplianceMessages, parameters, resourceSelectors, overrides
+	// set not scopes
+	if isKnown(pa.NotScopes) && len(pa.NotScopes.Elements()) != 0 {
+		ns, err := frameworktype.SliceOfPrimitiveToGo[string](ctx, pa.NotScopes.Elements())
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"policyAssignmentType2ArmPolicyValues: error",
+				fmt.Sprintf("unable to convert PolicyAssignmentsValue.NotScopes elements to Go slice: %s", err.Error()),
+			)
+			return nil, nil, nil, nil, nil, nil, nil
+		}
+		notScopes = ns
+	}
+
+	return enforcementMode, identity, nonComplianceMessages, parameters, resourceSelectors, overrides, notScopes
 }
 
 func convertPolicyAssignmentOverridesToSdkType(ctx context.Context, input []gen.OverridesValue, resp *datasource.ReadResponse) []*armpolicy.Override {
