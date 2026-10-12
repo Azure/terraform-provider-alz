@@ -166,7 +166,11 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 		if err := depl.AddDefaultPolicyAssignmentValue(ctx, defName, paramVal); err != nil {
 			resp.Diagnostics.AddError(
 				fmt.Sprintf("architectureDataSource.Read() Error applying policy assignment default `%s`", defName),
-				err.Error(),
+				fmt.Sprintf(
+					"The policy assignment default `%s` does not exist in the loaded library. Please verify that the library containing this policy default is included in the provider's `library_references` configuration. Original error: %s",
+					defName,
+					err.Error(),
+				),
 			)
 			return
 		}
