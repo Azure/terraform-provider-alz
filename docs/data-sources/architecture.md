@@ -111,8 +111,8 @@ Optional:
 
 Required:
 
-- `definition_name` (String) The name of the policy definition to override.
-- `parameter_name` (String) The name of the parameter to override.
+- `definition_name` (String) The name of the policy definition to override. This is case-sensitive.
+- `parameter_name` (String) The name of the parameter to override. Matched case-insensitively, preferring an exact match. The override is ignored if no parameter, or more than one parameter, matches.
 
 
 <a id="nestedatt--override_policy_definition_parameter_assign_permissions_unset"></a>
@@ -120,8 +120,8 @@ Required:
 
 Required:
 
-- `definition_name` (String) The name of the policy definition to override.
-- `parameter_name` (String) The name of the parameter to override.
+- `definition_name` (String) The name of the policy definition to override. This is case-sensitive.
+- `parameter_name` (String) The name of the parameter to override. Matched case-insensitively, preferring an exact match. The override is ignored if no parameter, or more than one parameter, matches.
 
 
 <a id="nestedatt--policy_assignments_to_modify"></a>
@@ -142,7 +142,7 @@ Optional:
 - `non_compliance_messages` (Attributes Set) The non-compliance messages to use for the policy assignment. (see [below for nested schema](#nestedatt--policy_assignments_to_modify--policy_assignments--non_compliance_messages))
 - `not_scopes` (List of String) A list of scopes to exclude from the policy assignment. Each element must be a valid ARM resource id. If specified here the not scopes will replace any existing not scopes on the policy assignment.
 - `overrides` (Attributes List) The overrides for this policy assignment. There are a maximum of 10 overrides allowed per assignment. If specified here the overrides will replace the existing overrides. (see [below for nested schema](#nestedatt--policy_assignments_to_modify--policy_assignments--overrides))
-- `parameters` (Map of String) The parameters to use for the policy assignment. The map key is the parameter name and the value is an JSON object containing a single `value` attribute with the values to apply. This to mitigate issues with the Terraform type system. E.g. `{ defaultName = jsonencode({ value = "value"}) }`
+- `parameters` (Map of String) The parameters to use for the policy assignment. The map key is the parameter name and the value is an JSON object containing a single `value` attribute with the values to apply. This to mitigate issues with the Terraform type system. E.g. `{ defaultName = jsonencode({ value = "value"}) }`. Parameter names are matched case-insensitively against the referenced definition, preferring an exact match. If the assignment already sets the parameter using a different casing, that parameter is updated rather than a second one being added.
 - `resource_selectors` (Attributes List) The resource selectors to use for the policy assignment. A maximum of 10 resource selectors are allowed per assignment. If specified here the resource selectors will replace any existing resource selectors. (see [below for nested schema](#nestedatt--policy_assignments_to_modify--policy_assignments--resource_selectors))
 
 <a id="nestedatt--policy_assignments_to_modify--policy_assignments--non_compliance_messages"></a>

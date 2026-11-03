@@ -140,8 +140,8 @@ func ArchitectureDataSourceSchema(ctx context.Context) schema.Schema {
 					Attributes: map[string]schema.Attribute{
 						"definition_name": schema.StringAttribute{
 							Required:            true,
-							Description:         "The name of the policy definition to override.",
-							MarkdownDescription: "The name of the policy definition to override.",
+							Description:         "The name of the policy definition to override. This is case-sensitive.",
+							MarkdownDescription: "The name of the policy definition to override. This is case-sensitive.",
 							Validators: []validator.String{
 								stringvalidator.LengthAtLeast(1),
 								stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("parameter_name")),
@@ -149,8 +149,8 @@ func ArchitectureDataSourceSchema(ctx context.Context) schema.Schema {
 						},
 						"parameter_name": schema.StringAttribute{
 							Required:            true,
-							Description:         "The name of the parameter to override.",
-							MarkdownDescription: "The name of the parameter to override.",
+							Description:         "The name of the parameter to override. Matched case-insensitively, preferring an exact match. The override is ignored if no parameter, or more than one parameter, matches.",
+							MarkdownDescription: "The name of the parameter to override. Matched case-insensitively, preferring an exact match. The override is ignored if no parameter, or more than one parameter, matches.",
 							Validators: []validator.String{
 								stringvalidator.LengthAtLeast(1),
 								stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("definition_name")),
@@ -172,8 +172,8 @@ func ArchitectureDataSourceSchema(ctx context.Context) schema.Schema {
 					Attributes: map[string]schema.Attribute{
 						"definition_name": schema.StringAttribute{
 							Required:            true,
-							Description:         "The name of the policy definition to override.",
-							MarkdownDescription: "The name of the policy definition to override.",
+							Description:         "The name of the policy definition to override. This is case-sensitive.",
+							MarkdownDescription: "The name of the policy definition to override. This is case-sensitive.",
 							Validators: []validator.String{
 								stringvalidator.LengthAtLeast(1),
 								stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("parameter_name")),
@@ -181,8 +181,8 @@ func ArchitectureDataSourceSchema(ctx context.Context) schema.Schema {
 						},
 						"parameter_name": schema.StringAttribute{
 							Required:            true,
-							Description:         "The name of the parameter to override.",
-							MarkdownDescription: "The name of the parameter to override.",
+							Description:         "The name of the parameter to override. Matched case-insensitively, preferring an exact match. The override is ignored if no parameter, or more than one parameter, matches.",
+							MarkdownDescription: "The name of the parameter to override. Matched case-insensitively, preferring an exact match. The override is ignored if no parameter, or more than one parameter, matches.",
 							Validators: []validator.String{
 								stringvalidator.LengthAtLeast(1),
 								stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("definition_name")),
@@ -345,8 +345,8 @@ func ArchitectureDataSourceSchema(ctx context.Context) schema.Schema {
 									"parameters": schema.MapAttribute{
 										ElementType:         jsontypes.NormalizedType{},
 										Optional:            true,
-										Description:         "The parameters to use for the policy assignment. The map key is the parameter name and the value is an JSON object containing a single `value` attribute with the values to apply. This to mitigate issues with the Terraform type system. E.g. `{ defaultName = jsonencode({ value = \"value\"}) }`",
-										MarkdownDescription: "The parameters to use for the policy assignment. The map key is the parameter name and the value is an JSON object containing a single `value` attribute with the values to apply. This to mitigate issues with the Terraform type system. E.g. `{ defaultName = jsonencode({ value = \"value\"}) }`",
+										Description:         "The parameters to use for the policy assignment. The map key is the parameter name and the value is an JSON object containing a single `value` attribute with the values to apply. This to mitigate issues with the Terraform type system. E.g. `{ defaultName = jsonencode({ value = \"value\"}) }`. Parameter names are matched case-insensitively against the referenced definition, preferring an exact match. If the assignment already sets the parameter using a different casing, that parameter is updated rather than a second one being added.",
+										MarkdownDescription: "The parameters to use for the policy assignment. The map key is the parameter name and the value is an JSON object containing a single `value` attribute with the values to apply. This to mitigate issues with the Terraform type system. E.g. `{ defaultName = jsonencode({ value = \"value\"}) }`. Parameter names are matched case-insensitively against the referenced definition, preferring an exact match. If the assignment already sets the parameter using a different casing, that parameter is updated rather than a second one being added.",
 									},
 									"resource_selectors": schema.ListNestedAttribute{
 										NestedObject: schema.NestedAttributeObject{
