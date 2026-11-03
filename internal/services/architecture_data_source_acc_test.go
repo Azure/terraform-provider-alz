@@ -1,6 +1,7 @@
 package services_test
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/Azure/terraform-provider-alz/internal/acceptance"
@@ -763,6 +764,57 @@ output "policy_with_message_nc_policy_specific" {
 
 output "policy_with_message_nc_default" {
   value = one([for m in local.policy_with_message.properties.nonComplianceMessages : m.message if try(m.policyDefinitionReferenceId, "") == ""])
+}
+`
+}
+
+// TestAccAlzArchitectureDataSourceMissingPolicyDefault tests the error message
+// when a policy assignment default is not present in the loaded library.
+func TestAccAlzArchitectureDataSourceMissingPolicyDefault(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acceptance.AccTestPreCheck(t) },
+		ProtoV6ProviderFactories: acceptance.AccTestProtoV6ProviderFactoriesUnique(),
+		ExternalProviders: map[string]resource.ExternalProvider{
+			"azapi": {
+				Source:            "azure/azapi",
+				VersionConstraint: "~> 2.0",
+			},
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccArchitectureDataSourceConfigMissingPolicyDefault(),
+				ExpectError: regexp.MustCompile(
+					`(?s)The policy assignment default \x60missing_default\x60 does not exist in the loaded.*library_references`,
+				),
+			},
+		},
+	})
+}
+
+func testAccArchitectureDataSourceConfigMissingPolicyDefault() string {
+	return `
+provider "alz" {
+	library_references = [
+		{
+			custom_url = "${path.root}/testdata/testacc_lib"
+		}
+	]
+}
+
+data "azapi_client_config" "current" {}
+
+data "alz_architecture" "test" {
+	name                     = "test"
+	root_management_group_id = data.azapi_client_config.current.tenant_id
+	location                 = "northeurope"
+
+	policy_default_values = {
+		missing_default = jsonencode({ value = "some-value" })
+	}
+
+	timeouts {
+		read = "5m"
+	}
 }
 `
 }
