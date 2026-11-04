@@ -11,7 +11,7 @@
           "name": "library_overwrite_enabled",
           "bool": {
             "optional_required": "optional",
-            "description": "Whether to allow overwriting of the library by other lib directories. Default is `false`."
+            "description": "Whether a library may redefine assets with the same name that were supplied by a library processed before it. Libraries are processed in the order of `library_references`, with the dependencies of a library processed before the library itself. When `true`, the library processed last wins: policy assignments, role definitions, archetypes, architectures and policy default values are replaced in full, they are not merged field by field; policy definitions and policy set definitions are replaced per version, so a redefined version replaces the earlier one and other versions are kept. Duplicate archetype override names, and changing a policy (set) definition between versioned and versionless, remain errors. When `false`, redefining an existing asset is an error, except that a new version of an existing policy (set) definition is added alongside the existing versions. Default is `false`."
           }
         },
         {
@@ -848,7 +848,7 @@
                           {
                             "name": "parameters",
                             "map": {
-                              "description": "The parameters to use for the policy assignment. The map key is the parameter name and the value is an JSON object containing a single `value` attribute with the values to apply. This to mitigate issues with the Terraform type system. E.g. `{ defaultName = jsonencode({ value = \"value\"}) }`",
+                              "description": "The parameters to use for the policy assignment. The map key is the parameter name and the value is an JSON object containing a single `value` attribute with the values to apply. This to mitigate issues with the Terraform type system. E.g. `{ defaultName = jsonencode({ value = \"value\"}) }`. Parameter names are matched case-insensitively against the referenced definition, preferring an exact match. If the assignment already sets the parameter using a different casing, that parameter is updated rather than a second one being added.",
                               "computed_optional_required": "optional",
                               "element_type": {
                                 "string": {
@@ -1025,7 +1025,7 @@
                     "name": "definition_name",
                     "string": {
                       "computed_optional_required": "required",
-                      "description": "The name of the policy definition to override.",
+                      "description": "The name of the policy definition to override. This is case-sensitive.",
                       "validators": [
                         {
                           "custom": {
@@ -1054,7 +1054,7 @@
                     "name": "parameter_name",
                     "string": {
                       "computed_optional_required": "required",
-                      "description": "The name of the parameter to override.",
+                      "description": "The name of the parameter to override. Matched case-insensitively, preferring an exact match. The override is ignored if no parameter, or more than one parameter, matches.",
                       "validators": [
                         {
                           "custom": {
@@ -1094,7 +1094,7 @@
                     "name": "definition_name",
                     "string": {
                       "computed_optional_required": "required",
-                      "description": "The name of the policy definition to override.",
+                      "description": "The name of the policy definition to override. This is case-sensitive.",
                       "validators": [
                         {
                           "custom": {
@@ -1123,7 +1123,7 @@
                     "name": "parameter_name",
                     "string": {
                       "computed_optional_required": "required",
-                      "description": "The name of the parameter to override.",
+                      "description": "The name of the parameter to override. Matched case-insensitively, preferring an exact match. The override is ignored if no parameter, or more than one parameter, matches.",
                       "validators": [
                         {
                           "custom": {
