@@ -65,7 +65,7 @@ The provider can use a local gzipped cache file to avoid fetching built-in Azure
 
 ### Creating the Cache File
 
-To create the initial cache, use [`alzlibtool`](https://github.com/Azure/alzlib/releases/latest).
+To create the initial cache, use [`alzlibtool`](https://github.com/Azure/alzlib/releases/latest) v0.32.3 or later, which matches the library processing of this provider.
 Use `alzlibtool cache create --help` to see all options, but the most important one is whether to include all built-in policy definitions or only the ones that are referenced by the library.
 
 ```bash
@@ -73,7 +73,22 @@ Use `alzlibtool cache create --help` to see all options, but the most important 
 alzlibtool cache create --output alzlib-cache.json.gz
 
 # Create cache with only the built-in policy definitions that are referenced by the library (much faster to run and results in a smaller cache file)
-alzlibtool cache create --library path/to/library --architecture alz_custom --output alzlib-cache.json.gz
+alzlibtool cache create --library platform/alz@2026.10.0 --architecture alz --output alzlib-cache.json.gz
 ```
+
+The `--library` flag accepts either a local path (e.g. `./lib`) or an ALZ Library reference in the form `<path>@<ref>` (e.g. `platform/alz@2026.10.0`), and library dependencies are fetched automatically.
+To match a provider configuration with several `library_references`, specify `--library` once for each reference, in the same order.
+If you set `library_overwrite_enabled = true`, also add `--library-overwrite-enabled` so that the cache is built from the same library assets as the provider uses:
+
+```bash
+alzlibtool cache create \
+  --library platform/alz@2026.10.0 \
+  --library ./lib \
+  --library-overwrite-enabled \
+  --architecture alz_custom \
+  --output alzlib-cache.json.gz
+```
+
+-> **Note** Prefer creating the cache with `--library` and `--architecture`. In some Azure regions, the API that lists the versions of a built-in policy definition can return no versions for Resource Provider mode definitions (e.g. `Microsoft.Kubernetes.Data`). The cache of all built-in policy definitions then only contains the latest version of those definitions. Definitions that are not found in the cache are fetched from Azure.
 
 {{ .SchemaMarkdown | trimspace }}

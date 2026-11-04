@@ -1,0 +1,8 @@
+---
+name: test
+policy_assignments:
+  - test-set-assignment
+policy_definitions:
+  - test-policy-definition
+policy_set_definitions:
+  - test-policy-set-definition

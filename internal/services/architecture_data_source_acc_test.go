@@ -1,6 +1,8 @@
 package services_test
 
 import (
+	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/Azure/terraform-provider-alz/internal/acceptance"
@@ -261,6 +263,98 @@ func TestAccAlzArchitectureDataSourceNonComplianceMessageCustomSubstitution(t *t
 					resource.TestCheckOutput("policy_with_message_nc_count", "2"),
 					resource.TestCheckOutput("policy_with_message_nc_policy_specific", "Message for specific policy definition"),
 					resource.TestCheckOutput("policy_with_message_nc_default", "This resource needs to be compliant."),
+				),
+			},
+		},
+	})
+}
+
+// TestAccAlzArchitectureDataSourceLibraryOverwrite tests that, with `library_overwrite_enabled`, a policy definition
+// and a policy set definition redefined by a later library replace those supplied by an earlier library.
+// The libraries only contain custom assets, so no Azure API requests are made.
+func TestAccAlzArchitectureDataSourceLibraryOverwrite(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acceptance.AccTestPreCheck(t) },
+		ProtoV6ProviderFactories: acceptance.AccTestProtoV6ProviderFactoriesUnique(),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccArchitectureDataSourceConfigLibraryOverwrite(true, "override"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckOutput("policy_definition_display_name", "Overridden policy definition"),
+					resource.TestCheckOutput("policy_definition_effect_default", "Deny"),
+					resource.TestCheckOutput("policy_set_definition_display_name", "Overridden policy set definition"),
+					resource.TestCheckOutput("policy_set_definition_version", "1.0.0"),
+					resource.TestCheckOutput("policy_set_definition_effect_default", "Deny"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccAlzArchitectureDataSourceLibraryOverwriteDisabled tests that redefining an existing asset in a later
+// library is an error when `library_overwrite_enabled` is not set.
+func TestAccAlzArchitectureDataSourceLibraryOverwriteDisabled(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acceptance.AccTestPreCheck(t) },
+		ProtoV6ProviderFactories: acceptance.AccTestProtoV6ProviderFactoriesUnique(),
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccArchitectureDataSourceConfigLibraryOverwrite(false, "override"),
+				ExpectError: regexp.MustCompile(`(?s)Failed to initialize AlzLib.*test-policy-definition`),
+			},
+		},
+	})
+}
+
+// TestAccAlzArchitectureDataSourceLibraryNewPolicySetDefinitionVersion tests that a new version of a policy set
+// definition supplied by a later library is retained when `library_overwrite_enabled` is not set.
+func TestAccAlzArchitectureDataSourceLibraryNewPolicySetDefinitionVersion(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acceptance.AccTestPreCheck(t) },
+		ProtoV6ProviderFactories: acceptance.AccTestProtoV6ProviderFactoriesUnique(),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccArchitectureDataSourceConfigLibraryOverwrite(false, "newversion"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckOutput("policy_definition_display_name", "Base policy definition"),
+					resource.TestCheckOutput("policy_set_definition_display_name", "Policy set definition version 1.1.0"),
+					resource.TestCheckOutput("policy_set_definition_version", "1.1.0"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccAlzArchitectureDataSourceAssignPermissionsOverrideParameterNameCase tests that the parameter name of an
+// assignPermissions override is matched case-insensitively.
+func TestAccAlzArchitectureDataSourceAssignPermissionsOverrideParameterNameCase(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acceptance.AccTestPreCheck(t) },
+		ProtoV6ProviderFactories: acceptance.AccTestProtoV6ProviderFactoriesUnique(),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccArchitectureDataSourceConfigOverrideAssignPermissionsParameterNameCase(),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownOutputValue("pra", knownvalue.Bool(true)),
+				},
+			},
+		},
+	})
+}
+
+// TestAccAlzArchitectureDataSourceModifyPolicyAssignmentParameterNameCase tests that a parameter in
+// `policy_assignments_to_modify` whose name differs only in case updates the existing parameter instead of
+// adding a second one.
+func TestAccAlzArchitectureDataSourceModifyPolicyAssignmentParameterNameCase(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acceptance.AccTestPreCheck(t) },
+		ProtoV6ProviderFactories: acceptance.AccTestProtoV6ProviderFactoriesUnique(),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccArchitectureDataSourceConfigModifyPolicyAssignmentParameterNameCase(),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckOutput("parameter_names", "logAnalytics"),
+					resource.TestCheckOutput("log_analytics", "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-rg/providers/Microsoft.OperationalInsights/workspaces/modified"),
 				),
 			},
 		},
@@ -763,6 +857,128 @@ output "policy_with_message_nc_policy_specific" {
 
 output "policy_with_message_nc_default" {
   value = one([for m in local.policy_with_message.properties.nonComplianceMessages : m.message if try(m.policyDefinitionReferenceId, "") == ""])
+}
+`
+}
+
+// testAccArchitectureDataSourceConfigLibraryOverwrite returns a test configuration that combines the `base` library
+// with the supplied later library, both from `testdata/libraryoverwrite`.
+func testAccArchitectureDataSourceConfigLibraryOverwrite(overwrite bool, laterLibrary string) string {
+	return fmt.Sprintf(`
+provider "alz" {
+  library_overwrite_enabled = %t
+  library_references = [
+    {
+      custom_url = "${path.root}/testdata/libraryoverwrite/base"
+    },
+    {
+      custom_url = "${path.root}/testdata/libraryoverwrite/%s"
+    }
+  ]
+}
+
+data "alz_architecture" "test" {
+  name                     = "test"
+  root_management_group_id = "00000000-0000-0000-0000-000000000000"
+  location                 = "northeurope"
+}
+
+locals {
+  policy_definition     = jsondecode(data.alz_architecture.test.management_groups[0].policy_definitions["test-policy-definition"])
+  policy_set_definition = jsondecode(data.alz_architecture.test.management_groups[0].policy_set_definitions["test-policy-set-definition"])
+}
+
+output "policy_definition_display_name" {
+  value = local.policy_definition.properties.displayName
+}
+
+output "policy_definition_effect_default" {
+  value = local.policy_definition.properties.parameters.effect.defaultValue
+}
+
+output "policy_set_definition_display_name" {
+  value = local.policy_set_definition.properties.displayName
+}
+
+output "policy_set_definition_version" {
+  value = local.policy_set_definition.properties.version
+}
+
+output "policy_set_definition_effect_default" {
+  value = local.policy_set_definition.properties.parameters.effect.defaultValue
+}
+`, overwrite, laterLibrary)
+}
+
+func testAccArchitectureDataSourceConfigOverrideAssignPermissionsParameterNameCase() string {
+	return `
+provider "alz" {
+  library_references = [
+    {
+      custom_url = "${path.root}/testdata/overrideAssignPermissions"
+    }
+  ]
+}
+
+data "alz_architecture" "test" {
+  name                     = "test"
+  root_management_group_id = "00000000-0000-0000-0000-000000000000"
+  location                 = "northeurope"
+
+  override_policy_definition_parameter_assign_permissions_set = [
+    {
+      definition_name = "test-policy-definition"
+      parameter_name  = "LOGANALYTICS"
+    }
+  ]
+}
+
+output "pra" {
+  value = anytrue([
+    for val in data.alz_architecture.test.policy_role_assignments : strcontains(val.scope, "Microsoft.OperationalInsights/workspaces/PLACEHOLDER")
+  ])
+}
+`
+}
+
+func testAccArchitectureDataSourceConfigModifyPolicyAssignmentParameterNameCase() string {
+	return `
+provider "alz" {
+  library_references = [
+    {
+      custom_url = "${path.root}/testdata/overrideAssignPermissions"
+    }
+  ]
+}
+
+data "alz_architecture" "test" {
+  name                     = "test"
+  root_management_group_id = "00000000-0000-0000-0000-000000000000"
+  location                 = "northeurope"
+
+  policy_assignments_to_modify = {
+    test = {
+      policy_assignments = {
+        test-policy-assignment = {
+          parameters = {
+            LogAnalytics = jsonencode({ value = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-rg/providers/Microsoft.OperationalInsights/workspaces/modified" })
+          }
+        }
+      }
+    }
+  }
+}
+
+locals {
+  policy_assignment = jsondecode(data.alz_architecture.test.management_groups[0].policy_assignments["test-policy-assignment"])
+}
+
+output "parameter_names" {
+  value = join(",", sort(keys(local.policy_assignment.properties.parameters)))
+}
+
+output "log_analytics" {
+  value = local.policy_assignment.properties.parameters.logAnalytics.value
 }
 `
 }
