@@ -183,6 +183,28 @@ Match: False
 cat xa-trust/evidence/reconciliation-api22.json
 
 
+# Cria um arquivo final com o audit que você me mandou
+cat > xa-trust/evidence/FINAL-AUDIT-BCVL-EXEC-001.json <<'EOF'
+{
+  "audit_id": "XA-TRUST-BCVL-EXEC-001",
+  "component": "cryptographic_artifact_validator",
+  "review_type": "STATIC_CODE_AND_REPRODUCIBILITY_REVIEW",
+  "decision": "IMPLEMENTATION_REJECTED_BY_AUDIT",
+  "api_11": {"claim": "RFC8785_JCS_CONFORMANCE", "status": "NOT_ESTABLISHED", "finding": "PYTHON_JSON_SERIALIZATION_IS_NOT_FULL_JCS"},
+  "api_12": {"claim": "SHA256_PAYLOAD_MATCH", "status": "FAIL", "observed_hash": "dbfc222f04e84ac2e3aec5773b679ca009c51230adf7bd63fe576413718ec4bb", "expected_hash": "4b825dc642cb6eb9a060e54bf8d69288fbee4904d9326584cad94766d9342718"},
+  "api_22": {"claim": "MERKLE_PROOF_VALID", "status": "NOT_ESTABLISHED", "finding": "PROOF_PROTOCOL_AND_POSITIONAL_BINDING_UNSPECIFIED"},
+  "global": {"execution_result": "FAIL", "cryptographic_conformance": "NOT_ESTABLISHED", "technical_homologation": "NOT_ESTABLISHED"},
+  "E7": "NOT_PROMOTED",
+  "E8": "NOT_ESTABLISHED",
+  "E9": "REVIEW - IMPLEMENTATION_DELETED_AFTER_AUDIT"
+}
+EOF
+
+git add xa-trust/evidence/FINAL-AUDIT-BCVL-EXEC-001.json
+git commit -m "audit(bcvl): EXEC-001 FAIL - API-11 NOT_ESTABLISHED, API-12 FAIL, API-22 NOT_ESTABLISHED - implementation to be deleted"
+git push origin xa-trust-implementation
+
+
 
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Azure/terraform-provider-alz/badge)](https://scorecard.dev/viewer/?uri=github.com/Azure/terraform-provider-alz)
 
