@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 var (
@@ -105,6 +106,7 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	// Use alzlib to create the hierarchy from the supplied architecture
 	depl := deployment.NewHierarchy(d.data.AlzLib)
+	buildStart := time.Now()
 	if err := depl.FromArchitecture(ctx, data.Name.ValueString(), data.RootManagementGroupId.ValueString(), data.Location.ValueString()); err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("architectureDataSource.Read() Error creating architecture %s", data.Name.ValueString()),
@@ -112,6 +114,10 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 		)
 		return
 	}
+	tflog.Debug(ctx, "Built architecture", map[string]interface{}{
+		"architecture": data.Name.ValueString(),
+		"duration_ms":  time.Since(buildStart).Milliseconds(),
+	})
 
 	// Process assignPermissions overrides setting the values in the alzlib
 	assignPermissionsSetValues := []gen.OverridePolicyDefinitionParameterAssignPermissionsSetValue{}

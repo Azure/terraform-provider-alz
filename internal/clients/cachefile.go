@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/Azure/alzlib"
 	"github.com/Azure/alzlib/cache"
@@ -40,6 +41,7 @@ func CacheFileMetadataPath(path string) string {
 // A cache file that the provider saved for other libraries is not loaded. A cache file without
 // metadata, e.g. one created by alzlibtool, is always loaded.
 func LoadCacheFile(ctx context.Context, alz *alzlib.AlzLib, path, libraryFingerprint string) error {
+	start := time.Now()
 	f, err := os.Open(path) // #nosec G304 -- path is provided by the operator via provider config.
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -66,7 +68,10 @@ func LoadCacheFile(ctx context.Context, alz *alzlib.AlzLib, path, libraryFingerp
 	}
 	alz.AddCache(c)
 	tflog.Debug(ctx, "Loaded AlzLib built-in cache from file", map[string]interface{}{
-		"cache_file_name": path,
+		"cache_file_name":        path,
+		"policy_definitions":     c.PolicyDefinitionCount(),
+		"policy_set_definitions": c.PolicySetDefinitionCount(),
+		"duration_ms":            time.Since(start).Milliseconds(),
 	})
 	return nil
 }
@@ -109,6 +114,7 @@ func cacheFileMatchesLibraries(path, libraryFingerprint string) (bool, string) {
 // If libraryFingerprint is set, it is saved in the metadata file next to the cache file, so that
 // LoadCacheFile does not use the cache file for other libraries.
 func SaveCacheFile(ctx context.Context, alz *alzlib.AlzLib, path, libraryFingerprint string) error {
+	start := time.Now()
 	c := alz.ExportBuiltInCache()
 
 	if libraryFingerprint != "" {
@@ -132,6 +138,7 @@ func SaveCacheFile(ctx context.Context, alz *alzlib.AlzLib, path, libraryFingerp
 		"cache_file_name":        path,
 		"policy_definitions":     c.PolicyDefinitionCount(),
 		"policy_set_definitions": c.PolicySetDefinitionCount(),
+		"duration_ms":            time.Since(start).Milliseconds(),
 	})
 	return nil
 }

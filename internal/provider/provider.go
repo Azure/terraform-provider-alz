@@ -82,6 +82,7 @@ func (p *AlzProvider) Schema(ctx context.Context, req provider.SchemaRequest, re
 
 func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	tflog.Debug(ctx, "Provider configuration started")
+	configureStart := time.Now()
 
 	if p.data != nil {
 		tflog.Debug(ctx, "Provider AlzLib already present, skipping configuration")
@@ -160,6 +161,7 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 		tflog.Debug(ctx, "Begin fetch library dependencies", map[string]interface{}{
 			"library_references": libRefs,
 		})
+		fetchStart := time.Now()
 		libRefs, err = libRefs.FetchWithDependencies(ctx)
 		if err != nil {
 			resp.Diagnostics.AddError("Failed to fetch library dependencies", err.Error())
@@ -167,14 +169,19 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 		}
 		tflog.Debug(ctx, "End fetch library dependencies", map[string]interface{}{
 			"library_references": libRefs,
+			"duration_ms":        time.Since(fetchStart).Milliseconds(),
 		})
 	}
 
-	// Init alzlib
+	// Init alzlib. Libraries that have not been fetched yet are fetched here.
+	initStart := time.Now()
 	if err := alz.Init(ctx, libRefs...); err != nil {
 		resp.Diagnostics.AddError("Failed to initialize AlzLib", err.Error())
 		return
 	}
+	tflog.Debug(ctx, "Initialized AlzLib", map[string]interface{}{
+		"duration_ms": time.Since(initStart).Milliseconds(),
+	})
 
 	// If a cache file was supplied and exists, load it and inject into AlzLib so
 	// that built-in policy and policy set definitions can be served from the cache
@@ -227,7 +234,9 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 	p.data = clients.NewClient(clientOpts...)
 	resp.DataSourceData = p.data
 	resp.ResourceData = p.data
-	tflog.Debug(ctx, "Provider configuration finished")
+	tflog.Debug(ctx, "Provider configuration finished", map[string]interface{}{
+		"duration_ms": time.Since(configureStart).Milliseconds(),
+	})
 }
 
 func (p *AlzProvider) Resources(ctx context.Context) []func() resource.Resource {
