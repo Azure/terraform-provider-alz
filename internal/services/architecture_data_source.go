@@ -251,6 +251,17 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Built-in definitions are only loaded by reading an architecture, so the cache file is saved here.
+	if err := d.data.SaveBuiltInCache(ctx); err != nil {
+		resp.Diagnostics.AddWarning(
+			"architectureDataSource.Read() Failed to save cache file",
+			fmt.Sprintf("The built-in policy definition cache could not be saved. The architecture was read successfully, but the next run may not be able to use the cache.\n\n%s", err.Error()),
+		)
+	}
 }
 
 func modifyPolicyAssignments(ctx context.Context, depl *deployment.Hierarchy, data gen.ArchitectureModel, resp *datasource.ReadResponse) {

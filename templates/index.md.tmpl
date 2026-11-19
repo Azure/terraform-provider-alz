@@ -59,9 +59,11 @@ For more information please visit the [library documentation site](https://azure
 
 ## Built-In Policy Definition Cache
 
-The provider can use a local gzipped cache file to avoid fetching built-in Azure policy and policy set definitions from Azure on every run. This is configured via the `cache_file_name` (path to a `.gz` file) and `cache_file_save_enabled` (whether to (re)write the file after the provider is configured) options.
+The provider can use a local gzipped cache file to avoid fetching built-in Azure policy and policy set definitions from Azure on every run. This is configured via the `cache_file_name` (path to a `.gz` file) and `cache_file_save_enabled` (whether to (re)write the file after each `alz_architecture` data source has been read) options.
 
-~> **Important** Using a cache means the provider will not see hotfixes, new minor versions, or any other updates to built-in policy definitions until the cache file is refreshed. Policy assignments MUST allow patch version updates in their version constraints (e.g. `1.0.*`), and MAY allow minor version updates (e.g. `1.*.*`). Therefore the cache file should be regenerated regularly (for example by setting `cache_file_save_enabled = true` periodically, or by deleting the cache file) to ensure no miscalculation for the policy role assignments.
+With `cache_file_save_enabled = true`, the provider writes the built-in definitions that the `alz_architecture` data sources loaded, from the cache file or from Azure. If the file does not exist yet, the first run fetches the definitions from Azure and creates it. The file then only contains the definitions used by this configuration, so use a separate cache file for each configuration.
+
+~> **Important** Using a cache means the provider will not see hotfixes, new minor versions, or any other updates to built-in policy definitions until the cache file is refreshed. Policy assignments MUST allow patch version updates in their version constraints (e.g. `1.0.*`), and MAY allow minor version updates (e.g. `1.*.*`). Therefore the cache file should be regenerated regularly to ensure no miscalculation for the policy role assignments. Delete the cache file (for example by rotating the key of your CI/CD cache, or when you change `library_references`) and run with `cache_file_save_enabled = true`, or recreate the file with `alzlibtool`.
 
 ### Creating the Cache File
 

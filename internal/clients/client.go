@@ -1,6 +1,7 @@
 package clients
 
 import (
+	"context"
 	"sync"
 
 	"github.com/Azure/alzlib"
@@ -14,6 +15,8 @@ type Client struct {
 	ncmPlaceholder                       string
 	ncmEnforcedReplacement               string
 	ncmNotEnforcedReplacement            string
+	cacheFileName                        string
+	cacheFileSaveEnabled                 bool
 }
 
 func (s *Client) SuppressWarningPolicyRoleAssignments() bool {
@@ -77,4 +80,27 @@ func WithNonComplianceMessageSubstitutionSettings(placeholder, enforcedReplaceme
 		c.ncmEnforcedReplacement = enforcedReplacement
 		c.ncmNotEnforcedReplacement = notEnforcedReplacement
 	}
+}
+
+// WithCacheFile sets the built-in cache file and whether SaveBuiltInCache writes it.
+func WithCacheFile(name string, saveEnabled bool) Option {
+	return func(c *Client) {
+		c.cacheFileName = name
+		c.cacheFileSaveEnabled = saveEnabled
+	}
+}
+
+// SaveBuiltInCache writes the built-in policy and policy set definitions loaded into the AlzLib to
+// the cache file. It does nothing unless a cache file is set and saving is enabled.
+// Built-in definitions are loaded when an architecture is built, so call it after that.
+// Calls are serialised, because several alz_architecture data sources can be read concurrently.
+func (s *Client) SaveBuiltInCache(ctx context.Context) error {
+	if s.AlzLib == nil || s.cacheFileName == "" || !s.cacheFileSaveEnabled {
+		return nil
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return SaveCacheFile(ctx, s.AlzLib, s.cacheFileName)
 }
