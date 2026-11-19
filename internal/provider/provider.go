@@ -170,21 +170,29 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 		})
 	}
 
-	// If a cache file was supplied and exists, load it and inject into AlzLib so
-	// that built-in policy and policy set definitions can be served from the cache
-	// without making Azure API calls.
-	cacheFileName := data.CacheFileName.ValueString()
-	if cacheFileName != "" {
-		if err := clients.LoadCacheFile(ctx, alz, cacheFileName); err != nil {
-			resp.Diagnostics.AddError("Failed to load cache file", err.Error())
-			return
-		}
-	}
-
 	// Init alzlib
 	if err := alz.Init(ctx, libRefs...); err != nil {
 		resp.Diagnostics.AddError("Failed to initialize AlzLib", err.Error())
 		return
+	}
+
+	// If a cache file was supplied and exists, load it and inject into AlzLib so
+	// that built-in policy and policy set definitions can be served from the cache
+	// without making Azure API calls. The libraries are fingerprinted after Init,
+	// when all of them have been fetched: a cache file saved by the provider is
+	// only loaded for the libraries it was saved for.
+	cacheFileName := data.CacheFileName.ValueString()
+	libraryFingerprint := ""
+	if cacheFileName != "" {
+		libraryFingerprint, err = clients.LibraryFingerprint(libRefs, data.LibraryOverwriteEnabled.ValueBool())
+		if err != nil {
+			resp.Diagnostics.AddError("Failed to fingerprint the libraries for the cache file", err.Error())
+			return
+		}
+		if err := clients.LoadCacheFile(ctx, alz, cacheFileName, libraryFingerprint); err != nil {
+			resp.Diagnostics.AddError("Failed to load cache file", err.Error())
+			return
+		}
 	}
 
 	// Store the alz pointer in the provider struct so we don't have to do all this work every time `.Configure` is called.
@@ -194,7 +202,7 @@ func (p *AlzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 	clientOpts := []clients.Option{
 		clients.WithAlzLib(alz),
 		clients.WithSuppressWarningPolicyRoleAssignments(data.SuppressWarningPolicyRoleAssignments.ValueBool()),
-		clients.WithCacheFile(cacheFileName, data.CacheFileSaveEnabled.ValueBool()),
+		clients.WithCacheFile(cacheFileName, data.CacheFileSaveEnabled.ValueBool(), libraryFingerprint),
 	}
 
 	// Parse non-compliance message substitution settings, applying provider-level

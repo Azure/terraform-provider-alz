@@ -17,6 +17,7 @@ type Client struct {
 	ncmNotEnforcedReplacement            string
 	cacheFileName                        string
 	cacheFileSaveEnabled                 bool
+	libraryFingerprint                   string
 }
 
 func (s *Client) SuppressWarningPolicyRoleAssignments() bool {
@@ -82,11 +83,13 @@ func WithNonComplianceMessageSubstitutionSettings(placeholder, enforcedReplaceme
 	}
 }
 
-// WithCacheFile sets the built-in cache file and whether SaveBuiltInCache writes it.
-func WithCacheFile(name string, saveEnabled bool) Option {
+// WithCacheFile sets the built-in cache file, whether SaveBuiltInCache writes it, and the fingerprint
+// of the libraries that is saved with it, see LibraryFingerprint.
+func WithCacheFile(name string, saveEnabled bool, libraryFingerprint string) Option {
 	return func(c *Client) {
 		c.cacheFileName = name
 		c.cacheFileSaveEnabled = saveEnabled
+		c.libraryFingerprint = libraryFingerprint
 	}
 }
 
@@ -102,5 +105,5 @@ func (s *Client) SaveBuiltInCache(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	return SaveCacheFile(ctx, s.AlzLib, s.cacheFileName)
+	return SaveCacheFile(ctx, s.AlzLib, s.cacheFileName, s.libraryFingerprint)
 }

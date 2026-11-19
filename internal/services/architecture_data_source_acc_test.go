@@ -1,15 +1,31 @@
 package services_test
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"regexp"
+	"strings"
 	"testing"
 
+	"github.com/Azure/alzlib/assets"
+	"github.com/Azure/alzlib/cache"
+	"github.com/Azure/alzlib/to"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armpolicy"
 	"github.com/Azure/terraform-provider-alz/internal/acceptance"
+	"github.com/Azure/terraform-provider-alz/internal/clients"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/stretchr/testify/require"
 )
+
+// testAccCacheFileBuiltInName is the name of the built-in policy definition assigned by the `testdata/cachefile`
+// libraries. It does not exist in Azure, so it can only be loaded from the cache file.
+const testAccCacheFileBuiltInName = "00000000-0000-0000-0000-000000000001"
 
 // TestAccAlzArchitectureDataSourceRemoteLib tests the data source for alz_architecture
 // when using a remote lib.
@@ -320,6 +336,59 @@ func TestAccAlzArchitectureDataSourceLibraryNewPolicySetDefinitionVersion(t *tes
 					resource.TestCheckOutput("policy_set_definition_display_name", "Policy set definition version 1.1.0"),
 					resource.TestCheckOutput("policy_set_definition_version", "1.1.0"),
 				),
+			},
+		},
+	})
+}
+
+// TestAccAlzArchitectureDataSourceCacheFileSave tests that, with `cache_file_save_enabled`, the built-in definitions
+// loaded by reading an architecture are saved to the cache file and loaded by the next run, and that a cache file
+// saved for other libraries is not loaded (Azure/Azure-Landing-Zones#4328).
+// The assigned built-in policy definition does not exist in Azure, so the architecture can only be read when the
+// definition is loaded from the cache file. Each Terraform command configures a new provider instance, as separate
+// runs do.
+func TestAccAlzArchitectureDataSourceCacheFileSave(t *testing.T) {
+	cacheFile := filepath.Join(t.TempDir(), "alzlib-cache.json.gz")
+	var fingerprint string
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acceptance.AccTestPreCheck(t) },
+		ProtoV6ProviderFactories: acceptance.AccTestProtoV6ProviderFactoriesPerCommand(),
+		Steps: []resource.TestStep{
+			{
+				// A cache file without metadata, such as one created by alzlibtool, is loaded.
+				PreConfig: func() { testAccWriteCacheFile(t, cacheFile) },
+				Config:    testAccArchitectureDataSourceConfigCacheFile(cacheFile, "base"),
+				Check: testAccCheckCacheFileSaved(cacheFile, func(saved string) error {
+					fingerprint = saved
+					return nil
+				}),
+			},
+			{
+				// The cache file saved by the previous run is loaded.
+				Config: testAccArchitectureDataSourceConfigCacheFile(cacheFile, "base"),
+				Check: testAccCheckCacheFileSaved(cacheFile, func(saved string) error {
+					if saved != fingerprint {
+						return fmt.Errorf("the libraries have not changed, but the fingerprint changed from %s to %s", fingerprint, saved)
+					}
+					return nil
+				}),
+			},
+			{
+				// The cache file was saved for other libraries, so it is not loaded and the definition is looked up in Azure.
+				Config:      testAccArchitectureDataSourceConfigCacheFile(cacheFile, "base", "extra"),
+				ExpectError: regexp.MustCompile(`(?s)Error creating architecture.*` + testAccCacheFileBuiltInName),
+			},
+			{
+				// Without the metadata, the cache file is loaded, and it is saved for the new libraries.
+				PreConfig: func() { require.NoError(t, os.Remove(clients.CacheFileMetadataPath(cacheFile))) },
+				Config:    testAccArchitectureDataSourceConfigCacheFile(cacheFile, "base", "extra"),
+				Check: testAccCheckCacheFileSaved(cacheFile, func(saved string) error {
+					if saved == fingerprint {
+						return errors.New("the libraries have changed, but the fingerprint has not")
+					}
+					return nil
+				}),
 			},
 		},
 	})
@@ -908,6 +977,99 @@ output "policy_set_definition_effect_default" {
   value = local.policy_set_definition.properties.parameters.effect.defaultValue
 }
 `, overwrite, laterLibrary)
+}
+
+// testAccArchitectureDataSourceConfigCacheFile returns a test configuration that saves the built-in definitions to
+// the supplied cache file and uses the supplied libraries from `testdata/cachefile`.
+func testAccArchitectureDataSourceConfigCacheFile(cacheFile string, libraries ...string) string {
+	refs := make([]string, len(libraries))
+	for i, library := range libraries {
+		refs[i] = fmt.Sprintf(`{ custom_url = "${path.root}/testdata/cachefile/%s" }`, library)
+	}
+
+	return fmt.Sprintf(`
+provider "alz" {
+  cache_file_name         = %q
+  cache_file_save_enabled = true
+  library_references      = [%s]
+}
+
+data "alz_architecture" "test" {
+  name                     = "test"
+  root_management_group_id = "00000000-0000-0000-0000-000000000000"
+  location                 = "northeurope"
+
+  timeouts {
+    read = "1m"
+  }
+}
+`, filepath.ToSlash(cacheFile), strings.Join(refs, ", "))
+}
+
+// testAccWriteCacheFile writes a cache file without metadata, as alzlibtool does, that holds the built-in policy
+// definition assigned by the `testdata/cachefile` libraries.
+func testAccWriteCacheFile(t *testing.T, cacheFile string) {
+	t.Helper()
+
+	pdvs := assets.NewPolicyDefinitionVersions()
+	require.NoError(t, pdvs.Add(&assets.PolicyDefinition{
+		Definition: armpolicy.Definition{
+			Name: to.Ptr(testAccCacheFileBuiltInName),
+			Properties: &armpolicy.DefinitionProperties{
+				Description: to.Ptr("Built-in policy definition that only exists in the cache file."),
+				DisplayName: to.Ptr("Cached built-in policy definition"),
+				Metadata:    map[string]any{},
+				Mode:        to.Ptr("All"),
+				PolicyRule:  map[string]any{"if": map[string]any{}, "then": map[string]any{}},
+				PolicyType:  to.Ptr(armpolicy.PolicyTypeBuiltIn),
+				Version:     to.Ptr("1.0.0"),
+			},
+		},
+	}, false))
+
+	f, err := os.Create(cacheFile)
+	require.NoError(t, err)
+	require.NoError(t, cache.NewCacheFromDefinitions(
+		map[string]*assets.PolicyDefinitionVersions{testAccCacheFileBuiltInName: pdvs},
+		map[string]*assets.PolicySetDefinitionVersions{},
+	).Save(f))
+	require.NoError(t, f.Close())
+}
+
+// testAccCheckCacheFileSaved checks that the cache file holds the assigned built-in policy definition, and passes the
+// library fingerprint recorded in the metadata file to checkFingerprint.
+func testAccCheckCacheFileSaved(cacheFile string, checkFingerprint func(string) error) resource.TestCheckFunc {
+	return func(*terraform.State) error {
+		f, err := os.Open(cacheFile)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		c, err := cache.NewCache(f)
+		if err != nil {
+			return err
+		}
+		if c.PolicyDefinitionVersionsByName(testAccCacheFileBuiltInName) == nil {
+			return fmt.Errorf("the cache file does not hold the built-in policy definition %s", testAccCacheFileBuiltInName)
+		}
+
+		content, err := os.ReadFile(clients.CacheFileMetadataPath(cacheFile))
+		if err != nil {
+			return err
+		}
+		var meta struct {
+			LibraryFingerprint string `json:"libraryFingerprint"`
+		}
+		if err := json.Unmarshal(content, &meta); err != nil {
+			return err
+		}
+		if meta.LibraryFingerprint == "" {
+			return errors.New("the cache file metadata does not record the libraries")
+		}
+
+		return checkFingerprint(meta.LibraryFingerprint)
+	}
 }
 
 func testAccArchitectureDataSourceConfigOverrideAssignPermissionsParameterNameCase() string {
