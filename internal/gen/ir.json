@@ -46,7 +46,7 @@
           "name": "cache_file_name",
           "string": {
             "optional_required": "optional",
-            "description": "Path to a gzipped cache file (must end in `.gz`) containing built-in policy and policy set definitions. When set, the provider will load the cache from this file (if it exists) so that built-in definitions do not need to be fetched from Azure. Use `cache_file_save_enabled` to (re)write the cache file after the provider has been configured. Caches should be regularly updated to ensure no miscalculation for the policy role assignments, as new minor or patch versions of built-in policy definitions may be released.",
+            "description": "Path to a gzipped cache file (must end in `.gz`) containing built-in policy and policy set definitions. When set, the provider will load the cache from this file (if it exists) so that built-in definitions do not need to be fetched from Azure. Use `cache_file_save_enabled` to (re)write the cache file with the definitions loaded by the `alz_architecture` data sources. Caches should be regularly updated to ensure no miscalculation for the policy role assignments, as new minor or patch versions of built-in policy definitions may be released.",
             "validators": [
               {
                 "custom": {
@@ -68,7 +68,7 @@
           "name": "cache_file_save_enabled",
           "bool": {
             "optional_required": "optional",
-            "description": "Whether to (re)write the cache file specified by `cache_file_name` after the provider has been configured. When `true`, the built-in policy and policy set definitions loaded into the AlzLib will be exported and saved to the file. Defaults to `false`. Has no effect when `cache_file_name` is not set."
+            "description": "Whether to (re)write the cache file specified by `cache_file_name` after each successful read of an `alz_architecture` data source. When `true`, the built-in policy and policy set definitions loaded by the read, from the cache file or from Azure, are exported and saved to the file. A file with the suffix `.meta.json` is saved next to it to record the libraries the cache was saved for; the provider does not load a cache file that it saved for other libraries. A failure to save the file is reported as a warning. Defaults to `false`. Has no effect when `cache_file_name` is not set."
           }
         },
         {

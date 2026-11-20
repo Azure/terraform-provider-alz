@@ -18,6 +18,17 @@ func AccTestProtoV6ProviderFactoriesUnique() map[string]func() (tfprotov6.Provid
 	}
 }
 
+// AccTestProtoV6ProviderFactoriesPerCommand creates a new provider instance for each Terraform command,
+// so that each command configures the provider again, as separate Terraform runs do.
+// Use it to test what the provider keeps between runs, such as the built-in definition cache file.
+func AccTestProtoV6ProviderFactoriesPerCommand() map[string]func() (tfprotov6.ProviderServer, error) {
+	return map[string]func() (tfprotov6.ProviderServer, error){
+		"alz": func() (tfprotov6.ProviderServer, error) {
+			return providerserver.NewProtocol6WithError(provider.New("test")())()
+		},
+	}
+}
+
 // AccTestPreCheck ensures that the environment is properly configured for acceptance testing.
 func AccTestPreCheck(t *testing.T) {
 	// You can add code here to run prior to any test case execution, for example assertions

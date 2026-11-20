@@ -1,0 +1,4 @@
+---
+name: test
+policy_assignments:
+  - test-builtin-assignment

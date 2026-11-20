@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 var (
@@ -105,6 +106,7 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	// Use alzlib to create the hierarchy from the supplied architecture
 	depl := deployment.NewHierarchy(d.data.AlzLib)
+	buildStart := time.Now()
 	if err := depl.FromArchitecture(ctx, data.Name.ValueString(), data.RootManagementGroupId.ValueString(), data.Location.ValueString()); err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("architectureDataSource.Read() Error creating architecture %s", data.Name.ValueString()),
@@ -112,6 +114,10 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 		)
 		return
 	}
+	tflog.Debug(ctx, "Built architecture", map[string]interface{}{
+		"architecture": data.Name.ValueString(),
+		"duration_ms":  time.Since(buildStart).Milliseconds(),
+	})
 
 	// Process assignPermissions overrides setting the values in the alzlib
 	assignPermissionsSetValues := []gen.OverridePolicyDefinitionParameterAssignPermissionsSetValue{}
@@ -251,6 +257,17 @@ func (d *architectureDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Built-in definitions are only loaded by reading an architecture, so the cache file is saved here.
+	if err := d.data.SaveBuiltInCache(ctx); err != nil {
+		resp.Diagnostics.AddWarning(
+			"architectureDataSource.Read() Failed to save cache file",
+			fmt.Sprintf("The built-in policy definition cache could not be saved. The architecture was read successfully, but the next run may not be able to use the cache.\n\n%s", err.Error()),
+		)
+	}
 }
 
 func modifyPolicyAssignments(ctx context.Context, depl *deployment.Hierarchy, data gen.ArchitectureModel, resp *datasource.ReadResponse) {
